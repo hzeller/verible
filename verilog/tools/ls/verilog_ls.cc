@@ -43,8 +43,6 @@ using verilog::TokenTypeToString;
 #define read(fd, buf, size) _read(fd, buf, size)
 #endif
 
-static constexpr size_t kBufferSize = 25 << 20;  // 25MiB for large files.
-
 using nlohmann::json;
 using verible::TokenInfo;
 using verible::lsp::BufferCollection;
@@ -233,7 +231,7 @@ class VersionedAnalyzedBuffer {
     verible::LineColumnMap line_column_map(base);
     for (const auto &v : lint_violations) {
       result.emplace_back(ViolationToDiagnostic(v, base, line_column_map));
-      --remaining;
+      if (--remaining <= 0) break;
     }
     return result;
   }
@@ -430,7 +428,7 @@ int main(int argc, char *argv[]) {
   // receive. It typically would be in the order of largest file to
   // be opened (as it is sent verbatim in didOpen).
   // Should be chosen accordingly.
-  MessageStreamSplitter stream_splitter(kBufferSize);
+  MessageStreamSplitter stream_splitter;
   JsonRpcDispatcher dispatcher(write_fun);
 
   // All bodies the stream splitter extracts are pushed to the json dispatcher
