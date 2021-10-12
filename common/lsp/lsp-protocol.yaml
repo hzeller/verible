@@ -63,6 +63,17 @@ DidSaveTextDocumentParams:      # textDocument/didSave
 DidCloseTextDocumentParams:     # textDocument/didClose
   textDocument: TextDocumentIdentifier
 
+# -- textDocument/documentSymbol
+DocumentSymbolParams:
+  textDocument: TextDocumentIdentifier
+
+DocumentSymbol:
+  name: string
+  kind: integer   # SymbolKind enum
+  range: Range    # The whole range this symbol (e.g. function/class) covers
+  selectionRange: Range  # Part to be highlighted (e.g. name of class)
+  children?: object   # DocumentSymbol[]
+
 # -- textDocument/publishDiagnostics
 Diagnostic:
   range: Range

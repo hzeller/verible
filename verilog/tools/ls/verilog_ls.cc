@@ -21,8 +21,17 @@
 #include "common/lsp/lsp-text-buffer.h"
 #include "common/lsp/message-stream-splitter.h"
 #include "common/util/init_command_line.h"
+#include "common/util/value_saver.h"
 #include "verilog/analysis/verilog_analyzer.h"
 #include "verilog/analysis/verilog_linter.h"
+#include "verilog/parser/verilog_token_classifications.h"
+
+// temp.
+#include "verilog/CST/verilog_nonterminals.h"
+using verilog::NodeEnumToString;
+
+#include "verilog/parser/verilog_token.h"
+using verilog::TokenTypeToString;
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -36,11 +45,17 @@
 
 static constexpr size_t kBufferSize = 25 << 20;  // 25MiB for large files.
 
+using nlohmann::json;
+using verible::TokenInfo;
 using verible::lsp::BufferCollection;
 using verible::lsp::EditTextBuffer;
 using verible::lsp::InitializeResult;
 using verible::lsp::JsonRpcDispatcher;
 using verible::lsp::MessageStreamSplitter;
+
+using verible::lsp::DocumentSymbol;
+using verible::lsp::DocumentSymbolParams;
+
 using verilog::VerilogAnalyzer;
 
 static std::string GetVersionNumber() {
@@ -65,10 +80,91 @@ InitializeResult InitializeServer(const nlohmann::json &params) {
           },
       },
       {"codeActionProvider", true},
+      {"documentSymbolProvider", true},
   };
 
   return result;
 }
+
+nlohmann::json ToJson(const TokenInfo& token_info,
+                      const TokenInfo::Context& context, bool include_text) {
+  nlohmann::json json(nlohmann::json::object());
+  std::ostringstream stream;
+  context.token_enum_translator(stream, token_info.token_enum());
+  json["start"] = token_info.left(context.base);
+  json["end"] = token_info.right(context.base);
+  json["tag"] = stream.str();
+
+  if (include_text) {
+    json["text"] = std::string(token_info.text());
+  }
+
+  return json;
+}
+
+class DocumentSymbolFiller : public verible::SymbolVisitor {
+ public:
+  explicit DocumentSymbolFiller(absl::string_view base,
+                                DocumentSymbol *toplevel)
+    : context_(base,
+               [](std::ostream& stream, int e) {
+                 stream << e;
+               }),
+      line_column_map_(base),
+      current_symbol_(toplevel) {}
+
+  void Visit(const verible::SyntaxTreeLeaf& leaf) final {
+#if 0
+    const verilog_tokentype tokentype =
+      static_cast<verilog_tokentype>(leaf.Tag().tag);
+    absl::string_view type_str = TokenTypeToString(tokentype);
+    // Don't include token's text for operators, keywords, or anything that is a
+    // part of Verilog syntax. For such types, TokenTypeToString() is equal to
+    // token's text. Exception has to be made for identifiers, because things like
+    // "PP_Identifier" or "SymbolIdentifier" (which are values returned by
+    // TokenTypeToString()) could be used as Verilog identifier.
+    const bool include_text =
+      verilog::IsIdentifierLike(tokentype) || (leaf.get().text() != type_str);
+#endif
+    const auto &token = leaf.get();
+    current_symbol_->name = std::string(token.text());
+    current_symbol_->kind = 7;  // replaceme Property.
+    verible::LineColumn start = line_column_map_(token.left(context_.base));
+    verible::LineColumn end = line_column_map_(token.right(context_.base));
+    current_symbol_->range = {
+      .start = {.line = start.line, .character = start.column},
+      .end = {.line = end.line, .character = end.column},
+    };
+    current_symbol_->selectionRange = current_symbol_->range;
+  }
+
+  void Visit(const verible::SyntaxTreeNode& node) final {
+    DocumentSymbol node_symbol;
+    node_symbol.kind = 3;  // replaceme namespace
+    node_symbol.name = NodeEnumToString(static_cast<verilog::NodeEnum>(node.Tag().tag));
+    const verible::ValueSaver<DocumentSymbol*> value_saver(
+      &current_symbol_, nullptr);
+    for (const auto& child : node.children()) {
+      if (!child) continue;
+      DocumentSymbol child_symbol;
+      current_symbol_ = &child_symbol;
+      child->Accept(this);
+      if (node_symbol.children == nullptr) {  // first non-null child.
+        node_symbol.range.start = child_symbol.range.start;
+        node_symbol.children = json::array();
+      }
+      node_symbol.children.push_back(child_symbol);
+      node_symbol.range.end = child_symbol.range.end;  // keep track of last.
+    }
+  }
+
+ protected:
+  // Range of text spanned by syntax tree, used for offset calculation.
+  const verible::TokenInfo::Context context_;
+
+  const verible::LineColumnMap line_column_map_;
+  DocumentSymbol *current_symbol_;
+};
 
 bool operator<(const verible::lsp::Position &a,
                const verible::lsp::Position &b) {
@@ -176,6 +272,17 @@ class VersionedAnalyzedBuffer {
         preferred_fix = false;  // only the first is preferred.
       }
     }
+    return result;
+  }
+
+  std::vector<DocumentSymbol> HandleDocumentSymbols(
+    const DocumentSymbolParams &p) const {
+    std::vector<DocumentSymbol> result;
+    const absl::string_view base = parser_->Data().Contents();
+    DocumentSymbolFiller filler(base, &result.emplace_back());
+    const auto& text_structure = parser_->Data();
+    const auto& syntax_tree = text_structure.SyntaxTree();
+    syntax_tree->Accept(&filler);
     return result;
   }
 
@@ -348,9 +455,17 @@ int main(int argc, char *argv[]) {
         if (analyzed) return analyzed->HandleCodeAction(p);
         return {};
       });
+  dispatcher.AddRequestHandler(
+      "textDocument/documentSymbol",
+      [&parsed_buffers](
+          const DocumentSymbolParams &p) -> std::vector<DocumentSymbol> {
+        const auto analyzed = parsed_buffers.GetCurrent(p.textDocument.uri);
+        if (analyzed) return analyzed->HandleDocumentSymbols(p);
+        return {};
+      });
 
-  // The client sends a request to shut down. Use that to exit our loop.
-  bool shutdown_requested = false;
+      // The client sends a request to shut down. Use that to exit our loop.
+      bool shutdown_requested = false;
   dispatcher.AddRequestHandler("shutdown",
                                [&shutdown_requested](const nlohmann::json &) {
                                  shutdown_requested = true;
@@ -358,6 +473,13 @@ int main(int argc, char *argv[]) {
                                });
 
   int64_t last_updated_version = 0;
+  buffers.SetOpenCallback(
+    [&parsed_buffers, &last_updated_version](const std::string &uri,
+                                             const EditTextBuffer &txt) {
+      parsed_buffers.Update(uri, txt);
+      last_updated_version = txt.last_global_version();
+    });
+
   absl::Status status = absl::OkStatus();
   while (status.ok() && !shutdown_requested) {
     status = stream_splitter.PullFrom([](char *buf, int size) -> int {  //
