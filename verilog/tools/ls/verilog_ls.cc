@@ -22,7 +22,11 @@
 #include "common/lsp/message-stream-splitter.h"
 #include "common/util/init_command_line.h"
 #include "common/util/value_saver.h"
+#include "verilog/CST/class.h"
+#include "verilog/CST/functions.h"
 #include "verilog/CST/module.h"
+#include "verilog/CST/package.h"
+#include "verilog/CST/seq_block.h"
 #include "verilog/analysis/verilog_analyzer.h"
 #include "verilog/analysis/verilog_linter.h"
 #include "verilog/parser/verilog_token_classifications.h"
@@ -48,6 +52,7 @@ using verible::lsp::InitializeResult;
 using verible::lsp::JsonRpcDispatcher;
 using verible::lsp::MessageStreamSplitter;
 using verible::lsp::Range;
+using verilog::GetBeginLabelTokenInfo;
 
 using verilog::VerilogAnalyzer;
 
@@ -120,6 +125,9 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
       : kModuleSymbolKind(absl::GetFlag(FLAGS_kate_workaround)
                               ? SymbolKind::Method
                               : SymbolKind::Module),
+        kBlockSymbolKind(absl::GetFlag(FLAGS_kate_workaround)
+                             ? SymbolKind::Class
+                             : SymbolKind::Namespace),
         context_(base, [](std::ostream &stream, int e) { stream << e; }),
         line_column_map_(base),
         current_symbol_(toplevel) {
@@ -127,7 +135,9 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
   }
 
   Range RangeFromLeaf(const verible::SyntaxTreeLeaf &leaf) const {
-    const auto &token = leaf.get();
+    return RangeFromToken(leaf.get());
+  }
+  Range RangeFromToken(const TokenInfo &token) const {
     verible::LineColumn start = line_column_map_(token.left(context_.base));
     verible::LineColumn end = line_column_map_(token.right(context_.base));
     return {.start = {.line = start.line, .character = start.column},
@@ -148,6 +158,7 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
   void Visit(const verible::SyntaxTreeNode &node) final {
     DocumentSymbol *parent = current_symbol_;
 
+    // These things can probably be done easier with Matchers.
     DocumentSymbol node_symbol;
     node_symbol.range.start.line = kUninitializedStartLine;
     bool is_visible_node = false;
@@ -160,6 +171,44 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
         node_symbol.name = std::string(name_leaf.get().text());
         break;
       }
+      case verilog::NodeEnum::kSeqBlock:
+        if (!node.children().empty()) {
+          const auto &begin = node.children().front().get();
+          if (begin) {
+            if (const TokenInfo *token = GetBeginLabelTokenInfo(*begin);
+                token) {
+              is_visible_node = true;
+              node_symbol.kind = kBlockSymbolKind;
+              node_symbol.selectionRange = RangeFromToken(*token);
+              node_symbol.name = std::string(token->text());
+            }
+          }
+        }
+        break;
+      case verilog::NodeEnum::kClassDeclaration: {
+        const auto &class_name_leaf = verilog::GetClassName(node);
+        is_visible_node = true;
+        node_symbol.kind = SymbolKind::Class;
+        node_symbol.selectionRange = RangeFromToken(class_name_leaf.get());
+        node_symbol.name = std::string(class_name_leaf.get().text());
+      } break;
+
+      case verilog::NodeEnum::kPackageDeclaration: {
+        const auto &package_name = verilog::GetPackageNameToken(node);
+        is_visible_node = true;
+        node_symbol.kind = SymbolKind::Package;
+        node_symbol.selectionRange = RangeFromToken(package_name);
+        node_symbol.name = std::string(package_name.text());
+      } break;
+      case verilog::NodeEnum::kFunctionDeclaration: {
+        const auto &function_name = verilog::GetFunctionName(node);
+        if (function_name) {
+          is_visible_node = true;
+          node_symbol.kind = SymbolKind::Function;
+          node_symbol.selectionRange = RangeFromToken(function_name->get());
+          node_symbol.name = std::string(function_name->get().text());
+        }
+      } break;
       default:
         is_visible_node = false;
         break;
@@ -190,6 +239,7 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
 
  protected:
   const int kModuleSymbolKind;  // Might be different if kate-workaround.
+  const int kBlockSymbolKind;
   // Range of text spanned by syntax tree, used for offset calculation.
   const verible::TokenInfo::Context context_;
   const verible::LineColumnMap line_column_map_;
@@ -315,7 +365,7 @@ class VersionedAnalyzedBuffer {
     const auto &syntax_tree = text_structure.SyntaxTree();
     syntax_tree->Accept(&filler);
 
-    std::cerr << std::setw(2) << toplevel.children << "\n";
+    // std::cerr << std::setw(2) << toplevel.children << "\n";
     return toplevel.children;  // We cut down one level.
   }
 
