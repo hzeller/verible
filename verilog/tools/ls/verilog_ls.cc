@@ -26,6 +26,10 @@
 #include "verilog/analysis/verilog_linter.h"
 #include "verilog/parser/verilog_token_classifications.h"
 
+#include <iomanip>
+
+#include "verilog/CST/module.h"
+
 // temp.
 #include "verilog/CST/verilog_nonterminals.h"
 using verilog::NodeEnumToString;
@@ -53,6 +57,7 @@ using verible::lsp::MessageStreamSplitter;
 
 using verible::lsp::DocumentSymbol;
 using verible::lsp::DocumentSymbolParams;
+using verible::lsp::Range;
 
 using verilog::VerilogAnalyzer;
 
@@ -84,24 +89,40 @@ InitializeResult InitializeServer(const nlohmann::json &params) {
   return result;
 }
 
-nlohmann::json ToJson(const TokenInfo& token_info,
-                      const TokenInfo::Context& context, bool include_text) {
-  nlohmann::json json(nlohmann::json::object());
-  std::ostringstream stream;
-  context.token_enum_translator(stream, token_info.token_enum());
-  json["start"] = token_info.left(context.base);
-  json["end"] = token_info.right(context.base);
-  json["tag"] = stream.str();
-
-  if (include_text) {
-    json["text"] = std::string(token_info.text());
-  }
-
-  return json;
-}
+enum SymbolKind {
+  File = 1,    //  file
+  Module = 2,  // module. Kate does not seem to support that ?
+  Namespace = 3,
+  Package = 4,  // package
+  Class = 5,    // class
+  Method = 6,   // class -> method
+  Property = 7,
+  Field = 8,
+  Constructor = 9,
+  Enum = 10,  // enum
+  Interface = 11,
+  Function = 12,  // function
+  Variable = 13,
+  Constant = 14,
+  String = 15,
+  Number = 16,
+  Boolean = 17,
+  Array = 18,
+  Object = 19,
+  Key = 20,
+  Null = 21,
+  EnumMember = 22,
+  Struct = 23,
+  Event = 24,
+  Operator = 25,
+  TypeParameter = 26,
+};
 
 class DocumentSymbolFiller : public verible::SymbolVisitor {
  public:
+  // Magic value to hint that we have to fill out the start range.
+  static constexpr int kUninitializedStartLine = -1;
+
   explicit DocumentSymbolFiller(absl::string_view base,
                                 DocumentSymbol *toplevel)
     : context_(base,
@@ -109,50 +130,71 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
                  stream << e;
                }),
       line_column_map_(base),
-      current_symbol_(toplevel) {}
+      current_symbol_(toplevel) {
+    toplevel->range.start = { .line = 0, .character = 0};
+  }
 
-  void Visit(const verible::SyntaxTreeLeaf& leaf) final {
-#if 0
-    const verilog_tokentype tokentype =
-      static_cast<verilog_tokentype>(leaf.Tag().tag);
-    absl::string_view type_str = TokenTypeToString(tokentype);
-    // Don't include token's text for operators, keywords, or anything that is a
-    // part of Verilog syntax. For such types, TokenTypeToString() is equal to
-    // token's text. Exception has to be made for identifiers, because things like
-    // "PP_Identifier" or "SymbolIdentifier" (which are values returned by
-    // TokenTypeToString()) could be used as Verilog identifier.
-    const bool include_text =
-      verilog::IsIdentifierLike(tokentype) || (leaf.get().text() != type_str);
-#endif
+  Range RangeFromLeaf(const verible::SyntaxTreeLeaf& leaf) const {
     const auto &token = leaf.get();
-    current_symbol_->name = std::string(token.text());
-    current_symbol_->kind = 7;  // replaceme Property.
     verible::LineColumn start = line_column_map_(token.left(context_.base));
     verible::LineColumn end = line_column_map_(token.right(context_.base));
-    current_symbol_->range = {
+    return {
       .start = {.line = start.line, .character = start.column},
-      .end = {.line = end.line, .character = end.column},
+      .end = {.line = end.line, .character = end.column}
     };
-    current_symbol_->selectionRange = current_symbol_->range;
+  }
+
+  void Visit(const verible::SyntaxTreeLeaf& leaf) final {
+    Range range = RangeFromLeaf(leaf);
+    if (current_symbol_->range.start.line == kUninitializedStartLine) {
+      // We're the first concrete token with a position within our parent,
+      // set the start position.
+      current_symbol_->range.start = range.start;
+    }
+    // Update the end position with every token we see. The last one wins.
+    current_symbol_->range.end = range.end;
   }
 
   void Visit(const verible::SyntaxTreeNode& node) final {
+    DocumentSymbol *parent = current_symbol_;
+
     DocumentSymbol node_symbol;
-    node_symbol.kind = 3;  // replaceme namespace
-    node_symbol.name = NodeEnumToString(static_cast<verilog::NodeEnum>(node.Tag().tag));
-    const verible::ValueSaver<DocumentSymbol*> value_saver(
-      &current_symbol_, nullptr);
-    for (const auto& child : node.children()) {
-      if (!child) continue;
-      DocumentSymbol child_symbol;
-      current_symbol_ = &child_symbol;
-      child->Accept(this);
-      if (node_symbol.children == nullptr) {  // first non-null child.
-        node_symbol.range.start = child_symbol.range.start;
-        node_symbol.children = json::array();
+    node_symbol.range.start.line = kUninitializedStartLine;
+    bool is_visible_node = false;
+    switch (static_cast<verilog::NodeEnum>(node.Tag().tag)) {
+    case verilog::NodeEnum::kModuleDeclaration: {
+      is_visible_node = true;
+      node_symbol.kind = SymbolKind::Module;  // TODO: work around kate issue.
+      const auto &name_leaf = verilog::GetModuleName(node);
+      node_symbol.selectionRange = RangeFromLeaf(name_leaf);
+      node_symbol.name = std::string(name_leaf.get().text());
+      break;
+    }
+    default:
+      is_visible_node = false;
+      break;
+    }
+
+    // Independent of visible or not, we always descent to our children.
+    if (is_visible_node) {
+      const verible::ValueSaver<DocumentSymbol*> value_saver(
+        &current_symbol_, &node_symbol);
+      for (const auto& child : node.children()) {
+        if (child) child->Accept(this);
       }
-      node_symbol.children.push_back(child_symbol);
-      node_symbol.range.end = child_symbol.range.end;  // keep track of last.
+      if (parent->children == nullptr) {
+        if (parent->range.start.line == kUninitializedStartLine) {
+          parent->range.start = node_symbol.range.start;
+        }
+        parent->children = nlohmann::json::array();
+        parent->has_children = true;
+      }
+      parent->children.push_back(node_symbol);
+      parent->range.end = node_symbol.range.end;
+    } else {
+      for (const auto& child : node.children()) {
+        if (child) child->Accept(this);
+      }
     }
   }
 
@@ -273,15 +315,19 @@ class VersionedAnalyzedBuffer {
     return result;
   }
 
-  std::vector<DocumentSymbol> HandleDocumentSymbols(
+  nlohmann::json HandleDocumentSymbols(
     const DocumentSymbolParams &p) const {
-    std::vector<DocumentSymbol> result;
+    if (!parser_) return {};
+    DocumentSymbol toplevel;
     const absl::string_view base = parser_->Data().Contents();
-    DocumentSymbolFiller filler(base, &result.emplace_back());
+
+    DocumentSymbolFiller filler(base, &toplevel);
     const auto& text_structure = parser_->Data();
     const auto& syntax_tree = text_structure.SyntaxTree();
     syntax_tree->Accept(&filler);
-    return result;
+
+    std::cerr << std::setw(2) << toplevel.children << "\n";
+    return toplevel.children;  // We cut down one level.
   }
 
  private:
@@ -366,6 +412,7 @@ class BufferTracker {
   }
 
   const VersionedAnalyzedBuffer *current() const { return current_.get(); }
+  const VersionedAnalyzedBuffer *last_good() const { return last_good_.get(); }
 
  private:
   std::shared_ptr<VersionedAnalyzedBuffer> current_;
@@ -385,15 +432,29 @@ class ParsedBufferContainer {
   }
 
   const VersionedAnalyzedBuffer *GetCurrent(const std::string &uri) {
+    if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
+      return buffer->current();
+    }
+    return nullptr;
+  }
+
+  const VersionedAnalyzedBuffer *GetLastGood(const std::string &uri) {
+    if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
+      return buffer->last_good();
+    }
+    return nullptr;
+  }
+
+ private:
+  BufferTracker *FindBufferTrackerOrNull(const std::string &uri) {
     auto found = buffers_.find(uri);
     if (found == buffers_.end()) {
       std::cerr << "Did not find " << uri << std::endl;
       return nullptr;
     }
-    return found->second->current();
+    return found->second.get();
   }
 
- private:
   std::unordered_map<std::string, std::unique_ptr<BufferTracker>> buffers_;
 };
 
@@ -456,10 +517,10 @@ int main(int argc, char *argv[]) {
   dispatcher.AddRequestHandler(
       "textDocument/documentSymbol",
       [&parsed_buffers](
-          const DocumentSymbolParams &p) -> std::vector<DocumentSymbol> {
-        const auto analyzed = parsed_buffers.GetCurrent(p.textDocument.uri);
+        const DocumentSymbolParams &p) -> nlohmann::json {
+        const auto analyzed = parsed_buffers.GetLastGood(p.textDocument.uri);
         if (analyzed) return analyzed->HandleDocumentSymbols(p);
-        return {};
+        return nlohmann::json::array();
       });
 
       // The client sends a request to shut down. Use that to exit our loop.
@@ -471,7 +532,7 @@ int main(int argc, char *argv[]) {
                                });
 
   int64_t last_updated_version = 0;
-  buffers.SetOpenCallback(
+  buffers.SetChangeCallback(
     [&parsed_buffers, &last_updated_version](const std::string &uri,
                                              const EditTextBuffer &txt) {
       parsed_buffers.Update(uri, txt);

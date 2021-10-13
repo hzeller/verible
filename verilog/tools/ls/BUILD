@@ -23,6 +23,7 @@ cc_binary(
       "//common/util:init_command_line",
       "//verilog/analysis:verilog_analyzer",
       "//verilog/analysis:verilog_linter",
+      "//verilog/CST:module",
       "//verilog/parser:verilog_token",
     ],
 )
