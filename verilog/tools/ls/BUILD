@@ -24,6 +24,10 @@ cc_binary(
       "//verilog/analysis:verilog_analyzer",
       "//verilog/analysis:verilog_linter",
       "//verilog/CST:module",
+      "//verilog/CST:class",
+      "//verilog/CST:package",
+      "//verilog/CST:functions",
+      "//verilog/CST:seq_block",
       "//verilog/parser:verilog_token",
     ],
 )
