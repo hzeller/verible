@@ -49,16 +49,20 @@ First, enable LSP by checking `Settings > Configure Kate > Plugins > LSP Client`
 Then, there is a new `{} LSP Client` icon appearing on the left of the configure dialog. In the _User Server Settings_ tab, enter the lsp server configuration
 to get it started up on our Verilog/SystemVerilog projects.
 
+Kate has a bug that it can't show modules in the Symbol Outline view, so
+the `--kate_workaround` pretends them to be methods to be shown correctly.
+(TODO: file bug with kate)
+
 ```json
 {
     "servers": {
         "verilog": {
-            "command": ["verible-verilog-ls"],
+            "command": ["verible-verilog-ls", "--kate_workaround"],
             "root": "",
             "url": "https://github.com/chipsalliance/verible"
         },
         "systemverilog": {
-            "command": ["verible-verilog-ls"],
+            "command": ["verible-verilog-ls", "--kate_workaround"],
             "root": "",
             "url": "https://github.com/chipsalliance/verible"
         }

@@ -138,13 +138,8 @@ void BufferCollection::didOpenEvent(const DidOpenTextDocumentParams &o) {
   if (inserted.second) {
     inserted.first->second.reset(new EditTextBuffer(o.textDocument.text));
     inserted.first->second->set_last_global_version(++global_version_);
-<<<<<<< HEAD
     if (change_listener_)
       change_listener_(o.textDocument.uri, inserted.first->second.get());
-=======
-    if (change_callback_) change_callback_(o.textDocument.uri,
-                                           *inserted.first->second);
->>>>>>> a4889778 (Make general change callback.)
   }
 }
 
@@ -163,25 +158,7 @@ void BufferCollection::didChangeEvent(const DidChangeTextDocumentParams &o) {
   EditTextBuffer *const buffer = found->second.get();
   buffer->ApplyChanges(o.contentChanges);
   buffer->set_last_global_version(++global_version_);
-<<<<<<< HEAD
   if (change_listener_) change_listener_(o.textDocument.uri, buffer);
-=======
-  if (change_callback_) change_callback_(o.textDocument.uri, *buffer);
-}
-
-int BufferCollection::MapBuffersChangedSince(
-    int64_t last_global_version,
-    const std::function<void(const std::string &uri,
-                             const EditTextBuffer &buffer)> &map_fun) const {
-  if (global_version_ <= last_global_version) return 0;
-  int count = 0;
-  for (const auto &b : buffers_) {
-    if (b.second->last_global_version() <= last_global_version) continue;
-    ++count;
-    if (map_fun) map_fun(b.first, *b.second);
-  }
-  return count;
->>>>>>> a4889778 (Make general change callback.)
 }
 
 void EditTextBuffer::RequestContent(const ContentProcessFun &processor) const {
