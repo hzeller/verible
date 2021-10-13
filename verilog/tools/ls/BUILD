@@ -14,7 +14,7 @@ package(
 
 cc_binary(
     name = "verible-verilog-ls",
-    srcs = ["verilog_ls.cc"],
+    srcs = ["verilog_ls.cc", "document-symbol-filler.h"],
     deps = [
       "//common/lsp:lsp-protocol",
       "//common/lsp:json-rpc-dispatcher",
