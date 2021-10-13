@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 #include <iomanip>  // Only needed for json debugging right now
 #include <iostream>
 
@@ -21,15 +21,10 @@
 #include "common/lsp/lsp-text-buffer.h"
 #include "common/lsp/message-stream-splitter.h"
 #include "common/util/init_command_line.h"
-#include "common/util/value_saver.h"
-#include "verilog/CST/class.h"
-#include "verilog/CST/functions.h"
-#include "verilog/CST/module.h"
-#include "verilog/CST/package.h"
-#include "verilog/CST/seq_block.h"
 #include "verilog/analysis/verilog_analyzer.h"
 #include "verilog/analysis/verilog_linter.h"
 #include "verilog/parser/verilog_token_classifications.h"
+#include "verilog/tools/ls/document-symbol-filler.h"
 
 // Windows specific implementation of read()
 #ifndef _WIN32
@@ -85,166 +80,6 @@ InitializeResult InitializeServer(const nlohmann::json &params) {
 
   return result;
 }
-
-enum SymbolKind {
-  File = 1,    //  file
-  Module = 2,  // module. Kate does not seem to support that ?
-  Namespace = 3,
-  Package = 4,  // package
-  Class = 5,    // class
-  Method = 6,   // class -> method
-  Property = 7,
-  Field = 8,
-  Constructor = 9,
-  Enum = 10,  // enum
-  Interface = 11,
-  Function = 12,  // function
-  Variable = 13,
-  Constant = 14,
-  String = 15,
-  Number = 16,
-  Boolean = 17,
-  Array = 18,
-  Object = 19,
-  Key = 20,
-  Null = 21,
-  EnumMember = 22,
-  Struct = 23,
-  Event = 24,
-  Operator = 25,
-  TypeParameter = 26,
-};
-
-class DocumentSymbolFiller : public verible::SymbolVisitor {
- public:
-  // Magic value to hint that we have to fill out the start range.
-  static constexpr int kUninitializedStartLine = -1;
-
-  explicit DocumentSymbolFiller(absl::string_view base,
-                                DocumentSymbol *toplevel)
-      : kModuleSymbolKind(absl::GetFlag(FLAGS_kate_workaround)
-                              ? SymbolKind::Method
-                              : SymbolKind::Module),
-        kBlockSymbolKind(absl::GetFlag(FLAGS_kate_workaround)
-                             ? SymbolKind::Class
-                             : SymbolKind::Namespace),
-        context_(base, [](std::ostream &stream, int e) { stream << e; }),
-        line_column_map_(base),
-        current_symbol_(toplevel) {
-    toplevel->range.start = {.line = 0, .character = 0};
-  }
-
-  Range RangeFromLeaf(const verible::SyntaxTreeLeaf &leaf) const {
-    return RangeFromToken(leaf.get());
-  }
-  Range RangeFromToken(const TokenInfo &token) const {
-    verible::LineColumn start = line_column_map_(token.left(context_.base));
-    verible::LineColumn end = line_column_map_(token.right(context_.base));
-    return {.start = {.line = start.line, .character = start.column},
-            .end = {.line = end.line, .character = end.column}};
-  }
-
-  void Visit(const verible::SyntaxTreeLeaf &leaf) final {
-    Range range = RangeFromLeaf(leaf);
-    if (current_symbol_->range.start.line == kUninitializedStartLine) {
-      // We're the first concrete token with a position within our parent,
-      // set the start position.
-      current_symbol_->range.start = range.start;
-    }
-    // Update the end position with every token we see. The last one wins.
-    current_symbol_->range.end = range.end;
-  }
-
-  void Visit(const verible::SyntaxTreeNode &node) final {
-    DocumentSymbol *parent = current_symbol_;
-
-    // These things can probably be done easier with Matchers.
-    DocumentSymbol node_symbol;
-    node_symbol.range.start.line = kUninitializedStartLine;
-    bool is_visible_node = false;
-    switch (static_cast<verilog::NodeEnum>(node.Tag().tag)) {
-      case verilog::NodeEnum::kModuleDeclaration: {
-        is_visible_node = true;
-        node_symbol.kind = kModuleSymbolKind;
-        const auto &name_leaf = verilog::GetModuleName(node);
-        node_symbol.selectionRange = RangeFromLeaf(name_leaf);
-        node_symbol.name = std::string(name_leaf.get().text());
-        break;
-      }
-      case verilog::NodeEnum::kSeqBlock:
-        if (!node.children().empty()) {
-          const auto &begin = node.children().front().get();
-          if (begin) {
-            if (const TokenInfo *token = GetBeginLabelTokenInfo(*begin);
-                token) {
-              is_visible_node = true;
-              node_symbol.kind = kBlockSymbolKind;
-              node_symbol.selectionRange = RangeFromToken(*token);
-              node_symbol.name = std::string(token->text());
-            }
-          }
-        }
-        break;
-      case verilog::NodeEnum::kClassDeclaration: {
-        const auto &class_name_leaf = verilog::GetClassName(node);
-        is_visible_node = true;
-        node_symbol.kind = SymbolKind::Class;
-        node_symbol.selectionRange = RangeFromToken(class_name_leaf.get());
-        node_symbol.name = std::string(class_name_leaf.get().text());
-      } break;
-
-      case verilog::NodeEnum::kPackageDeclaration: {
-        const auto &package_name = verilog::GetPackageNameToken(node);
-        is_visible_node = true;
-        node_symbol.kind = SymbolKind::Package;
-        node_symbol.selectionRange = RangeFromToken(package_name);
-        node_symbol.name = std::string(package_name.text());
-      } break;
-      case verilog::NodeEnum::kFunctionDeclaration: {
-        const auto &function_name = verilog::GetFunctionName(node);
-        if (function_name) {
-          is_visible_node = true;
-          node_symbol.kind = SymbolKind::Function;
-          node_symbol.selectionRange = RangeFromToken(function_name->get());
-          node_symbol.name = std::string(function_name->get().text());
-        }
-      } break;
-      default:
-        is_visible_node = false;
-        break;
-    }
-
-    // Independent of visible or not, we always descent to our children.
-    if (is_visible_node) {
-      const verible::ValueSaver<DocumentSymbol *> value_saver(&current_symbol_,
-                                                              &node_symbol);
-      for (const auto &child : node.children()) {
-        if (child) child->Accept(this);
-      }
-      if (parent->children == nullptr) {
-        if (parent->range.start.line == kUninitializedStartLine) {
-          parent->range.start = node_symbol.range.start;
-        }
-        parent->children = nlohmann::json::array();
-        parent->has_children = true;
-      }
-      parent->children.push_back(node_symbol);
-      parent->range.end = node_symbol.range.end;
-    } else {
-      for (const auto &child : node.children()) {
-        if (child) child->Accept(this);
-      }
-    }
-  }
-
- protected:
-  const int kModuleSymbolKind;  // Might be different if kate-workaround.
-  const int kBlockSymbolKind;
-  // Range of text spanned by syntax tree, used for offset calculation.
-  const verible::TokenInfo::Context context_;
-  const verible::LineColumnMap line_column_map_;
-  DocumentSymbol *current_symbol_;
-};
 
 bool operator<(const verible::lsp::Position &a,
                const verible::lsp::Position &b) {
@@ -360,7 +195,8 @@ class VersionedAnalyzedBuffer {
     DocumentSymbol toplevel;
     const absl::string_view base = parser_->Data().Contents();
 
-    DocumentSymbolFiller filler(base, &toplevel);
+    verilog::DocumentSymbolFiller filler(absl::GetFlag(FLAGS_kate_workaround),
+                                         base, &toplevel);
     const auto &text_structure = parser_->Data();
     const auto &syntax_tree = text_structure.SyntaxTree();
     syntax_tree->Accept(&filler);
