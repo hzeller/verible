@@ -126,13 +126,13 @@ class BufferCollection {
 
   size_t documents_open() const { return buffers_.size(); }
 
-  void SetOpenCallback(const UriBufferCallback &callback) {
-    open_callback_ = callback;
+  void SetChangeCallback(const UriBufferCallback &callback) {
+    change_callback_ = callback;
   }
 
  private:
   int64_t global_version_ = 0;
-  UriBufferCallback open_callback_ = nullptr;
+  UriBufferCallback change_callback_ = nullptr;
   std::unordered_map<std::string, std::unique_ptr<EditTextBuffer>> buffers_;
 };
 }  // namespace lsp
