@@ -72,7 +72,8 @@ DocumentSymbol:
   kind: integer   # SymbolKind enum
   range: Range    # The whole range this symbol (e.g. function/class) covers
   selectionRange: Range  # Part to be highlighted (e.g. name of class)
-  children?: object   # DocumentSymbol[]
+  # DocumentSymbol[]
+  children?: object = nullptr
 
 # -- textDocument/publishDiagnostics
 Diagnostic:

@@ -129,9 +129,19 @@ class BufferCollection {
 
   size_t documents_open() const { return buffers_.size(); }
 
+<<<<<<< HEAD
  private:
   int64_t global_version_ = 0;
   UriBufferCallback change_listener_ = nullptr;
+=======
+  void SetChangeCallback(const UriBufferCallback &callback) {
+    change_callback_ = callback;
+  }
+
+ private:
+  int64_t global_version_ = 0;
+  UriBufferCallback change_callback_ = nullptr;
+>>>>>>> a4889778 (Make general change callback.)
   std::unordered_map<std::string, std::unique_ptr<EditTextBuffer>> buffers_;
 };
 }  // namespace lsp
