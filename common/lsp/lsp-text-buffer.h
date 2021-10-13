@@ -111,9 +111,8 @@ class BufferCollection {
   // only changed buffers when calling MapBuffersChangedSince()
   int64_t global_version() const { return global_version_; }
 
-  using UriBufferCallback = std::function<void(const std::string &uri,
-                                               const EditTextBuffer &buffer)>;
-
+  using UriBufferCallback =
+      std::function<void(const std::string &uri, const EditTextBuffer &buffer)>;
 
   // Calls "map_fun"() on each buffer that has changed since the given version.
   // This allows to only process changed buffers.
@@ -121,8 +120,8 @@ class BufferCollection {
   // "map_fun" can be nullptr in which case only the number of changed buffers.
   // are returned.
   // Returns number of buffers for which the condition applied.
-  int MapBuffersChangedSince(
-    int64_t last_global_version, const UriBufferCallback &map_fun) const;
+  int MapBuffersChangedSince(int64_t last_global_version,
+                             const UriBufferCallback &map_fun) const;
 
   size_t documents_open() const { return buffers_.size(); }
 

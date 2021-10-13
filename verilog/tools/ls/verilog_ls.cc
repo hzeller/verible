@@ -12,31 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// A super-simple dummy LSP without functionality except responding
-// to initialize and shutdown as well as tracking file contents.
-// This is merely to test that the json-rpc plumbing is working.
+#include <iomanip>  // Only needed for json debugging right now
+#include <iostream>
 
+#include "absl/flags/flag.h"
 #include "common/lsp/json-rpc-dispatcher.h"
 #include "common/lsp/lsp-protocol.h"
 #include "common/lsp/lsp-text-buffer.h"
 #include "common/lsp/message-stream-splitter.h"
 #include "common/util/init_command_line.h"
 #include "common/util/value_saver.h"
+#include "verilog/CST/module.h"
 #include "verilog/analysis/verilog_analyzer.h"
 #include "verilog/analysis/verilog_linter.h"
 #include "verilog/parser/verilog_token_classifications.h"
 
-#include <iomanip>
-
-#include "verilog/CST/module.h"
-
-// temp.
-#include "verilog/CST/verilog_nonterminals.h"
-using verilog::NodeEnumToString;
-
-#include "verilog/parser/verilog_token.h"
-using verilog::TokenTypeToString;
-
+// Windows specific implementation of read()
 #ifndef _WIN32
 #include <unistd.h>
 #else
@@ -50,16 +41,17 @@ using verilog::TokenTypeToString;
 using nlohmann::json;
 using verible::TokenInfo;
 using verible::lsp::BufferCollection;
+using verible::lsp::DocumentSymbol;
+using verible::lsp::DocumentSymbolParams;
 using verible::lsp::EditTextBuffer;
 using verible::lsp::InitializeResult;
 using verible::lsp::JsonRpcDispatcher;
 using verible::lsp::MessageStreamSplitter;
-
-using verible::lsp::DocumentSymbol;
-using verible::lsp::DocumentSymbolParams;
 using verible::lsp::Range;
 
 using verilog::VerilogAnalyzer;
+
+ABSL_FLAG(bool, kate_workaround, false, "Work around some kate issues");
 
 static std::string GetVersionNumber() {
   return "0.0 alpha";  // TODO(hzeller): once ready, extract from build version
@@ -82,8 +74,8 @@ InitializeResult InitializeServer(const nlohmann::json &params) {
               {"change", 2},        // Incremental updates
           },
       },
-      {"codeActionProvider", true},
-      {"documentSymbolProvider", true},
+      {"codeActionProvider", true},      // Autofixes for lint errors
+      {"documentSymbolProvider", true},  // Outline of file
   };
 
   return result;
@@ -125,26 +117,24 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
 
   explicit DocumentSymbolFiller(absl::string_view base,
                                 DocumentSymbol *toplevel)
-    : context_(base,
-               [](std::ostream& stream, int e) {
-                 stream << e;
-               }),
-      line_column_map_(base),
-      current_symbol_(toplevel) {
-    toplevel->range.start = { .line = 0, .character = 0};
+      : kModuleSymbolKind(absl::GetFlag(FLAGS_kate_workaround)
+                              ? SymbolKind::Method
+                              : SymbolKind::Module),
+        context_(base, [](std::ostream &stream, int e) { stream << e; }),
+        line_column_map_(base),
+        current_symbol_(toplevel) {
+    toplevel->range.start = {.line = 0, .character = 0};
   }
 
-  Range RangeFromLeaf(const verible::SyntaxTreeLeaf& leaf) const {
+  Range RangeFromLeaf(const verible::SyntaxTreeLeaf &leaf) const {
     const auto &token = leaf.get();
     verible::LineColumn start = line_column_map_(token.left(context_.base));
     verible::LineColumn end = line_column_map_(token.right(context_.base));
-    return {
-      .start = {.line = start.line, .character = start.column},
-      .end = {.line = end.line, .character = end.column}
-    };
+    return {.start = {.line = start.line, .character = start.column},
+            .end = {.line = end.line, .character = end.column}};
   }
 
-  void Visit(const verible::SyntaxTreeLeaf& leaf) final {
+  void Visit(const verible::SyntaxTreeLeaf &leaf) final {
     Range range = RangeFromLeaf(leaf);
     if (current_symbol_->range.start.line == kUninitializedStartLine) {
       // We're the first concrete token with a position within our parent,
@@ -155,31 +145,31 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
     current_symbol_->range.end = range.end;
   }
 
-  void Visit(const verible::SyntaxTreeNode& node) final {
+  void Visit(const verible::SyntaxTreeNode &node) final {
     DocumentSymbol *parent = current_symbol_;
 
     DocumentSymbol node_symbol;
     node_symbol.range.start.line = kUninitializedStartLine;
     bool is_visible_node = false;
     switch (static_cast<verilog::NodeEnum>(node.Tag().tag)) {
-    case verilog::NodeEnum::kModuleDeclaration: {
-      is_visible_node = true;
-      node_symbol.kind = SymbolKind::Module;  // TODO: work around kate issue.
-      const auto &name_leaf = verilog::GetModuleName(node);
-      node_symbol.selectionRange = RangeFromLeaf(name_leaf);
-      node_symbol.name = std::string(name_leaf.get().text());
-      break;
-    }
-    default:
-      is_visible_node = false;
-      break;
+      case verilog::NodeEnum::kModuleDeclaration: {
+        is_visible_node = true;
+        node_symbol.kind = kModuleSymbolKind;
+        const auto &name_leaf = verilog::GetModuleName(node);
+        node_symbol.selectionRange = RangeFromLeaf(name_leaf);
+        node_symbol.name = std::string(name_leaf.get().text());
+        break;
+      }
+      default:
+        is_visible_node = false;
+        break;
     }
 
     // Independent of visible or not, we always descent to our children.
     if (is_visible_node) {
-      const verible::ValueSaver<DocumentSymbol*> value_saver(
-        &current_symbol_, &node_symbol);
-      for (const auto& child : node.children()) {
+      const verible::ValueSaver<DocumentSymbol *> value_saver(&current_symbol_,
+                                                              &node_symbol);
+      for (const auto &child : node.children()) {
         if (child) child->Accept(this);
       }
       if (parent->children == nullptr) {
@@ -192,16 +182,16 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
       parent->children.push_back(node_symbol);
       parent->range.end = node_symbol.range.end;
     } else {
-      for (const auto& child : node.children()) {
+      for (const auto &child : node.children()) {
         if (child) child->Accept(this);
       }
     }
   }
 
  protected:
+  const int kModuleSymbolKind;  // Might be different if kate-workaround.
   // Range of text spanned by syntax tree, used for offset calculation.
   const verible::TokenInfo::Context context_;
-
   const verible::LineColumnMap line_column_map_;
   DocumentSymbol *current_symbol_;
 };
@@ -315,20 +305,21 @@ class VersionedAnalyzedBuffer {
     return result;
   }
 
-  nlohmann::json HandleDocumentSymbols(
-    const DocumentSymbolParams &p) const {
+  nlohmann::json HandleDocumentSymbols(const DocumentSymbolParams &p) const {
     if (!parser_) return {};
     DocumentSymbol toplevel;
     const absl::string_view base = parser_->Data().Contents();
 
     DocumentSymbolFiller filler(base, &toplevel);
-    const auto& text_structure = parser_->Data();
-    const auto& syntax_tree = text_structure.SyntaxTree();
+    const auto &text_structure = parser_->Data();
+    const auto &syntax_tree = text_structure.SyntaxTree();
     syntax_tree->Accept(&filler);
 
     std::cerr << std::setw(2) << toplevel.children << "\n";
     return toplevel.children;  // We cut down one level.
   }
+
+  int64_t version() const { return version_; }
 
  private:
   void RunLinter(absl::string_view filename) {
@@ -402,6 +393,8 @@ class BufferTracker {
  public:
   void Update(const std::string &filename, const EditTextBuffer &txt) {
     // TODO: remove file:// prefix.
+    if (current_ && current_->version() == txt.last_global_version())
+      return;  // Nothing to do.
     txt.RequestContent([&txt, &filename, this](absl::string_view content) {
       current_ = std::make_shared<VersionedAnalyzedBuffer>(
           txt.last_global_version(), filename, content);
@@ -516,44 +509,32 @@ int main(int argc, char *argv[]) {
       });
   dispatcher.AddRequestHandler(
       "textDocument/documentSymbol",
-      [&parsed_buffers](
-        const DocumentSymbolParams &p) -> nlohmann::json {
+      [&parsed_buffers](const DocumentSymbolParams &p) -> nlohmann::json {
         const auto analyzed = parsed_buffers.GetLastGood(p.textDocument.uri);
         if (analyzed) return analyzed->HandleDocumentSymbols(p);
         return nlohmann::json::array();
       });
 
-      // The client sends a request to shut down. Use that to exit our loop.
-      bool shutdown_requested = false;
+  // The client sends a request to shut down. Use that to exit our loop.
+  bool shutdown_requested = false;
   dispatcher.AddRequestHandler("shutdown",
                                [&shutdown_requested](const nlohmann::json &) {
                                  shutdown_requested = true;
                                  return nullptr;
                                });
 
-  int64_t last_updated_version = 0;
   buffers.SetChangeCallback(
-    [&parsed_buffers, &last_updated_version](const std::string &uri,
-                                             const EditTextBuffer &txt) {
-      parsed_buffers.Update(uri, txt);
-      last_updated_version = txt.last_global_version();
-    });
+      [&parsed_buffers, &dispatcher](const std::string &uri,
+                                     const EditTextBuffer &txt) {
+        BufferTracker *const buffer = parsed_buffers.Update(uri, txt);
+        ConsiderSendDiagnostics(uri, buffer->current(), &dispatcher);
+      });
 
   absl::Status status = absl::OkStatus();
   while (status.ok() && !shutdown_requested) {
     status = stream_splitter.PullFrom([](char *buf, int size) -> int {  //
       return read(in_fd, buf, size);
     });
-
-    // TODO: this should work async.
-    buffers.MapBuffersChangedSince(
-        last_updated_version,
-        [&parsed_buffers, &dispatcher](const std::string &uri,
-                                       const EditTextBuffer &txt) {
-          BufferTracker *const buffer = parsed_buffers.Update(uri, txt);
-          ConsiderSendDiagnostics(uri, buffer->current(), &dispatcher);
-        });
-    last_updated_version = buffers.global_version();
   }
 
   std::cerr << status.message() << std::endl;
