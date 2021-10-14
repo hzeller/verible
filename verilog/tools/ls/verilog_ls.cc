@@ -38,7 +38,6 @@
 #endif
 
 using nlohmann::json;
-using verible::TokenInfo;
 using verible::lsp::BufferCollection;
 using verible::lsp::DocumentSymbol;
 using verible::lsp::DocumentSymbolParams;
@@ -47,7 +46,6 @@ using verible::lsp::InitializeResult;
 using verible::lsp::JsonRpcDispatcher;
 using verible::lsp::MessageStreamSplitter;
 using verible::lsp::Range;
-using verilog::GetBeginLabelTokenInfo;
 
 using verilog::VerilogAnalyzer;
 

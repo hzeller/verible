@@ -4,8 +4,6 @@
 
 licenses(["notice"])
 
-load("//common/lsp:jcxxgen.bzl", "jcxxgen")
-
 package(
     default_visibility = [
         "//:__subpackages__",
