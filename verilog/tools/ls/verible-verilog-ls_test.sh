@@ -38,6 +38,7 @@ awk '{printf("Content-Length: %d\r\n\r\n%s", length($0), $0)}' > ${TMP_IN} <<EOF
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://mini.sv","text":"module mini();\nendmodule"}}}
 {"jsonrpc":"2.0", "id":2, "method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file://mini.sv"}}}
 {"jsonrpc":"2.0", "id":3, "method":"textDocument/codeAction","params":{"textDocument":{"uri":"file://mini.sv"},"range":{"start":{"line":0,"character":0},"end":{"line":2,"character":0}}}}
+{"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":"file://mini.sv"}}}
 {"jsonrpc":"2.0", "id":100, "method":"shutdown","params":{}}
 EOF
 
