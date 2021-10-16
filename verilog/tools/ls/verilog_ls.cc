@@ -79,6 +79,19 @@ InitializeResult InitializeServer(const nlohmann::json &params) {
   return result;
 }
 
+nlohmann::json HandleDocumentSymbols(const VerilogAnalyzer &parser,
+                                     const DocumentSymbolParams &p) {
+  DocumentSymbol toplevel;
+  const absl::string_view base = parser.Data().Contents();
+
+  verilog::DocumentSymbolFiller filler(absl::GetFlag(FLAGS_kate_workaround),
+                                       base, &toplevel);
+  const auto &text_structure = parser.Data();
+  const auto &syntax_tree = text_structure.SyntaxTree();
+  syntax_tree->Accept(&filler);
+  return toplevel.children;  // We cut down one level.
+}
+
 class ParsedBuffer {
  public:
   ParsedBuffer(int64_t version, absl::string_view uri,
@@ -93,6 +106,8 @@ class ParsedBuffer {
   bool parsed_successfully() const {
     return parser_->LexStatus().ok() && parser_->ParseStatus().ok();
   }
+
+  const VerilogAnalyzer &parser() const { return *parser_; }
 
   std::vector<verible::lsp::Diagnostic> GetDiagnostics() const {
     // TODO: files that generate a lot of messages will create a huge
@@ -171,21 +186,6 @@ class ParsedBuffer {
       }
     }
     return result;
-  }
-
-  nlohmann::json HandleDocumentSymbols(const DocumentSymbolParams &p) const {
-    if (!parser_) return {};
-    DocumentSymbol toplevel;
-    const absl::string_view base = parser_->Data().Contents();
-
-    verilog::DocumentSymbolFiller filler(absl::GetFlag(FLAGS_kate_workaround),
-                                         base, &toplevel);
-    const auto &text_structure = parser_->Data();
-    const auto &syntax_tree = text_structure.SyntaxTree();
-    syntax_tree->Accept(&filler);
-
-    // std::cerr << std::setw(2) << toplevel.children << "\n";
-    return toplevel.children;  // We cut down one level.
   }
 
   int64_t version() const { return version_; }
@@ -392,7 +392,7 @@ int main(int argc, char *argv[]) {
       "textDocument/documentSymbol",
       [&parsed_buffers](const DocumentSymbolParams &p) -> nlohmann::json {
         const auto analyzed = parsed_buffers.GetLastGood(p.textDocument.uri);
-        if (analyzed) return analyzed->HandleDocumentSymbols(p);
+        if (analyzed) return HandleDocumentSymbols(analyzed->parser(), p);
         return nlohmann::json::array();
       });
 
