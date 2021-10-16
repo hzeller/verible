@@ -2,6 +2,8 @@
 #
 # [1]: https://microsoft.github.io/language-server-protocol/specification
 
+load("//bazel:sh_test_with_runfiles_lib.bzl", "sh_test_with_runfiles_lib")
+
 licenses(["notice"])
 
 package(
@@ -52,4 +54,13 @@ cc_binary(
       "//verilog/analysis:verilog_analyzer",
       "//verilog/analysis:verilog_linter",
     ],
+)
+
+sh_test_with_runfiles_lib(
+    name = "verible-verilog-ls_test",
+    size = "small",
+    srcs = ["verible-verilog-ls_test.sh"],
+    args = ["$(location :verible-verilog-ls)"],
+    data = [":verible-verilog-ls"],
+    deps = [],
 )
