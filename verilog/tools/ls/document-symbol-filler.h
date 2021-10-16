@@ -80,6 +80,7 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
         break;
       }
       case verilog::NodeEnum::kSeqBlock:
+      case verilog::NodeEnum::kGenerateBlock:
         if (!node.children().empty()) {
           const auto &begin = node.children().front().get();
           if (begin) {
