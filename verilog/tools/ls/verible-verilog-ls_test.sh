@@ -34,6 +34,9 @@ MSG_OUT=${TEST_TMPDIR:-/tmp/}/test-lsp-out-msg.txt
 # Requesting an autofix (codeAction) of the EOF violation
 # We then apply an edit (didChange) and expect that the published diagnostics
 # for the edited file will be empty.
+#
+# TODO: maye this awk-script should be replaced with something that allows
+# multi-line input with comment.
 awk '{printf("Content-Length: %d\r\n\r\n%s", length($0), $0)}' > ${TMP_IN} <<EOF
 {"jsonrpc":"2.0", "id":1, "method":"initialize","params":null}
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://syntaxerror.sv","text":"brokenfile\n"}}}
