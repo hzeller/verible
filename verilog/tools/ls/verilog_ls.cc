@@ -155,6 +155,72 @@ std::vector<verible::lsp::Diagnostic> CreateDiagnostics(
   return result;
 }
 
+static std::vector<verible::lsp::TextEdit> AutofixToTextEdits(
+    const verible::AutoFix &fix, absl::string_view base,
+    const verible::LineColumnMap &lc_map) {
+  std::vector<verible::lsp::TextEdit> result;
+  // TODO(hzeller): figure out if edits are stacking or are all based
+  // on the same start status.
+  for (const verible::ReplacementEdit &edit : fix.Edits()) {
+    verible::LineColumn start = lc_map(edit.fragment.begin() - base.begin());
+    verible::LineColumn end = lc_map(edit.fragment.end() - base.begin());
+    result.emplace_back(verible::lsp::TextEdit{
+        .range =
+            {
+                .start = {.line = start.line, .character = start.column},
+                .end = {.line = end.line, .character = end.column},
+            },
+        .newText = edit.replacement,
+    });
+  }
+  return result;
+}
+
+std::vector<verible::lsp::CodeAction> GenerateLinterCodeActions(
+  const VerilogAnalyzer &parser,
+  const std::vector<verible::LintRuleStatus> &lint_statuses,
+  const verible::lsp::CodeActionParams &p) {
+  auto const &lint_violations = verilog::GetSortedViolations(lint_statuses);
+  if (lint_violations.empty()) return {};
+
+  const absl::string_view base = parser.Data().Contents();
+  verible::LineColumnMap line_column_map(base);
+
+  std::vector<verible::lsp::CodeAction> result;
+  for (const auto &v : lint_violations) {
+    const verible::LintViolation &violation = *v.violation;
+    if (violation.autofixes.empty()) continue;
+    auto diagnostic = ViolationToDiagnostic(v, base, line_column_map);
+
+    // The editor usually has the cursor on a line or word, so we
+    // only want to output edits that are relevant.
+    if (!rangeOverlap(diagnostic.range, p.range)) continue;
+
+    bool preferred_fix = true;
+    for (const auto &fix : violation.autofixes) {
+      result.emplace_back(verible::lsp::CodeAction{
+          .title = fix.Description(),
+          .kind = "quickfix",
+          .diagnostics = {diagnostic},
+          .isPreferred = preferred_fix,
+          // The following is translated from json, map uri -> edits.
+          // We're only sending changes for one document, the current one.
+          .edit = {.changes = {{p.textDocument.uri,
+                                AutofixToTextEdits(fix, base,
+                                                   line_column_map)}}},
+      });
+      preferred_fix = false;  // only the first is preferred.
+    }
+  }
+  return result;
+}
+
+// A parsed buffer collects all the artifacts generated from a text buffer
+// from parsing or running the linter.
+////
+// Right now, the ParsedBuffer is synchronously filling its internal structure
+// on construction, but plan is to do that on-demand and possibly with
+// std::future<>s evaluated in separate threads.
 class ParsedBuffer {
  public:
   ParsedBuffer(int64_t version, absl::string_view uri,
@@ -163,7 +229,10 @@ class ParsedBuffer {
         parser_(VerilogAnalyzer::AnalyzeAutomaticMode(content, uri)) {
     std::cerr << "Analyzed " << uri << " lex:" << parser_->LexStatus()
               << "; parser:" << parser_->ParseStatus() << std::endl;
-    RunLinter(uri);  // TODO: we should use filename here
+    // TODO: we should use a filename not URI
+    if (const auto &lint_result = RunLinter(uri); lint_result.ok()) {
+      lint_statuses_ = lint_result.value();
+    }
   }
 
   bool parsed_successfully() const {
@@ -175,47 +244,11 @@ class ParsedBuffer {
     return lint_statuses_;
   }
 
-  std::vector<verible::lsp::CodeAction> HandleCodeAction(
-      const verible::lsp::CodeActionParams &p) const {
-    auto const &lint_violations = verilog::GetSortedViolations(lint_statuses_);
-    if (lint_violations.empty()) return {};
-
-    const absl::string_view base = parser_->Data().Contents();
-    verible::LineColumnMap line_column_map(base);
-
-    std::vector<verible::lsp::CodeAction> result;
-    for (const auto &v : lint_violations) {
-      const verible::LintViolation &violation = *v.violation;
-      if (violation.autofixes.empty()) continue;
-      auto diagnostic = ViolationToDiagnostic(v, base, line_column_map);
-
-      // The editor usually has the cursor on a line or word, so we
-      // only want to output edits that are relevant.
-      if (!rangeOverlap(diagnostic.range, p.range)) continue;
-
-      bool preferred_fix = true;
-      for (const auto &fix : violation.autofixes) {
-        result.emplace_back(verible::lsp::CodeAction{
-            .title = fix.Description(),
-            .kind = "quickfix",
-            .diagnostics = {diagnostic},
-            .isPreferred = preferred_fix,
-            // The following is translated from json, map uri -> edits.
-            // We're only sending changes for one document, the current one.
-            .edit = {.changes = {{p.textDocument.uri,
-                                  AutofixToTextEdits(fix, base,
-                                                     line_column_map)}}},
-        });
-        preferred_fix = false;  // only the first is preferred.
-      }
-    }
-    return result;
-  }
-
   int64_t version() const { return version_; }
 
  private:
-  void RunLinter(absl::string_view filename) {
+  absl::StatusOr<std::vector<verible::LintRuleStatus>> RunLinter(
+    absl::string_view filename) {
     const auto &text_structure = parser_->Data();
     verilog::LinterConfiguration config;  // TODO: read from project context
     verilog::RuleBundle bundle;
@@ -225,37 +258,9 @@ class ParsedBuffer {
     });
     if (!status.ok()) {
       std::cerr << "Got an issue with the lint configuration" << std::endl;
-      return;
+      return status;
     }
-    const bool show_context = true;  // ? needed
-    const auto linter_result = VerilogLintTextStructure(
-        filename, config, text_structure, show_context);
-    if (!linter_result.ok()) {
-      return;
-    }
-
-    lint_statuses_ = linter_result.value();
-  }
-
-  static std::vector<verible::lsp::TextEdit> AutofixToTextEdits(
-      const verible::AutoFix &fix, absl::string_view base,
-      const verible::LineColumnMap &lc_map) {
-    std::vector<verible::lsp::TextEdit> result;
-    // TODO(hzeller): figure out if edits are stacking or are all based
-    // on the same start status.
-    for (const verible::ReplacementEdit &edit : fix.Edits()) {
-      verible::LineColumn start = lc_map(edit.fragment.begin() - base.begin());
-      verible::LineColumn end = lc_map(edit.fragment.end() - base.begin());
-      result.emplace_back(verible::lsp::TextEdit{
-          .range =
-              {
-                  .start = {.line = start.line, .character = start.column},
-                  .end = {.line = end.line, .character = end.column},
-              },
-          .newText = edit.replacement,
-      });
-    }
-    return result;
+    return VerilogLintTextStructure(filename, config, text_structure);
   }
 
   const int64_t version_;
@@ -391,7 +396,10 @@ int main(int argc, char *argv[]) {
       [&parsed_buffers](const verible::lsp::CodeActionParams &p)
           -> std::vector<verible::lsp::CodeAction> {
         const auto analyzed = parsed_buffers.GetCurrent(p.textDocument.uri);
-        if (analyzed) return analyzed->HandleCodeAction(p);
+        if (analyzed) {
+          return GenerateLinterCodeActions(analyzed->parser(),
+                                           analyzed->lint_result(), p);
+        }
         return {};
       });
   dispatcher.AddRequestHandler(
