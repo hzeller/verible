@@ -32,12 +32,15 @@ MSG_OUT=${TEST_TMPDIR:-/tmp/}/test-lsp-out-msg.txt
 #
 # Requesting documentSymbol outline tree on the parseable file
 # Requesting an autofix (codeAction) of the EOF violation
+# We then apply an edit (didChange) and expect that the published diagnostics
+# for the edited file will be empty.
 awk '{printf("Content-Length: %d\r\n\r\n%s", length($0), $0)}' > ${TMP_IN} <<EOF
 {"jsonrpc":"2.0", "id":1, "method":"initialize","params":null}
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://syntaxerror.sv","text":"brokenfile\n"}}}
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://mini.sv","text":"module mini();\nendmodule"}}}
 {"jsonrpc":"2.0", "id":2, "method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file://mini.sv"}}}
 {"jsonrpc":"2.0", "id":3, "method":"textDocument/codeAction","params":{"textDocument":{"uri":"file://mini.sv"},"range":{"start":{"line":0,"character":0},"end":{"line":2,"character":0}}}}
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file://mini.sv"},"contentChanges":[{"range":{"start":{"character":9,"line":1},"end":{"character":9,"line":1}},"text":"\n"}]}}
 {"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":"file://mini.sv"}}}
 {"jsonrpc":"2.0", "id":100, "method":"shutdown","params":{}}
 EOF
@@ -83,6 +86,15 @@ cat > "${JSON_EXPECTED}" <<EOF
        "result": [
           {"edit": {"changes": {"file://mini.sv":[{"newText":"\n"}]}}}
         ]
+    }
+  },
+  {
+    "json_contains": {
+       "method":"textDocument/publishDiagnostics",
+       "params": {
+          "uri": "file://mini.sv",
+          "diagnostics":[]
+       }
     }
   },
   {
