@@ -42,7 +42,6 @@
 using nlohmann::json;
 using verible::lsp::BufferCollection;
 using verible::lsp::DocumentSymbolParams;
-using verible::lsp::EditTextBuffer;
 using verible::lsp::InitializeResult;
 using verible::lsp::JsonRpcDispatcher;
 using verible::lsp::MessageStreamSplitter;
@@ -84,9 +83,13 @@ static InitializeResult InitializeServer(const nlohmann::json &params) {
   return result;
 }
 
+// Publish a diagnostic sent to the server.
 static void SendDiagnostics(const std::string &uri,
                             const verilog::ParsedBuffer *buffer,
                             JsonRpcDispatcher *dispatcher) {
+  // TODO: Cache result and rate-limit.
+  // This should not send anything if the diagnostics we're about to
+  // send would be exactly the same as last time.
   verible::lsp::PublishDiagnosticsParams params;
   params.uri = uri;
   params.diagnostics =
@@ -130,13 +133,29 @@ int main(int argc, char *argv[]) {
   BufferCollection buffers(&dispatcher);
   verilog::BufferTrackerContainer parsed_buffers;
 
+  // Subscribe the parsed buffers to changes updating the text edit buffers
+  buffers.SetChangeCallback(parsed_buffers.GetSubscriptionCallback());
+
+  // Whenever there is a new parse result ready, use that as an opportunity
+  // to send diagnostics to the client.
+  parsed_buffers.SetChangeListener(
+      [&dispatcher](const std::string &uri,
+                    const verilog::BufferTracker &buffer_tracker) {
+        SendDiagnostics(uri, buffer_tracker.current(), &dispatcher);
+      });
+
+  // -- Register JSON RPC callbacks
+
   // Exchange of capabilities.
   dispatcher.AddRequestHandler("initialize", InitializeServer);
 
+  // Provide autofixes
   dispatcher.AddRequestHandler(
       "textDocument/codeAction",
       [&parsed_buffers](const verible::lsp::CodeActionParams &p)
           -> std::vector<verible::lsp::CodeAction> {
+        // autofixes should be based on the latest known document to provide
+        // accurate positions and ranges.
         const auto analyzed = parsed_buffers.GetCurrent(p.textDocument.uri);
         if (analyzed) {
           return GenerateLinterCodeActions(analyzed->parser(),
@@ -144,9 +163,12 @@ int main(int argc, char *argv[]) {
         }
         return {};
       });
+
+  // Provide outline
   dispatcher.AddRequestHandler(
       "textDocument/documentSymbol",
       [&parsed_buffers](const DocumentSymbolParams &p) -> nlohmann::json {
+        // Document outline only makes sense from the last completely parsed
         const auto analyzed = parsed_buffers.GetLastGood(p.textDocument.uri);
         if (analyzed) {
           return CreateDocumentSymbolOutline(
@@ -162,17 +184,6 @@ int main(int argc, char *argv[]) {
                                  shutdown_requested = true;
                                  return nullptr;
                                });
-
-  buffers.SetChangeCallback([&parsed_buffers, &dispatcher](
-                                const std::string &uri,
-                                const EditTextBuffer *txt) {
-    if (txt) {
-      verilog::BufferTracker *const buffer = parsed_buffers.Update(uri, *txt);
-      SendDiagnostics(uri, buffer->current(), &dispatcher);
-    } else {
-      parsed_buffers.Remove(uri);
-    }
-  });
 
   absl::Status status = absl::OkStatus();
   while (status.ok() && !shutdown_requested) {

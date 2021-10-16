@@ -39,7 +39,7 @@ class ParsedBuffer {
     std::cerr << "Analyzed " << uri << " lex:" << parser_->LexStatus()
               << "; parser:" << parser_->ParseStatus() << std::endl;
     // TODO: we should use a filename not URI
-    if (const auto &lint_result = RunLinter(uri); lint_result.ok()) {
+    if (const auto &lint_result = RunLinter(uri, *parser_); lint_result.ok()) {
       lint_statuses_ = lint_result.value();
     }
   }
@@ -56,9 +56,9 @@ class ParsedBuffer {
   int64_t version() const { return version_; }
 
  private:
-  absl::StatusOr<std::vector<verible::LintRuleStatus>> RunLinter(
-      absl::string_view filename) {
-    const auto &text_structure = parser_->Data();
+  static absl::StatusOr<std::vector<verible::LintRuleStatus>> RunLinter(
+      absl::string_view filename, const verilog::VerilogAnalyzer &parser) {
+    const auto &text_structure = parser.Data();
     verilog::LinterConfiguration config;  // TODO: read from project context
     verilog::RuleBundle bundle;
     auto status = config.ConfigureFromOptions(verilog::LinterOptions{
@@ -105,22 +105,27 @@ class BufferTracker {
 };
 
 // Container holding all buffer trackers keyed by file uri.
+// This is the correspondent to verible::lsp::BufferCollection that
+// internally stores
 class BufferTrackerContainer {
  public:
-  // Update internal state of the given "uri" with the content of the text
-  // buffer. Return the buffer tracker.
-  BufferTracker *Update(const std::string &uri,
-                        const verible::lsp::EditTextBuffer &txt) {
-    auto inserted = buffers_.insert({uri, nullptr});
-    if (inserted.second) {
-      inserted.first->second.reset(new BufferTracker());
-    }
-    inserted.first->second->Update(uri, txt);
-    return inserted.first->second.get();
+  // Return a callback that allows to subscribe to an lsp::BufferCollection
+  verible::lsp::BufferCollection::UriBufferCallback GetSubscriptionCallback() {
+    return [this](const std::string &uri,
+                  const verible::lsp::EditTextBuffer *txt) {
+      if (txt) {
+        const BufferTracker *tracker = Update(uri, *txt);
+        // Now inform our listeners.
+        if (change_listener_) change_listener_(uri, *tracker);
+      } else {
+        Remove(uri);
+      }
+    };
   }
 
-  // Remove the buffer tracker for the given "uri".
-  void Remove(const std::string &uri) { buffers_.erase(uri); }
+  using ChangeCallback =
+      std::function<void(const std::string &uri, const BufferTracker &tracker)>;
+  void SetChangeListener(const ChangeCallback &cb) { change_listener_ = cb; }
 
   // Get the current ParsedBuffer for a given "uri" if available, i.e.
   // if the "uri" had been registered with the container.
@@ -142,6 +147,21 @@ class BufferTrackerContainer {
   }
 
  private:
+  // Update internal state of the given "uri" with the content of the text
+  // buffer. Return the buffer tracker.
+  BufferTracker *Update(const std::string &uri,
+                        const verible::lsp::EditTextBuffer &txt) {
+    auto inserted = buffers_.insert({uri, nullptr});
+    if (inserted.second) {
+      inserted.first->second.reset(new BufferTracker());
+    }
+    inserted.first->second->Update(uri, txt);
+    return inserted.first->second.get();
+  }
+
+  // Remove the buffer tracker for the given "uri".
+  void Remove(const std::string &uri) { buffers_.erase(uri); }
+
   BufferTracker *FindBufferTrackerOrNull(const std::string &uri) {
     auto found = buffers_.find(uri);
     if (found == buffers_.end()) {
@@ -151,6 +171,7 @@ class BufferTrackerContainer {
     return found->second.get();
   }
 
+  ChangeCallback change_listener_ = nullptr;
   std::unordered_map<std::string, std::unique_ptr<BufferTracker>> buffers_;
 };
 }  // namespace verilog
