@@ -15,6 +15,7 @@ cc_binary(
     srcs = ["verilog_ls.cc", "document-symbol-filler.h"],
     deps = [
       "//common/lsp:lsp-protocol",
+      "//common/lsp:lsp-protocol-operators",
       "//common/lsp:json-rpc-dispatcher",
       "//common/lsp:lsp-text-buffer",
       "//common/lsp:message-stream-splitter",

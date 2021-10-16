@@ -18,6 +18,7 @@
 #include "absl/flags/flag.h"
 #include "common/lsp/json-rpc-dispatcher.h"
 #include "common/lsp/lsp-protocol.h"
+#include "common/lsp/lsp-protocol-operators.h"
 #include "common/lsp/lsp-text-buffer.h"
 #include "common/lsp/message-stream-splitter.h"
 #include "common/util/init_command_line.h"
@@ -78,21 +79,6 @@ InitializeResult InitializeServer(const nlohmann::json &params) {
   return result;
 }
 
-bool operator<(const verible::lsp::Position &a,
-               const verible::lsp::Position &b) {
-  if (a.line > b.line) return false;
-  if (a.line < b.line) return true;
-  return a.character < b.character;
-}
-bool operator==(const verible::lsp::Position &a,
-                const verible::lsp::Position &b) {
-  return a.line == b.line && a.character == b.character;
-}
-bool rangeOverlap(const verible::lsp::Range &a, const verible::lsp::Range &b) {
-  return a.start == b.start || a.end == b.end ||
-         (a.start < b.end && b.start < a.end);
-}
-
 class ParsedBuffer {
  public:
   ParsedBuffer(int64_t version, absl::string_view uri,
@@ -104,7 +90,7 @@ class ParsedBuffer {
     RunLinter(uri);  // TODO: we should use filename here
   }
 
-  bool is_good() const {
+  bool parsed_successfully() const {
     return parser_->LexStatus().ok() && parser_->ParseStatus().ok();
   }
 
@@ -285,7 +271,7 @@ class BufferTracker {
       current_ = std::make_shared<ParsedBuffer>(txt.last_global_version(),
                                                 filename, content);
     });
-    if (current_->is_good()) {
+    if (current_->parsed_successfully()) {
       last_good_ = current_;
     }
   }
@@ -298,8 +284,11 @@ class BufferTracker {
   std::shared_ptr<ParsedBuffer> last_good_;
 };
 
-class ParsedBufferContainer {
+// Container holding all buffer trackers keyed by file uri.
+class BufferTrackerContainer {
  public:
+  // Update internal state of the given "uri" with the content of the text
+  // buffer. Return the buffer tracker.
   BufferTracker *Update(const std::string &uri, const EditTextBuffer &txt) {
     auto inserted = buffers_.insert({uri, nullptr});
     if (inserted.second) {
@@ -309,8 +298,11 @@ class ParsedBufferContainer {
     return inserted.first->second.get();
   }
 
+  // Remove the buffer tracker for the given "uri".
   void Remove(const std::string &uri) { buffers_.erase(uri); }
 
+  // Get the current ParsedBuffer for a given "uri" if available, i.e.
+  // if the "uri" had been registered with the container.
   const ParsedBuffer *GetCurrent(const std::string &uri) {
     if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
       return buffer->current();
@@ -318,6 +310,9 @@ class ParsedBufferContainer {
     return nullptr;
   }
 
+  // Get the last good ParsedBuffer for the given "uri" if available, i.e.
+  // if the "uri" has been registered with the container _and_ at least
+  // one of the updates contained a valid parseable content.
   const ParsedBuffer *GetLastGood(const std::string &uri) {
     if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
       return buffer->last_good();
@@ -380,7 +375,7 @@ int main(int argc, char *argv[]) {
   // The buffer collection keeps track of all the buffers opened in the editor.
   // It registers callbacks to receive the relevant events on the dispatcher.
   BufferCollection buffers(&dispatcher);
-  ParsedBufferContainer parsed_buffers;
+  BufferTrackerContainer parsed_buffers;
 
   // Exchange of capabilities.
   dispatcher.AddRequestHandler("initialize", InitializeServer);
