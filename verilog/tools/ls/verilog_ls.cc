@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
   verilog::BufferTrackerContainer parsed_buffers;
 
   // Subscribe the parsed buffers to changes updating the text edit buffers
-  buffers.SetChangeCallback(parsed_buffers.GetSubscriptionCallback());
+  buffers.SetChangeListener(parsed_buffers.GetSubscriptionCallback());
 
   // Whenever there is a new parse result ready, use that as an opportunity
   // to send diagnostics to the client.
