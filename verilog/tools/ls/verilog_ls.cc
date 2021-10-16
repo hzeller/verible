@@ -46,7 +46,6 @@ using verible::lsp::InitializeResult;
 using verible::lsp::JsonRpcDispatcher;
 using verible::lsp::MessageStreamSplitter;
 using verible::lsp::Range;
-
 using verilog::VerilogAnalyzer;
 
 ABSL_FLAG(bool, kate_workaround, false, "Work around some kate issues");
@@ -94,10 +93,10 @@ bool rangeOverlap(const verible::lsp::Range &a, const verible::lsp::Range &b) {
          (a.start < b.end && b.start < a.end);
 }
 
-class VersionedAnalyzedBuffer {
+class ParsedBuffer {
  public:
-  VersionedAnalyzedBuffer(int64_t version, absl::string_view uri,
-                          absl::string_view content)
+  ParsedBuffer(int64_t version, absl::string_view uri,
+               absl::string_view content)
       : version_(version),
         parser_(VerilogAnalyzer::AnalyzeAutomaticMode(content, uri)) {
     std::cerr << "Analyzed " << uri << " lex:" << parser_->LexStatus()
@@ -273,49 +272,53 @@ class VersionedAnalyzedBuffer {
   std::vector<verible::LintRuleStatus> lint_statuses_;
 };
 
+// A buffer tracker tracks the EditTextBuffer content and keeps up to
+// two versions of ParsedBuffers - the latest, that might have parse errors
+// and the last good (if available).
 class BufferTracker {
  public:
   void Update(const std::string &filename, const EditTextBuffer &txt) {
     // TODO: remove file:// prefix.
     if (current_ && current_->version() == txt.last_global_version())
-      return;  // Nothing to do.
+      return;  // Nothing to do (we don't really expect this to happen)
     txt.RequestContent([&txt, &filename, this](absl::string_view content) {
-      current_ = std::make_shared<VersionedAnalyzedBuffer>(
-          txt.last_global_version(), filename, content);
+      current_ = std::make_shared<ParsedBuffer>(txt.last_global_version(),
+                                                filename, content);
     });
     if (current_->is_good()) {
       last_good_ = current_;
     }
   }
 
-  const VersionedAnalyzedBuffer *current() const { return current_.get(); }
-  const VersionedAnalyzedBuffer *last_good() const { return last_good_.get(); }
+  const ParsedBuffer *current() const { return current_.get(); }
+  const ParsedBuffer *last_good() const { return last_good_.get(); }
 
  private:
-  std::shared_ptr<VersionedAnalyzedBuffer> current_;
-  std::shared_ptr<VersionedAnalyzedBuffer> last_good_;
+  std::shared_ptr<ParsedBuffer> current_;
+  std::shared_ptr<ParsedBuffer> last_good_;
 };
 
 class ParsedBufferContainer {
  public:
-  BufferTracker *Update(const std::string &filename,
-                        const EditTextBuffer &txt) {
-    auto inserted = buffers_.insert({filename, nullptr});
+  BufferTracker *Update(const std::string &uri, const EditTextBuffer &txt) {
+    auto inserted = buffers_.insert({uri, nullptr});
     if (inserted.second) {
       inserted.first->second.reset(new BufferTracker());
     }
-    inserted.first->second->Update(filename, txt);
+    inserted.first->second->Update(uri, txt);
     return inserted.first->second.get();
   }
 
-  const VersionedAnalyzedBuffer *GetCurrent(const std::string &uri) {
+  void Remove(const std::string &uri) { buffers_.erase(uri); }
+
+  const ParsedBuffer *GetCurrent(const std::string &uri) {
     if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
       return buffer->current();
     }
     return nullptr;
   }
 
-  const VersionedAnalyzedBuffer *GetLastGood(const std::string &uri) {
+  const ParsedBuffer *GetLastGood(const std::string &uri) {
     if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
       return buffer->last_good();
     }
@@ -335,8 +338,7 @@ class ParsedBufferContainer {
   std::unordered_map<std::string, std::unique_ptr<BufferTracker>> buffers_;
 };
 
-void ConsiderSendDiagnostics(const std::string &uri,
-                             const VersionedAnalyzedBuffer *buffer,
+void ConsiderSendDiagnostics(const std::string &uri, const ParsedBuffer *buffer,
                              JsonRpcDispatcher *dispatcher) {
   verible::lsp::PublishDiagnosticsParams params;
   params.uri = uri;
@@ -409,9 +411,13 @@ int main(int argc, char *argv[]) {
 
   buffers.SetChangeCallback(
       [&parsed_buffers, &dispatcher](const std::string &uri,
-                                     const EditTextBuffer &txt) {
-        BufferTracker *const buffer = parsed_buffers.Update(uri, txt);
-        ConsiderSendDiagnostics(uri, buffer->current(), &dispatcher);
+                                     const EditTextBuffer *txt) {
+        if (txt) {
+          BufferTracker *const buffer = parsed_buffers.Update(uri, *txt);
+          ConsiderSendDiagnostics(uri, buffer->current(), &dispatcher);
+        } else {
+          parsed_buffers.Remove(uri);
+        }
       });
 
   absl::Status status = absl::OkStatus();
