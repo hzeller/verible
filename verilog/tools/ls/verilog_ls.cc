@@ -92,6 +92,69 @@ nlohmann::json HandleDocumentSymbols(const VerilogAnalyzer &parser,
   return toplevel.children;  // We cut down one level.
 }
 
+// Convert our representation of a linter violation to a LSP-Diagnostic
+static verible::lsp::Diagnostic ViolationToDiagnostic(
+  const verilog::LintViolationWithStatus &v, absl::string_view base,
+  const verible::LineColumnMap &lc_map) {
+  const verible::LintViolation &violation = *v.violation;
+  verible::LineColumn start = lc_map(violation.token.left(base));
+  verible::LineColumn end = lc_map(violation.token.right(base));
+  const char *fix_msg = violation.autofixes.empty() ? "" : " (fix available)";
+  return verible::lsp::Diagnostic{
+    .range =
+    {
+      .start = {.line = start.line, .character = start.column},
+      .end = {.line = end.line, .character = end.column},
+    },
+    .message = absl::StrCat(violation.reason, " ", v.status->url, "[",
+                            v.status->lint_rule_name, "]", fix_msg),
+  };
+}
+
+std::vector<verible::lsp::Diagnostic> CreateDiagnostics(
+  const VerilogAnalyzer &parser,
+  const std::vector<verible::LintRuleStatus> &lint_statuses) {
+  // TODO: files that generate a lot of messages will create a huge
+  // output. So we limit the messages here.
+  // However, we should work towards emitting them around the last known
+  // edit point in the document as this is what the user sees.
+  static constexpr int kMaxMessages = 100;
+  const auto &rejected_tokens = parser.GetRejectedTokens();
+  auto const &lint_violations = verilog::GetSortedViolations(lint_statuses);
+  std::vector<verible::lsp::Diagnostic> result;
+  int remaining = rejected_tokens.size() + lint_violations.size();
+  if (remaining > kMaxMessages) remaining = kMaxMessages;
+  result.reserve(remaining);
+  for (const auto &rejected_token : rejected_tokens) {
+    parser.ExtractLinterTokenErrorDetail(
+        rejected_token,
+        [&result](const std::string &filename, verible::LineColumnRange range,
+                  verible::AnalysisPhase phase, absl::string_view token_text,
+                  absl::string_view context_line, const std::string &msg) {
+          // Note: msg is currently empty and not useful.
+          const auto message = (phase == verible::AnalysisPhase::kLexPhase)
+                                   ? "token error"
+                                   : "syntax error";
+          result.emplace_back(verible::lsp::Diagnostic{
+              .range{.start{.line = range.start.line,
+                            .character = range.start.column},
+                     .end{.line = range.end.line,  //
+                          .character = range.end.column}},
+              .message = message,
+          });
+        });
+    if (--remaining <= 0) break;
+  }
+
+  const absl::string_view base = parser.Data().Contents();
+  verible::LineColumnMap line_column_map(base);
+  for (const auto &v : lint_violations) {
+    result.emplace_back(ViolationToDiagnostic(v, base, line_column_map));
+    if (--remaining <= 0) break;
+  }
+  return result;
+}
+
 class ParsedBuffer {
  public:
   ParsedBuffer(int64_t version, absl::string_view uri,
@@ -108,47 +171,8 @@ class ParsedBuffer {
   }
 
   const VerilogAnalyzer &parser() const { return *parser_; }
-
-  std::vector<verible::lsp::Diagnostic> GetDiagnostics() const {
-    // TODO: files that generate a lot of messages will create a huge
-    // output. So we limit the messages here.
-    // However, we should work towards emitting them around the last known
-    // edit point in the document as this is what the user sees.
-    static constexpr int kMaxMessages = 100;
-    const auto &rejected_tokens = parser_->GetRejectedTokens();
-    auto const &lint_violations = verilog::GetSortedViolations(lint_statuses_);
-    std::vector<verible::lsp::Diagnostic> result;
-    int remaining = rejected_tokens.size() + lint_violations.size();
-    if (remaining > kMaxMessages) remaining = kMaxMessages;
-    result.reserve(remaining);
-    for (const auto &rejected_token : rejected_tokens) {
-      parser_->ExtractLinterTokenErrorDetail(
-          rejected_token,
-          [&result](const std::string &filename, verible::LineColumnRange range,
-                    verible::AnalysisPhase phase, absl::string_view token_text,
-                    absl::string_view context_line, const std::string &msg) {
-            // Note: msg is currently empty and not useful.
-            const auto message = (phase == verible::AnalysisPhase::kLexPhase)
-                                     ? "token error"
-                                     : "syntax error";
-            result.emplace_back(verible::lsp::Diagnostic{
-                .range{.start{.line = range.start.line,
-                              .character = range.start.column},
-                       .end{.line = range.end.line,  //
-                            .character = range.end.column}},
-                .message = message,
-            });
-          });
-      if (--remaining <= 0) break;
-    }
-
-    const absl::string_view base = parser_->Data().Contents();
-    verible::LineColumnMap line_column_map(base);
-    for (const auto &v : lint_violations) {
-      result.emplace_back(ViolationToDiagnostic(v, base, line_column_map));
-      if (--remaining <= 0) break;
-    }
-    return result;
+  const std::vector<verible::LintRuleStatus> &lint_result() const {
+    return lint_statuses_;
   }
 
   std::vector<verible::lsp::CodeAction> HandleCodeAction(
@@ -211,25 +235,6 @@ class ParsedBuffer {
     }
 
     lint_statuses_ = linter_result.value();
-  }
-
-  // Convert our representation of a linter violation to a LSP-Diagnostic
-  static verible::lsp::Diagnostic ViolationToDiagnostic(
-      const verilog::LintViolationWithStatus &v, absl::string_view base,
-      const verible::LineColumnMap &lc_map) {
-    const verible::LintViolation &violation = *v.violation;
-    verible::LineColumn start = lc_map(violation.token.left(base));
-    verible::LineColumn end = lc_map(violation.token.right(base));
-    const char *fix_msg = violation.autofixes.empty() ? "" : " (fix available)";
-    return verible::lsp::Diagnostic{
-        .range =
-            {
-                .start = {.line = start.line, .character = start.column},
-                .end = {.line = end.line, .character = end.column},
-            },
-        .message = absl::StrCat(violation.reason, " ", v.status->url, "[",
-                                v.status->lint_rule_name, "]", fix_msg),
-    };
   }
 
   static std::vector<verible::lsp::TextEdit> AutofixToTextEdits(
@@ -337,7 +342,8 @@ void ConsiderSendDiagnostics(const std::string &uri, const ParsedBuffer *buffer,
                              JsonRpcDispatcher *dispatcher) {
   verible::lsp::PublishDiagnosticsParams params;
   params.uri = uri;
-  params.diagnostics = buffer->GetDiagnostics();
+  params.diagnostics = CreateDiagnostics(buffer->parser(),
+                                         buffer->lint_result());
   dispatcher->SendNotification("textDocument/publishDiagnostics", params);
 }
 
