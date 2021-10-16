@@ -60,7 +60,13 @@ sh_test_with_runfiles_lib(
     name = "verible-verilog-ls_test",
     size = "small",
     srcs = ["verible-verilog-ls_test.sh"],
-    args = ["$(location :verible-verilog-ls)"],
-    data = [":verible-verilog-ls"],
+    args = [
+      "$(location :verible-verilog-ls)",
+      "$(location //common/lsp:json-rpc-expect)",
+    ],
+    data = [
+     ":verible-verilog-ls",
+     "//common/lsp:json-rpc-expect",
+    ],
     deps = [],
 )
