@@ -12,7 +12,7 @@ package(
 
 cc_binary(
     name = "verible-verilog-ls",
-    srcs = ["verilog_ls.cc", "document-symbol-filler.h"],
+    srcs = ["verilog_ls.cc", "document-symbol-filler.h", "lsp-parse-buffer.h"],
     deps = [
       "//common/lsp:lsp-protocol",
       "//common/lsp:lsp-protocol-operators",

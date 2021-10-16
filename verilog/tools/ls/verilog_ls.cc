@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 #include <iomanip>  // Only needed for json debugging right now
 #include <iostream>
 
 #include "absl/flags/flag.h"
 #include "common/lsp/json-rpc-dispatcher.h"
-#include "common/lsp/lsp-protocol.h"
 #include "common/lsp/lsp-protocol-operators.h"
+#include "common/lsp/lsp-protocol.h"
 #include "common/lsp/lsp-text-buffer.h"
 #include "common/lsp/message-stream-splitter.h"
 #include "common/util/init_command_line.h"
@@ -26,6 +27,7 @@
 #include "verilog/analysis/verilog_linter.h"
 #include "verilog/parser/verilog_token_classifications.h"
 #include "verilog/tools/ls/document-symbol-filler.h"
+#include "verilog/tools/ls/lsp-parse-buffer.h"
 
 // Windows specific implementation of read()
 #ifndef _WIN32
@@ -94,26 +96,26 @@ nlohmann::json HandleDocumentSymbols(const VerilogAnalyzer &parser,
 
 // Convert our representation of a linter violation to a LSP-Diagnostic
 static verible::lsp::Diagnostic ViolationToDiagnostic(
-  const verilog::LintViolationWithStatus &v, absl::string_view base,
-  const verible::LineColumnMap &lc_map) {
+    const verilog::LintViolationWithStatus &v, absl::string_view base,
+    const verible::LineColumnMap &lc_map) {
   const verible::LintViolation &violation = *v.violation;
   verible::LineColumn start = lc_map(violation.token.left(base));
   verible::LineColumn end = lc_map(violation.token.right(base));
   const char *fix_msg = violation.autofixes.empty() ? "" : " (fix available)";
   return verible::lsp::Diagnostic{
-    .range =
-    {
-      .start = {.line = start.line, .character = start.column},
-      .end = {.line = end.line, .character = end.column},
-    },
-    .message = absl::StrCat(violation.reason, " ", v.status->url, "[",
-                            v.status->lint_rule_name, "]", fix_msg),
+      .range =
+          {
+              .start = {.line = start.line, .character = start.column},
+              .end = {.line = end.line, .character = end.column},
+          },
+      .message = absl::StrCat(violation.reason, " ", v.status->url, "[",
+                              v.status->lint_rule_name, "]", fix_msg),
   };
 }
 
 std::vector<verible::lsp::Diagnostic> CreateDiagnostics(
-  const VerilogAnalyzer &parser,
-  const std::vector<verible::LintRuleStatus> &lint_statuses) {
+    const VerilogAnalyzer &parser,
+    const std::vector<verible::LintRuleStatus> &lint_statuses) {
   // TODO: files that generate a lot of messages will create a huge
   // output. So we limit the messages here.
   // However, we should work towards emitting them around the last known
@@ -177,9 +179,9 @@ static std::vector<verible::lsp::TextEdit> AutofixToTextEdits(
 }
 
 std::vector<verible::lsp::CodeAction> GenerateLinterCodeActions(
-  const VerilogAnalyzer &parser,
-  const std::vector<verible::LintRuleStatus> &lint_statuses,
-  const verible::lsp::CodeActionParams &p) {
+    const VerilogAnalyzer &parser,
+    const std::vector<verible::LintRuleStatus> &lint_statuses,
+    const verible::lsp::CodeActionParams &p) {
   auto const &lint_violations = verilog::GetSortedViolations(lint_statuses);
   if (lint_violations.empty()) return {};
 
@@ -215,140 +217,13 @@ std::vector<verible::lsp::CodeAction> GenerateLinterCodeActions(
   return result;
 }
 
-// A parsed buffer collects all the artifacts generated from a text buffer
-// from parsing or running the linter.
-////
-// Right now, the ParsedBuffer is synchronously filling its internal structure
-// on construction, but plan is to do that on-demand and possibly with
-// std::future<>s evaluated in separate threads.
-class ParsedBuffer {
- public:
-  ParsedBuffer(int64_t version, absl::string_view uri,
-               absl::string_view content)
-      : version_(version),
-        parser_(VerilogAnalyzer::AnalyzeAutomaticMode(content, uri)) {
-    std::cerr << "Analyzed " << uri << " lex:" << parser_->LexStatus()
-              << "; parser:" << parser_->ParseStatus() << std::endl;
-    // TODO: we should use a filename not URI
-    if (const auto &lint_result = RunLinter(uri); lint_result.ok()) {
-      lint_statuses_ = lint_result.value();
-    }
-  }
-
-  bool parsed_successfully() const {
-    return parser_->LexStatus().ok() && parser_->ParseStatus().ok();
-  }
-
-  const VerilogAnalyzer &parser() const { return *parser_; }
-  const std::vector<verible::LintRuleStatus> &lint_result() const {
-    return lint_statuses_;
-  }
-
-  int64_t version() const { return version_; }
-
- private:
-  absl::StatusOr<std::vector<verible::LintRuleStatus>> RunLinter(
-    absl::string_view filename) {
-    const auto &text_structure = parser_->Data();
-    verilog::LinterConfiguration config;  // TODO: read from project context
-    verilog::RuleBundle bundle;
-    auto status = config.ConfigureFromOptions(verilog::LinterOptions{
-        .ruleset = verilog::RuleSet::kAll,
-        .rules = bundle,
-    });
-    if (!status.ok()) {
-      std::cerr << "Got an issue with the lint configuration" << std::endl;
-      return status;
-    }
-    return VerilogLintTextStructure(filename, config, text_structure);
-  }
-
-  const int64_t version_;
-  std::unique_ptr<VerilogAnalyzer> parser_;
-  std::vector<verible::LintRuleStatus> lint_statuses_;
-};
-
-// A buffer tracker tracks the EditTextBuffer content and keeps up to
-// two versions of ParsedBuffers - the latest, that might have parse errors
-// and the last good (if available).
-class BufferTracker {
- public:
-  void Update(const std::string &filename, const EditTextBuffer &txt) {
-    // TODO: remove file:// prefix.
-    if (current_ && current_->version() == txt.last_global_version())
-      return;  // Nothing to do (we don't really expect this to happen)
-    txt.RequestContent([&txt, &filename, this](absl::string_view content) {
-      current_ = std::make_shared<ParsedBuffer>(txt.last_global_version(),
-                                                filename, content);
-    });
-    if (current_->parsed_successfully()) {
-      last_good_ = current_;
-    }
-  }
-
-  const ParsedBuffer *current() const { return current_.get(); }
-  const ParsedBuffer *last_good() const { return last_good_.get(); }
-
- private:
-  std::shared_ptr<ParsedBuffer> current_;
-  std::shared_ptr<ParsedBuffer> last_good_;
-};
-
-// Container holding all buffer trackers keyed by file uri.
-class BufferTrackerContainer {
- public:
-  // Update internal state of the given "uri" with the content of the text
-  // buffer. Return the buffer tracker.
-  BufferTracker *Update(const std::string &uri, const EditTextBuffer &txt) {
-    auto inserted = buffers_.insert({uri, nullptr});
-    if (inserted.second) {
-      inserted.first->second.reset(new BufferTracker());
-    }
-    inserted.first->second->Update(uri, txt);
-    return inserted.first->second.get();
-  }
-
-  // Remove the buffer tracker for the given "uri".
-  void Remove(const std::string &uri) { buffers_.erase(uri); }
-
-  // Get the current ParsedBuffer for a given "uri" if available, i.e.
-  // if the "uri" had been registered with the container.
-  const ParsedBuffer *GetCurrent(const std::string &uri) {
-    if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
-      return buffer->current();
-    }
-    return nullptr;
-  }
-
-  // Get the last good ParsedBuffer for the given "uri" if available, i.e.
-  // if the "uri" has been registered with the container _and_ at least
-  // one of the updates contained a valid parseable content.
-  const ParsedBuffer *GetLastGood(const std::string &uri) {
-    if (const auto buffer = FindBufferTrackerOrNull(uri); buffer != nullptr) {
-      return buffer->last_good();
-    }
-    return nullptr;
-  }
-
- private:
-  BufferTracker *FindBufferTrackerOrNull(const std::string &uri) {
-    auto found = buffers_.find(uri);
-    if (found == buffers_.end()) {
-      std::cerr << "Did not find " << uri << std::endl;
-      return nullptr;
-    }
-    return found->second.get();
-  }
-
-  std::unordered_map<std::string, std::unique_ptr<BufferTracker>> buffers_;
-};
-
-void ConsiderSendDiagnostics(const std::string &uri, const ParsedBuffer *buffer,
+void ConsiderSendDiagnostics(const std::string &uri,
+                             const verilog::ParsedBuffer *buffer,
                              JsonRpcDispatcher *dispatcher) {
   verible::lsp::PublishDiagnosticsParams params;
   params.uri = uri;
-  params.diagnostics = CreateDiagnostics(buffer->parser(),
-                                         buffer->lint_result());
+  params.diagnostics =
+      CreateDiagnostics(buffer->parser(), buffer->lint_result());
   dispatcher->SendNotification("textDocument/publishDiagnostics", params);
 }
 
@@ -386,7 +261,7 @@ int main(int argc, char *argv[]) {
   // The buffer collection keeps track of all the buffers opened in the editor.
   // It registers callbacks to receive the relevant events on the dispatcher.
   BufferCollection buffers(&dispatcher);
-  BufferTrackerContainer parsed_buffers;
+  verilog::BufferTrackerContainer parsed_buffers;
 
   // Exchange of capabilities.
   dispatcher.AddRequestHandler("initialize", InitializeServer);
@@ -418,16 +293,16 @@ int main(int argc, char *argv[]) {
                                  return nullptr;
                                });
 
-  buffers.SetChangeCallback(
-      [&parsed_buffers, &dispatcher](const std::string &uri,
-                                     const EditTextBuffer *txt) {
-        if (txt) {
-          BufferTracker *const buffer = parsed_buffers.Update(uri, *txt);
-          ConsiderSendDiagnostics(uri, buffer->current(), &dispatcher);
-        } else {
-          parsed_buffers.Remove(uri);
-        }
-      });
+  buffers.SetChangeCallback([&parsed_buffers, &dispatcher](
+                                const std::string &uri,
+                                const EditTextBuffer *txt) {
+    if (txt) {
+      verilog::BufferTracker *const buffer = parsed_buffers.Update(uri, *txt);
+      ConsiderSendDiagnostics(uri, buffer->current(), &dispatcher);
+    } else {
+      parsed_buffers.Remove(uri);
+    }
+  });
 
   absl::Status status = absl::OkStatus();
   while (status.ok() && !shutdown_requested) {
