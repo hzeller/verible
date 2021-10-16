@@ -26,15 +26,22 @@ JSON_EXPECTED=${TEST_TMPDIR:-/tmp/}/test-lsp-json-expect.txt
 MSG_OUT=${TEST_TMPDIR:-/tmp/}/test-lsp-out-msg.txt
 
 # One message per line, converted by the awk script to header/body.
-# Simple end-to-end test
+
+# Starting up server, sending two files, a file with a parse error and
+# a file that parses, but has a EOF newline linting diagnostic.
+#
+# Requesting documentSymbol outline tree on the parseable file
+# Requesting an autofix (codeAction) of the EOF violation
 awk '{printf("Content-Length: %d\r\n\r\n%s", length($0), $0)}' > ${TMP_IN} <<EOF
 {"jsonrpc":"2.0", "id":1, "method":"initialize","params":null}
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://syntaxerror.sv","text":"brokenfile\n"}}}
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://mini.sv","text":"module mini();\nendmodule"}}}
 {"jsonrpc":"2.0", "id":2, "method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file://mini.sv"}}}
-{"jsonrpc":"2.0", "id":3, "method":"shutdown","params":{}}
+{"jsonrpc":"2.0", "id":3, "method":"textDocument/codeAction","params":{"textDocument":{"uri":"file://mini.sv"},"range":{"start":{"line":0,"character":0},"end":{"line":2,"character":0}}}}
+{"jsonrpc":"2.0", "id":100, "method":"shutdown","params":{}}
 EOF
 
+# TODO: change json rpc expect to allow comments in the input.
 cat > "${JSON_EXPECTED}" <<EOF
 [
   {
@@ -70,7 +77,15 @@ cat > "${JSON_EXPECTED}" <<EOF
      }
   },
   {
-    "json_contains": { "id":3 }
+    "json_contains": {
+       "id":3,
+       "result": [
+          {"edit": {"changes": {"file://mini.sv":[{"newText":"\n"}]}}}
+        ]
+    }
+  },
+  {
+    "json_contains": { "id":100 }
   }
 ]
 EOF
