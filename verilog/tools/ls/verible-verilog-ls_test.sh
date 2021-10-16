@@ -29,8 +29,9 @@ MSG_OUT=${TEST_TMPDIR:-/tmp/}/test-lsp-out-msg.txt
 # Simple end-to-end test
 awk '{printf("Content-Length: %d\r\n\r\n%s", length($0), $0)}' > ${TMP_IN} <<EOF
 {"jsonrpc":"2.0", "id":1, "method":"initialize","params":null}
-{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///mini.sv","text":"module mini();\nendmodule\n"}}}
-{"jsonrpc":"2.0", "id":2, "method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///mini.sv"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://syntaxerror.sv","text":"brokenfile\n"}}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://mini.sv","text":"module mini();\nendmodule"}}}
+{"jsonrpc":"2.0", "id":2, "method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file://mini.sv"}}}
 {"jsonrpc":"2.0", "id":3, "method":"shutdown","params":{}}
 EOF
 
@@ -45,7 +46,22 @@ cat > "${JSON_EXPECTED}" <<EOF
     }
   },
   {
-    "json_contains": { "method":"textDocument/publishDiagnostics" }
+    "json_contains": {
+       "method":"textDocument/publishDiagnostics",
+       "params": {
+          "uri": "file://syntaxerror.sv",
+          "diagnostics":[{"message":"syntax error"}]
+       }
+     }
+  },
+  {
+    "json_contains": {
+       "method":"textDocument/publishDiagnostics",
+       "params": {
+          "uri": "file://mini.sv",
+          "diagnostics":[{"message":"File must end with a newline. [Style: posix-file-endings][posix-eof] (fix available)"}]
+       }
+    }
   },
   {
     "json_contains": {
