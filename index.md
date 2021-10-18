@@ -1,7 +1,9 @@
 ---
 ---
 
-# Verible
+# ![](./img/verible-logo-headline.png)Verible
+
+
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Continuous Integration](https://github.com/chipsalliance/verible/workflows/verible-ci/badge.svg)](https://github.com/chipsalliance/verible/actions/workflows/verible-ci.yml)
@@ -56,4 +58,4 @@ See the [README file for further information.](README.md)
 
 ## Version
 
-Generated on 2021-10-16 14:20:22 -0700 from [70933e3c](https://github.com/google/verible/commit/70933e3ce543677d3fe126d39b47d8290de8707b)
+Generated on 2021-10-18 07:44:56 -0700 from [44c3772b](https://github.com/google/verible/commit/44c3772bdd5be8fbd949d2a3bea484c2e2472e9b)
