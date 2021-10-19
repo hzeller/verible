@@ -317,4 +317,4 @@ Enabled by default: true
 
 ## Version
 
-Generated on 2021-10-18 18:29:22 -0700 from [e8a29cae](https://github.com/google/verible/commit/e8a29cae57a602b7d0941eae0a03e9dee7cf5ebd)
+Generated on 2021-10-18 22:56:53 -0700 from [bdfdd451](https://github.com/google/verible/commit/bdfdd45152c670a55cef7eafb37159502102307c)
