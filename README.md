@@ -48,8 +48,6 @@ Verible's code base is written in C++.
 To build, you need the [bazel] build system and a C++17 compatible compiler
 (e.g. >= g++-9), as well as python3.
 
-Linux systems also require the following tools: m4, flex, bison.
-
 Use your package manager to install the dependencies; on a system with
 the nix package manager simply run `nix-shell` to get a build environment.
 
@@ -62,6 +60,15 @@ You can access the generated artifacts under `bazel-bin/`. For instance the
 syntax checker will be at
 `bazel-bin/verilog/tools/syntax/verible-verilog-syntax` (corresponding to the
 target name `//verilog/tools/syntax:verible-verilog-syntax`).
+
+### Building on systems with glibc >= 2.34
+
+To build Verible on systems with glibc >= 2.34, you need to use install flex and bison. Then, build Verible with
+
+```bash
+# Also append the option '--//bazel:use_local_flex_bison' to test/install commands
+bazel build -c opt  --//bazel:use_local_flex_bison //...
+```
 
 ### Installation
 
