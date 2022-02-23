@@ -77,9 +77,7 @@ class SyntaxTreeContext : public AutoPopStack<const SyntaxTreeNode*> {
   // Returns true if current context is directly inside one of the includes
   // node types before any of the excludes node types.  Search starts
   // from the top of the stack.
-  template <typename E>
-  bool IsInsideFirst(std::initializer_list<E> includes,
-                     std::initializer_list<E> excludes) const {
+  bool IsInsideFirst(TagSet includes, TagSet excludes) const {
     for (const auto& type : reversed_view(*this)) {
       if (type->MatchesTagAnyOf(includes)) return true;
       if (type->MatchesTagAnyOf(excludes)) return false;

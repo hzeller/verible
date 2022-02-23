@@ -24,7 +24,7 @@ genrule(
     srcs = ["verilog_nonterminals.h"],
     outs = ["verilog_nonterminals_foreach-gen.inc"],
     cmd = "sed -n -e '/BEGIN GENERATE/,/END GENERATE/p' $< | " +
-          "grep -v GENERATE | " +
+          "grep -v GENERATE | grep ',' | " +
           "sed -e 's|^ *|CONSIDER(|' -e 's| =.*,|,|' -e 's|,|)|' > $@",
 )
 

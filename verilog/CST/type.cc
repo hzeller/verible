@@ -72,8 +72,8 @@ SymbolPtr ReinterpretReferenceCallBaseAsDataTypePackedDimensions(
     const auto tag = child->Tag();
     if (tag.kind != verible::SymbolKind::kNode) continue;
     auto& node = verible::SymbolCastToNode(*child);
-    if (node.MatchesTagAnyOf(
-            {NodeEnum::kDimensionRange, NodeEnum::kDimensionScalar})) {
+    if (node.MatchesTagAnyOf(MAKE_TAG_SET2(NodeEnum::kDimensionRange,
+                                           NodeEnum::kDimensionScalar))) {
       pdim_node.AppendChild(std::move(child));
     }
     // TODO(fangism): instead of ignoring, retain non-tag-matched nodes as

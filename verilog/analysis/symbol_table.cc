@@ -588,8 +588,8 @@ class SymbolTable::Builder : public TreeContextVisitor {
 
       const SyntaxTreeNode* decl_syntax =
           Context().NearestParentMatching([](const SyntaxTreeNode& node) {
-            return node.MatchesTagAnyOf(
-                {NodeEnum::kFunctionDeclaration, NodeEnum::kFunctionPrototype});
+            return node.MatchesTagAnyOf(MAKE_TAG_SET2(
+                NodeEnum::kFunctionDeclaration, NodeEnum::kFunctionPrototype));
           });
       if (decl_syntax == nullptr) return;
       SymbolTableNode* declared_function = &EmplaceTypedElementInCurrentScope(
@@ -610,8 +610,8 @@ class SymbolTable::Builder : public TreeContextVisitor {
 
       const SyntaxTreeNode* decl_syntax =
           Context().NearestParentMatching([](const SyntaxTreeNode& node) {
-            return node.MatchesTagAnyOf(
-                {NodeEnum::kTaskDeclaration, NodeEnum::kTaskPrototype});
+            return node.MatchesTagAnyOf(MAKE_TAG_SET2(
+                NodeEnum::kTaskDeclaration, NodeEnum::kTaskPrototype));
           });
       if (decl_syntax == nullptr) return;
       SymbolTableNode* declared_task = EmplaceElementInCurrentScope(
@@ -1215,8 +1215,9 @@ class SymbolTable::Builder : public TreeContextVisitor {
       case NodeEnum::kFunctionHeader: {
         const SyntaxTreeNode* decl_syntax =
             Context().NearestParentMatching([](const SyntaxTreeNode& node) {
-              return node.MatchesTagAnyOf({NodeEnum::kFunctionDeclaration,
-                                           NodeEnum::kFunctionPrototype});
+              return node.MatchesTagAnyOf(
+                  MAKE_TAG_SET2(NodeEnum::kFunctionDeclaration,
+                                NodeEnum::kFunctionPrototype));
             });
         DescendThroughOutOfLineDefinition(qualified_id,
                                           SymbolMetaType::kFunction,
@@ -1226,8 +1227,8 @@ class SymbolTable::Builder : public TreeContextVisitor {
       case NodeEnum::kTaskHeader: {
         const SyntaxTreeNode* decl_syntax =
             Context().NearestParentMatching([](const SyntaxTreeNode& node) {
-              return node.MatchesTagAnyOf(
-                  {NodeEnum::kTaskDeclaration, NodeEnum::kTaskPrototype});
+              return node.MatchesTagAnyOf(MAKE_TAG_SET2(
+                  NodeEnum::kTaskDeclaration, NodeEnum::kTaskPrototype));
             });
         DescendThroughOutOfLineDefinition(qualified_id, SymbolMetaType::kTask,
                                           ABSL_DIE_IF_NULL(decl_syntax));

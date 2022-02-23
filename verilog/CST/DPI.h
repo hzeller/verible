@@ -47,7 +47,7 @@ verible::SymbolPtr MakeDPIImport(T0&& keyword, T1&& spec, T2&& property,
   }
   verible::CheckOptionalSymbolAsLeaf(equals, '=');
   CHECK(verible::SymbolCastToNode(*proto).MatchesTagAnyOf(
-      {NodeEnum::kFunctionPrototype, NodeEnum::kTaskPrototype}));
+      MAKE_TAG_SET2(NodeEnum::kFunctionPrototype, NodeEnum::kTaskPrototype)));
   return verible::MakeTaggedNode(
       NodeEnum::kDPIImportItem, std::forward<T0>(keyword),
       std::forward<T1>(spec), std::forward<T2>(property), std::forward<T3>(id),
@@ -64,7 +64,7 @@ verible::SymbolPtr MakeDPIImport(T0&& keyword, T1&& spec, T2&& property,
   verible::CheckSymbolAsLeaf(*keyword, verilog_tokentype::TK_import);
   verible::CheckSymbolAsLeaf(*spec, verilog_tokentype::TK_StringLiteral);
   CHECK(verible::SymbolCastToNode(*proto).MatchesTagAnyOf(
-      {NodeEnum::kFunctionPrototype, NodeEnum::kTaskPrototype}));
+      MAKE_TAG_SET2(NodeEnum::kFunctionPrototype, NodeEnum::kTaskPrototype)));
   return verible::MakeTaggedNode(
       NodeEnum::kDPIImportItem, std::forward<T0>(keyword),
       std::forward<T1>(spec), std::forward<T2>(property), id, equals,

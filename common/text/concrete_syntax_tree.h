@@ -68,6 +68,8 @@ struct ForwardChildren {
   SymbolPtr node;
 };
 
+using TagSet = uint64_t;
+
 // SyntaxTreeNode is a language-agnostic node structure, supporting an
 // arbitrary number of children.  The 'tag' field is a node type enumeration
 // used by various language front-ends.
@@ -149,29 +151,19 @@ class SyntaxTreeNode : public Symbol {
     return tag_ == static_cast<int>(e);
   }
 
-  template <typename EnumType>
-  bool MatchesTagAnyOf(std::initializer_list<EnumType> enums) const {
-    auto it = enums.begin();
-    // Unroll OR expression. Right now, we never have more than 4.
-    switch (enums.size()) {
-      case 4:
-        if (*it++ == EnumType(tag_)) return true;
-        ABSL_FALLTHROUGH_INTENDED;
-      case 3:
-        if (*it++ == EnumType(tag_)) return true;
-        ABSL_FALLTHROUGH_INTENDED;
-      case 2:
-        if (*it++ == EnumType(tag_)) return true;
-        ABSL_FALLTHROUGH_INTENDED;
-      case 1:
-        if (*it++ == EnumType(tag_)) return true;
-        ABSL_FALLTHROUGH_INTENDED;
-      case 0:
-        return false;
-      default:
-        // TODO(hzeller): with constexpr magic, can we static_assert() this ?
-        LOG(FATAL) << "need more choice " << enums.size();
-    }
+#define MAKE_TAG_SET0() (0)
+#define MAKE_TAG_SET1(a) (1uL << static_cast<int>(a))
+#define MAKE_TAG_SET2(a, b) \
+  ((1uL << static_cast<int>(a)) | (1uL << static_cast<int>(b)))
+#define MAKE_TAG_SET3(a, b, c)                                   \
+  ((1uL << static_cast<int>(a)) | (1uL << static_cast<int>(b)) | \
+   (1uL << static_cast<int>(c)))
+#define MAKE_TAG_SET4(a, b, c, d)                                \
+  ((1uL << static_cast<int>(a)) | (1uL << static_cast<int>(b)) | \
+   (1uL << static_cast<int>(c)) | (1uL << static_cast<int>(d)))
+
+  bool MatchesTagAnyOf(TagSet set) const {
+    return tag_ < 64 && (set & (1uL << tag_));
   }
 
  private:

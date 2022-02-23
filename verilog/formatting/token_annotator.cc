@@ -50,8 +50,8 @@ static constexpr int kUnhandledSpacesRequired = -1;
 static bool IsUnaryPrefixExpressionOperand(const PreFormatToken& left,
                                            const SyntaxTreeContext& context) {
   return (IsUnaryOperator(verilog_tokentype(left.TokenEnum())) &&
-          context.IsInsideFirst({NodeEnum::kUnaryPrefixExpression},
-                                {NodeEnum::kExpression})) ||
+          context.IsInsideFirst(MAKE_TAG_SET1(NodeEnum::kUnaryPrefixExpression),
+                                MAKE_TAG_SET1(NodeEnum::kExpression))) ||
          // Treat '##' like a unary prefix operator.
          left.TokenEnum() == verilog_tokentype::TK_POUNDPOUND;
 }
@@ -108,14 +108,15 @@ static bool PairwiseNonmergeable(const PreFormatToken& ftoken) {
 
 static bool InDeclaredDimensions(const SyntaxTreeContext& context) {
   return context.IsInsideFirst(
-      {NodeEnum::kPackedDimensions, NodeEnum::kUnpackedDimensions}, {});
+      MAKE_TAG_SET2(NodeEnum::kPackedDimensions, NodeEnum::kUnpackedDimensions),
+      MAKE_TAG_SET0());
 }
 
 static bool InRangeLikeContext(const SyntaxTreeContext& context) {
   return context.IsInsideFirst(
-      {NodeEnum::kDimensionScalar, NodeEnum::kDimensionRange,
-       NodeEnum::kDimensionSlice, NodeEnum::kCycleDelayRange},
-      {});
+      MAKE_TAG_SET4(NodeEnum::kDimensionScalar, NodeEnum::kDimensionRange,
+                    NodeEnum::kDimensionSlice, NodeEnum::kCycleDelayRange),
+      MAKE_TAG_SET0());
 }
 
 static bool IsAnySemicolon(const PreFormatToken& ftoken) {
@@ -204,7 +205,8 @@ static WithReason<int> SpacesRequiredBetween(
     return {1, "Space between return keyword and return value"};
   }
 
-  if (right_context.IsInsideFirst({NodeEnum::kStreamingConcatenation}, {})) {
+  if (right_context.IsInsideFirst(
+          MAKE_TAG_SET1(NodeEnum::kStreamingConcatenation), MAKE_TAG_SET0())) {
     if (left.TokenEnum() == TK_LS || left.TokenEnum() == TK_RS) {
       return {0, "No space around streaming operators"};
     } else if (left.format_token_enum == FormatTokenType::numeric_literal ||
@@ -224,7 +226,8 @@ static WithReason<int> SpacesRequiredBetween(
   }
 
   // Do not force space between '^' and '{' operators
-  if (right_context.IsInsideFirst({NodeEnum::kUnaryPrefixExpression}, {})) {
+  if (right_context.IsInsideFirst(
+          MAKE_TAG_SET1(NodeEnum::kUnaryPrefixExpression), 0)) {
     if (IsUnaryOperator(static_cast<verilog_tokentype>(left.TokenEnum())) &&
         right.TokenEnum() == '{') {
       return {0, "No space between unary and concatenation operators"};
@@ -275,7 +278,8 @@ static WithReason<int> SpacesRequiredBetween(
   }
 
   if (right_context.IsInsideFirst(
-          {NodeEnum::kUdpCombEntry, NodeEnum::kUdpSequenceEntry}, {})) {
+          MAKE_TAG_SET2(NodeEnum::kUdpCombEntry, NodeEnum::kUdpSequenceEntry),
+          0)) {
     // Spacing before ';' is handled above
     return {1, "One space around UDP entries"};
   }
@@ -371,8 +375,8 @@ static WithReason<int> SpacesRequiredBetween(
   if ((left.format_token_enum == FormatTokenType::keyword ||
        left.format_token_enum == FormatTokenType::identifier) &&
       right.TokenEnum() == '[') {
-    if (right_context.IsInsideFirst({NodeEnum::kPackedDimensions},
-                                    {NodeEnum::kExpression})) {
+    if (right_context.IsInsideFirst(MAKE_TAG_SET1(NodeEnum::kPackedDimensions),
+                                    MAKE_TAG_SET1(NodeEnum::kExpression))) {
       // "type [packed...]" (space between type and packed dimensions)
       // avoid touching any expressions inside the packed dimensions
       return {1, "spacing before [packed dimensions] of declarations"};
@@ -502,10 +506,10 @@ static WithReason<int> SpacesRequiredBetween(
     // classes often appear with method calls like:
     //   type#(params...)::method(...);
     if (left_context.DirectParentIs(NodeEnum::kUnqualifiedId) &&
-        !left_context.IsInsideFirst(
-            {NodeEnum::kInstantiationType, NodeEnum::kBindTargetInstance,
-             NodeEnum::kExtendsList},
-            {})) {
+        !left_context.IsInsideFirst(MAKE_TAG_SET3(NodeEnum::kInstantiationType,
+                                                  NodeEnum::kBindTargetInstance,
+                                                  NodeEnum::kExtendsList),
+                                    0)) {
       return {0, "No space before # when direct parent is kUnqualifiedId."};
     } else {
       return {1, "Spaces before # in most other contexts."};

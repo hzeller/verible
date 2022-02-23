@@ -113,36 +113,43 @@ TEST(SyntaxTreeContextTest, IsInsideTest) {
 // Test that IsInsideFirst correctly reports whether context matches.
 TEST(SyntaxTreeContextTest, IsInsideFirstTest) {
   SyntaxTreeContext context;
-  EXPECT_FALSE(context.IsInsideFirst({1, 2, 3}, {0}));
+  EXPECT_FALSE(context.IsInsideFirst(MAKE_TAG_SET3(1, 2, 3), MAKE_TAG_SET1(0)));
   {
     SyntaxTreeNode node1(1);
     SyntaxTreeContext::AutoPop p1(&context, &node1);
-    EXPECT_TRUE(context.IsInsideFirst({1}, {0, 2, 3}));
-    EXPECT_FALSE(context.IsInsideFirst({0}, {1, 2, 3}));
+    EXPECT_TRUE(
+        context.IsInsideFirst(MAKE_TAG_SET1(1), MAKE_TAG_SET3(0, 2, 3)));
+    EXPECT_FALSE(
+        context.IsInsideFirst(MAKE_TAG_SET1(0), MAKE_TAG_SET3(1, 2, 3)));
     {
       SyntaxTreeNode node2(2);
       SyntaxTreeContext::AutoPop p2(&context, &node2);
-      EXPECT_TRUE(context.IsInsideFirst({2}, {0, 1, 3}));
-      EXPECT_TRUE(context.IsInsideFirst({1}, {0}));
-      EXPECT_FALSE(context.IsInsideFirst({1}, {2}));
-      EXPECT_TRUE(context.IsInsideFirst({1, 2}, {0}));
-      EXPECT_TRUE(context.IsInsideFirst({1, 3}, {0}));
+      EXPECT_TRUE(
+          context.IsInsideFirst(MAKE_TAG_SET1(2), MAKE_TAG_SET3(0, 1, 3)));
+      EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(1), MAKE_TAG_SET1(0)));
+      EXPECT_FALSE(context.IsInsideFirst(MAKE_TAG_SET1(1), MAKE_TAG_SET1(2)));
+      EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET2(1, 2), MAKE_TAG_SET1(0)));
+      EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET2(1, 3), MAKE_TAG_SET1(0)));
       {
         SyntaxTreeNode node3(3);
         SyntaxTreeContext::AutoPop p3(&context, &node3);
-        EXPECT_TRUE(context.IsInsideFirst({2}, {0, 1}));
-        EXPECT_TRUE(context.IsInsideFirst({3}, {0, 1, 2}));
-        EXPECT_TRUE(context.IsInsideFirst({1}, {0}));
-        EXPECT_FALSE(context.IsInsideFirst({1}, {2}));
-        EXPECT_FALSE(context.IsInsideFirst({1}, {3}));
-        EXPECT_TRUE(context.IsInsideFirst({2}, {0}));
-        EXPECT_TRUE(context.IsInsideFirst({2}, {1}));
-        EXPECT_FALSE(context.IsInsideFirst({2}, {3}));
-        EXPECT_TRUE(context.IsInsideFirst({3}, {0}));
-        EXPECT_TRUE(context.IsInsideFirst({3}, {1}));
-        EXPECT_TRUE(context.IsInsideFirst({3}, {2}));
-        EXPECT_TRUE(context.IsInsideFirst({1, 3}, {2}));
-        EXPECT_FALSE(context.IsInsideFirst({1, 2}, {3}));
+        EXPECT_TRUE(
+            context.IsInsideFirst(MAKE_TAG_SET1(2), MAKE_TAG_SET2(0, 1)));
+        EXPECT_TRUE(
+            context.IsInsideFirst(MAKE_TAG_SET1(3), MAKE_TAG_SET3(0, 1, 2)));
+        EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(1), MAKE_TAG_SET1(0)));
+        EXPECT_FALSE(context.IsInsideFirst(MAKE_TAG_SET1(1), MAKE_TAG_SET1(2)));
+        EXPECT_FALSE(context.IsInsideFirst(MAKE_TAG_SET1(1), MAKE_TAG_SET1(3)));
+        EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(2), MAKE_TAG_SET1(0)));
+        EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(2), MAKE_TAG_SET1(1)));
+        EXPECT_FALSE(context.IsInsideFirst(MAKE_TAG_SET1(2), MAKE_TAG_SET1(3)));
+        EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(3), MAKE_TAG_SET1(0)));
+        EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(3), MAKE_TAG_SET1(1)));
+        EXPECT_TRUE(context.IsInsideFirst(MAKE_TAG_SET1(3), MAKE_TAG_SET1(2)));
+        EXPECT_TRUE(
+            context.IsInsideFirst(MAKE_TAG_SET2(1, 3), MAKE_TAG_SET1(2)));
+        EXPECT_FALSE(
+            context.IsInsideFirst(MAKE_TAG_SET2(1, 2), MAKE_TAG_SET1(3)));
       }
     }
   }

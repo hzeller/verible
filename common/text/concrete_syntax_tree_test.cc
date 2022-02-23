@@ -60,9 +60,9 @@ TEST(SyntaxTreeNodeMatchesTag, NotMatches) {
 // Test that MatchesTagAnyOf matches correctly.
 TEST(SyntaxTreeNodeMatchesTagAnyOf, Matches) {
   auto node = MakeTaggedNode(3);
-  EXPECT_TRUE(CheckTree(node)->MatchesTagAnyOf({2, 3}));
-  EXPECT_TRUE(CheckTree(node)->MatchesTagAnyOf({3, 4}));
-  EXPECT_FALSE(CheckTree(node)->MatchesTagAnyOf({2, 4}));
+  EXPECT_TRUE(CheckTree(node)->MatchesTagAnyOf(MAKE_TAG_SET2(2, 3)));
+  EXPECT_TRUE(CheckTree(node)->MatchesTagAnyOf(MAKE_TAG_SET2(3, 4)));
+  EXPECT_FALSE(CheckTree(node)->MatchesTagAnyOf(MAKE_TAG_SET2(2, 4)));
 }
 
 TEST(SyntaxTreeNodeAppend, AppendVoid) {

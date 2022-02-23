@@ -67,7 +67,8 @@ static bool KeepNonWhitespace(const TokenInfo& t) {
 }
 
 static bool NodeIsBeginEndBlock(const SyntaxTreeNode& node) {
-  return node.MatchesTagAnyOf({NodeEnum::kSeqBlock, NodeEnum::kGenerateBlock});
+  return node.MatchesTagAnyOf(
+      MAKE_TAG_SET2(NodeEnum::kSeqBlock, NodeEnum::kGenerateBlock));
 }
 
 static SyntaxTreeNode& GetBlockEnd(const SyntaxTreeNode& block) {
@@ -80,8 +81,9 @@ static const verible::Symbol* GetEndLabel(const SyntaxTreeNode& end_node) {
 }
 
 static bool NodeIsConditionalConstruct(const SyntaxTreeNode& node) {
-  return node.MatchesTagAnyOf({NodeEnum::kConditionalStatement,
-                               NodeEnum::kConditionalGenerateConstruct});
+  return node.MatchesTagAnyOf(
+      MAKE_TAG_SET2(NodeEnum::kConditionalStatement,
+                    NodeEnum::kConditionalGenerateConstruct));
 }
 
 static bool NodeIsConditionalOrBlock(const SyntaxTreeNode& node) {
@@ -931,9 +933,9 @@ void TreeUnwrapper::SetIndentationsAndCreatePartitions(
           // TODO(fangism): Handle constriants
           VisitIndentedSection(node, 0, PartitionPolicyEnum::kAlwaysExpand);
         } else if (subnode.MatchesTagAnyOf(
-                       {NodeEnum::kMethodCallExtension,
-                        NodeEnum::kRandomizeMethodCallExtension,
-                        NodeEnum::kFunctionCall})) {
+                       MAKE_TAG_SET3(NodeEnum::kMethodCallExtension,
+                                     NodeEnum::kRandomizeMethodCallExtension,
+                                     NodeEnum::kFunctionCall))) {
           VisitIndentedSection(
               node, 0, PartitionPolicyEnum::kAppendFittingSubPartitions);
         } else {
@@ -1980,9 +1982,9 @@ void TreeUnwrapper::ReshapeTokenPartitions(
     }
     case NodeEnum::kReferenceCallBase: {
       const auto& subnode = verible::SymbolCastToNode(*node.children().back());
-      if (subnode.MatchesTagAnyOf({NodeEnum::kMethodCallExtension,
-                                   NodeEnum::kFunctionCall,
-                                   NodeEnum::kRandomizeMethodCallExtension})) {
+      if (subnode.MatchesTagAnyOf(MAKE_TAG_SET3(
+              NodeEnum::kMethodCallExtension, NodeEnum::kFunctionCall,
+              NodeEnum::kRandomizeMethodCallExtension))) {
         if (partition.Value().PartitionPolicy() ==
             PartitionPolicyEnum::kAppendFittingSubPartitions) {
           auto& last = *ABSL_DIE_IF_NULL(partition.RightmostDescendant());
@@ -2274,8 +2276,9 @@ void TreeUnwrapper::ReshapeTokenPartitions(
 
     case NodeEnum::kAlwaysStatement: {
       if (GetSubtreeAsNode(node, tag, node.children().size() - 1)
-              ->MatchesTagAnyOf({NodeEnum::kProceduralTimingControlStatement,
-                                 NodeEnum::kSeqBlock})) {
+              ->MatchesTagAnyOf(
+                  MAKE_TAG_SET2(NodeEnum::kProceduralTimingControlStatement,
+                                NodeEnum::kSeqBlock))) {
         // Merge 'always' keyword with next sibling, and adjust subtree indent.
         verible::MergeLeafIntoNextLeaf(&partition.Children().front());
         verible::AdjustIndentationAbsolute(

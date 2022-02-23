@@ -44,8 +44,9 @@ inline bool ContextIsInsidePackedDimensions(
 inline bool ContextIsInsideUnpackedDimensions(
     const verible::SyntaxTreeContext& context) {
   // Exclude being inside an associative array dimensions ([type]).
-  return context.IsInsideFirst({NodeEnum::kUnpackedDimensions},
-                               {NodeEnum::kDimensionAssociativeType});
+  return context.IsInsideFirst(
+      MAKE_TAG_SET1(NodeEnum::kUnpackedDimensions),
+      MAKE_TAG_SET1(NodeEnum::kDimensionAssociativeType));
 }
 
 inline bool ContextIsInsideFormalParameterList(

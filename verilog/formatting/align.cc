@@ -662,8 +662,9 @@ static std::vector<TaggedTokenPartitionRange> GetAlignableStatementGroups(
                                AlignableSyntaxSubtype::kDataDeclaration);
         }
         // Align blocking assignments.
-        if (node.MatchesTagAnyOf({NodeEnum::kBlockingAssignmentStatement,
-                                  NodeEnum::kNetVariableAssignment})) {
+        if (node.MatchesTagAnyOf(
+                MAKE_TAG_SET2(NodeEnum::kBlockingAssignmentStatement,
+                              NodeEnum::kNetVariableAssignment))) {
           return AlignClassify(AlignmentGroupAction::kMatch,
                                AlignableSyntaxSubtype::kBlockingAssignment);
         }

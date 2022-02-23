@@ -53,9 +53,9 @@ std::vector<verible::TreeSearchMatch> FindAllProgramDeclarations(
 
 bool IsModuleOrInterfaceOrProgramDeclaration(
     const SyntaxTreeNode& declaration) {
-  return declaration.MatchesTagAnyOf({NodeEnum::kModuleDeclaration,
-                                      NodeEnum::kInterfaceDeclaration,
-                                      NodeEnum::kProgramDeclaration});
+  return declaration.MatchesTagAnyOf(MAKE_TAG_SET3(
+      NodeEnum::kModuleDeclaration, NodeEnum::kInterfaceDeclaration,
+      NodeEnum::kProgramDeclaration));
 }
 
 const SyntaxTreeNode* GetModuleHeader(const Symbol& module_declaration) {
