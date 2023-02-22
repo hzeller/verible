@@ -77,6 +77,7 @@ compilation_database(
     targets = [
         ":install-binaries",
         "//common/lsp:dummy-ls",
+        "//bazel:aquery2compdb",
     ],
     # TODO: is there a way to essentially specify //... so that all tests
     # are included as well ?

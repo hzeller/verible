@@ -19,6 +19,21 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "aquery2compdb",
+    srcs = [ "aquery2compdb.cc" ],
+    copts = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["-fexceptions"],
+    }),
+    features = ["-use_header_modules"],  # precompiled headers incompatible with -fexceptions.
+    deps = [
+        "@jsonhpp",
+        "@com_google_absl//absl/strings",
+        "//common/util:file_util",
+    ],
+)
+
 exports_files([
     "bison.bzl",
     "flex.bzl",

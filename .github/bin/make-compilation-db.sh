@@ -17,14 +17,20 @@ set -u
 set -e
 set -o pipefail
 
+readonly USE_AQUERY_APPROACH=${USE_AQUERY_APPROACH:-0}
 readonly OUTPUT_BASE=$(bazel info output_base)
 
-# First, build the compilation database baseline with placeholders for exec-root
-bazel build :compdb > /dev/null 2>&1
+if [ ${USE_AQUERY_APPROACH} -eq 1 ]; then
+  bazel build -c opt bazel:aquery2compdb > /dev/null 2>&1
+  bazel aquery -c opt '//...' --output=jsonproto 2>/dev/null | bazel-bin/bazel/aquery2compdb ${OUTPUT_BASE} > compile_commands.json
+else
+  # First, build the compilation database baseline with placeholders for exec-root
+  bazel build :compdb > /dev/null 2>&1
 
-# Fix up the __OUTPUT_BASE__ to the path used by bazel and put the resulting
-# db with the expected name in the root directory of the project.
-cat bazel-bin/compile_commands.json \
-  | sed "s|__OUTPUT_BASE__|$OUTPUT_BASE|g" \
-  | sed 's/-fno-canonical-system-headers//g' \
-        > compile_commands.json
+  # Fix up the __OUTPUT_BASE__ to the path used by bazel and put the resulting
+  # db with the expected name in the root directory of the project.
+  cat bazel-bin/compile_commands.json \
+    | sed "s|__OUTPUT_BASE__|$OUTPUT_BASE|g" \
+    | sed 's/-fno-canonical-system-headers//g' \
+    > compile_commands.json
+fi
