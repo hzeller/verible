@@ -13,18 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -u
 set -e
-set -o pipefail
-
-readonly OUTPUT_BASE=$(bazel info output_base)
 
 # First, build the compilation database baseline with placeholders for exec-root
-bazel build :compdb > /dev/null 2>&1
-
-# Fix up the __OUTPUT_BASE__ to the path used by bazel and put the resulting
-# db with the expected name in the root directory of the project.
-cat bazel-bin/compile_commands.json \
-  | sed "s|__OUTPUT_BASE__|$OUTPUT_BASE|g" \
-  | sed 's/-fno-canonical-system-headers//g' \
-        > compile_commands.json
+bazel run :compdb > /dev/null 2>&1

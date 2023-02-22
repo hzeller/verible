@@ -5,7 +5,7 @@
 #  bazel test ...
 
 load("@com_github_google_rules_install//installer:def.bzl", "installer")
-load("@com_grail_bazel_compdb//:defs.bzl", "compilation_database")
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 
 licenses(["notice"])  # Apache 2.0
 
@@ -72,12 +72,7 @@ action_listener(
     visibility = ["//visibility:public"],
 )
 
-compilation_database(
+refresh_compile_commands(
     name = "compdb",
-    targets = [
-        ":install-binaries",
-        "//common/lsp:dummy-ls",
-    ],
-    # TODO: is there a way to essentially specify //... so that all tests
-    # are included as well ?
+    exclude_external_sources = True,
 )

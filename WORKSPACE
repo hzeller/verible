@@ -196,11 +196,14 @@ http_archive(
 )
 
 http_archive(
-    name = "com_grail_bazel_compdb",
-    sha256 = "a3ff6fe238eec8202270dff75580cba3d604edafb8c3408711e82633c153efa8",
-    strip_prefix = "bazel-compilation-database-940cedacdb8a1acbce42093bf67f3a5ca8b265f7",
-    urls = ["https://github.com/grailbio/bazel-compilation-database/archive/940cedacdb8a1acbce42093bf67f3a5ca8b265f7.tar.gz"],
+    name = "hedron_compile_commands",
+    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/19808d64d08d7e8866bc7ebe2e3da98119935933.tar.gz",
+    strip_prefix = "bazel-compile-commands-extractor-19808d64d08d7e8866bc7ebe2e3da98119935933",
+    sha256 = "303ce6c701eed2b33902b8198ad0d3e6d45f2a2c088adad276d02b27f86ac9fc",
 )
+load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
+hedron_compile_commands_setup()
+
 
 # zlib is imported through protobuf. Make the dependency explicit considering
 # it's used outside protobuf.
