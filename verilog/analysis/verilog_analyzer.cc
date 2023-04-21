@@ -213,7 +213,9 @@ std::unique_ptr<VerilogAnalyzer>
 VerilogAnalyzer::AnalyzeAutomaticPreprocessFallback(absl::string_view text,
                                                     absl::string_view name) {
   std::unique_ptr<verilog::VerilogAnalyzer> parser;
-  for (bool preprocess_expand_macros : {false, true}) {
+  using Option = verilog::VerilogPreprocess::Option;
+  // TODO(hzeller): After kBestEffort works, maybe that should be used.
+  for (auto preprocess_expand_macros : {Option::kNo, Option::kYes}) {
     bool expand_macro_status = false;
     for (bool preprocess_filter_branches : {false, true}) {
       parser = verilog::VerilogAnalyzer::AnalyzeAutomaticMode(

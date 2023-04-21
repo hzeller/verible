@@ -788,12 +788,13 @@ endmodule
 
   for (const auto& test_case : test_cases) {
     PreprocessorTester expanded(
-        test_case.pp_input, VerilogPreprocess::Config({.expand_macros = true}));
+        test_case.pp_input,
+        VerilogPreprocess::Config({.expand_macros = VerilogPreprocess::Option::kYes}));
     EXPECT_TRUE(expanded.Status().ok())
         << expanded.Status() << " " << test_case.description;
     PreprocessorTester equivalent(
         test_case.equivalent,
-        VerilogPreprocess::Config({.expand_macros = false}));
+        VerilogPreprocess::Config({.expand_macros = VerilogPreprocess::Option::kNo}));
     EXPECT_TRUE(equivalent.Status().ok())
         << equivalent.Status() << " " << test_case.description;
     const auto& expanded_stream = expanded.Data().GetTokenStreamView();
@@ -826,7 +827,7 @@ TEST(VerilogPreprocessTest, SetExternalDefines) {
   verible::TokenStreamView test_case_stream_view;
   verible::InitTokenStreamView(test_case_tokens, &test_case_stream_view);
 
-  VerilogPreprocess::Config test_config({.expand_macros = true});
+  VerilogPreprocess::Config test_config({.expand_macros = VerilogPreprocess::Option::kYes});
   VerilogPreprocess preprocessor(test_config);
 
   verilog::TextMacroDefinition macro1("MACRO1", "VALUE1");
@@ -856,7 +857,7 @@ TEST(VerilogPreprocessTest, ExternalDefinesWithUndef) {
   verible::TokenStreamView test_case_stream_view;
   verible::InitTokenStreamView(test_case_tokens, &test_case_stream_view);
 
-  VerilogPreprocess::Config test_config({.expand_macros = true});
+  VerilogPreprocess::Config test_config({.expand_macros = VerilogPreprocess::Option::kYes});
   VerilogPreprocess preprocessor(test_config);
 
   verilog::TextMacroDefinition macro1("MACRO1", "VALUE1");
@@ -873,7 +874,7 @@ TEST(VerilogPreprocessTest, ExternalDefinesWithUndef) {
 
   EXPECT_THAT(errors.size(), 1);
   EXPECT_THAT(errors.front().error_message,
-              StartsWith("Error expanding macro identifier"));
+              StartsWith("Unknown macro identifier"));
 }
 
 static void IncludeFileTestWithIncludeBracket(const char* start_inc,
@@ -898,10 +899,12 @@ static void IncludeFileTestWithIncludeBracket(const char* start_inc,
     if (filename == included_absolute_path) return included_content;
     return absl::NotFoundError(absl::StrCat(filename, " is not found"));
   };
-  VerilogPreprocess tester(VerilogPreprocess::Config({.include_files = true}),
-                           file_opener);
-  VerilogPreprocess equivalent(
-      VerilogPreprocess::Config({.include_files = true}));
+  VerilogPreprocess tester(
+      VerilogPreprocess::Config(
+          {.include_files = VerilogPreprocess::Option::kYes}),
+      file_opener);
+  VerilogPreprocess equivalent(VerilogPreprocess::Config(
+      {.include_files = VerilogPreprocess::Option::kYes}));
 
   LexerTester src_lexer(src_content);
   LexerTester equivalent_lexer(equivalent_content);
@@ -962,10 +965,12 @@ TEST(VerilogPreprocessTest, IncludingFileWithRelativePath) {
     if (!result.status().ok()) return result.status();
     return (*result)->GetContent();
   };
-  VerilogPreprocess tester(VerilogPreprocess::Config({.include_files = true}),
-                           file_opener);
-  VerilogPreprocess equivalent(
-      VerilogPreprocess::Config({.include_files = true}));
+  VerilogPreprocess tester(
+      VerilogPreprocess::Config(
+          {.include_files = VerilogPreprocess::Option::kYes}),
+      file_opener);
+  VerilogPreprocess equivalent(VerilogPreprocess::Config(
+      {.include_files = VerilogPreprocess::Option::kYes}));
 
   LexerTester src_lexer(src_content);
   LexerTester equivalent_lexer(equivalent_content);
@@ -1017,8 +1022,10 @@ TEST(VerilogPreprocessTest,
     if (!result.status().ok()) return result.status();
     return (*result)->GetContent();
   };
-  VerilogPreprocess tester(VerilogPreprocess::Config({.include_files = true}),
-                           file_opener);
+  VerilogPreprocess tester(
+      VerilogPreprocess::Config(
+          {.include_files = VerilogPreprocess::Option::kYes}),
+      file_opener);
 
   LexerTester src_lexer(src_content);
   const auto& tester_pp_data =

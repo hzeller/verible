@@ -94,8 +94,9 @@ static absl::Status PreprocessSingleFile(
   }
   verilog::VerilogPreprocess::Config config;
   config.filter_branches = true;
-  config.include_files = true;
-  config.expand_macros = true;
+  // TODO: make the following configurable via command line.
+  config.include_files = verilog::VerilogPreprocess::Option::kBestEffort;
+  config.expand_macros = verilog::VerilogPreprocess::Option::kBestEffort;
 
   verilog::VerilogProject project(".", preprocessing_info.include_dirs);
 

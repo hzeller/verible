@@ -130,7 +130,7 @@ declare -A ExpectedFailCount
 ExpectedFailCount[syntax:ibex]=14
 ExpectedFailCount[lint:ibex]=14
 ExpectedFailCount[project:ibex]=192
-ExpectedFailCount[preprocessor:ibex]=368
+ExpectedFailCount[preprocessor:ibex]=166
 
 ExpectedFailCount[syntax:opentitan]=36
 ExpectedFailCount[lint:opentitan]=36
@@ -140,7 +140,7 @@ ExpectedFailCount[preprocessor:opentitan]=1955
 ExpectedFailCount[syntax:sv-tests]=77
 ExpectedFailCount[lint:sv-tests]=76
 ExpectedFailCount[project:sv-tests]=187
-ExpectedFailCount[preprocessor:sv-tests]=139
+ExpectedFailCount[preprocessor:sv-tests]=125
 
 ExpectedFailCount[syntax:caliptra-rtl]=4
 ExpectedFailCount[lint:caliptra-rtl]=4
@@ -150,12 +150,12 @@ ExpectedFailCount[preprocessor:caliptra-rtl]=668
 ExpectedFailCount[syntax:Cores-VeeR-EH2]=2
 ExpectedFailCount[lint:Cores-VeeR-EH2]=2
 ExpectedFailCount[project:Cores-VeeR-EH2]=42
-ExpectedFailCount[preprocessor:Cores-VeeR-EH2]=43
+ExpectedFailCount[preprocessor:Cores-VeeR-EH2]=42
 
 ExpectedFailCount[syntax:cva6]=4
 ExpectedFailCount[lint:cva6]=4
 ExpectedFailCount[project:cva6]=70
-ExpectedFailCount[preprocessor:cva6]=65
+ExpectedFailCount[preprocessor:cva6]=59
 
 ExpectedFailCount[syntax:uvm]=1
 ExpectedFailCount[lint:uvm]=1
@@ -165,10 +165,10 @@ ExpectedFailCount[preprocessor:uvm]=115
 ExpectedFailCount[syntax:tnoc]=3
 ExpectedFailCount[lint:tnoc]=3
 ExpectedFailCount[project:tnoc]=24
-ExpectedFailCount[preprocessor:tnoc]=57
+ExpectedFailCount[preprocessor:tnoc]=11
 
 ExpectedFailCount[project:80x86]=2
-ExpectedFailCount[preprocessor:80x86]=7
+ExpectedFailCount[preprocessor:80x86]=1
 
 ExpectedFailCount[syntax:XilinxUnisimLibrary]=4
 ExpectedFailCount[lint:XilinxUnisimLibrary]=4
@@ -188,7 +188,7 @@ ExpectedFailCount[preprocessor:ivtest]=26
 ExpectedFailCount[syntax:nontrivial-mips]=2
 ExpectedFailCount[lint:nontrivial-mips]=2
 ExpectedFailCount[project:nontrivial-mips]=81
-ExpectedFailCount[preprocessor:nontrivial-mips]=78
+ExpectedFailCount[preprocessor:nontrivial-mips]=77
 
 ExpectedFailCount[project:axi]=71
 ExpectedFailCount[preprocessor:axi]=68
@@ -196,7 +196,7 @@ ExpectedFailCount[preprocessor:axi]=68
 ExpectedFailCount[syntax:rsd]=5
 ExpectedFailCount[lint:rsd]=5
 ExpectedFailCount[project:rsd]=51
-ExpectedFailCount[preprocessor:rsd]=48
+ExpectedFailCount[preprocessor:rsd]=46
 
 ExpectedFailCount[project:scr1]=45
 ExpectedFailCount[preprocessor:scr1]=46
@@ -207,7 +207,7 @@ ExpectedFailCount[preprocessor:serv]=1
 ExpectedFailCount[syntax:basejump_stl]=466
 ExpectedFailCount[lint:basejump_stl]=466
 ExpectedFailCount[project:basejump_stl]=577
-ExpectedFailCount[preprocessor:basejump_stl]=610
+ExpectedFailCount[preprocessor:basejump_stl]=481
 
 # Ideally, we expect all tools to process all files with a zero exit code.
 # However, that is not always the case, so we document the current

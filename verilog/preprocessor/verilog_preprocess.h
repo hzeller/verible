@@ -77,6 +77,8 @@ struct VerilogPreprocessData {
   std::vector<TokenSequence> lexed_macros_backup;
 
   // A backup memory that owns the content of the included files.
+  // TODO(hzeller): verilog project does a similar thing, keeping track of
+  // TextStructures of opened files. This should be unified.
   std::vector<std::unique_ptr<verible::TextStructure>> included_text_structure;
 
   // Map of defined macros.
@@ -99,6 +101,11 @@ class VerilogPreprocess {
  public:
   using FileOpener =
       std::function<absl::StatusOr<absl::string_view>(absl::string_view)>;
+  enum class Option {
+    kNo,          // Don't do the option.
+    kYes,         // Always do this feature. Strictly fail if we can't do it.
+    kBestEffort,  // Attempt feature option; keep token in stream if impossible.
+  };
   struct Config {
     // Filter out non-matching `ifdef and `ifndef branches depending on
     // which defines are set.
@@ -110,11 +117,22 @@ class VerilogPreprocess {
     // want to emit all tokens.
     bool filter_branches = false;
 
+    // TODO(hzeller): the following: could these be three values 'yes', 'no'
+    // and 'best effort' ? Often, being able to find some includes (if they
+    // are found in include path) and expand some macros (if they are defined)
+    // can bring us a long way. Use PreprocessOption instead of bool.
+
     // Inlude files with `include.
-    bool include_files = false;
+    Option include_files = Option::kNo;
+
+    // TODO(hzeller): Depending on context, different behavior could be
+    // considered: if a macro is not defined, should it be expanded
+    // to an empty string or the token left as-is ?
 
     // Expand macro definition bodies, this will relexes the macro body.
-    bool expand_macros = false;
+    Option expand_macros = Option::kNo;
+    // TODO(hzeller): bool remove_comments;
+    // TODO(hzeller): bool remove_define;
     // TODO(hzeller): Provide a map of command-line provided +define+'s
   };
 

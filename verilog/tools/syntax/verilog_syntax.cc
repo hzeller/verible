@@ -305,8 +305,10 @@ int main(int argc, char** argv) {
 
     // TODO(hzeller): is there ever a situation in which we do not want
     // to use the preprocessor ?
+    // All the ternary options should be at least set to kBestEffort.
     const verilog::VerilogPreprocess::Config preprocess_config{
         .filter_branches = true,
+        .expand_macros = verilog::VerilogPreprocess::Option::kNo,
     };
     json file_json;
     int file_status =
