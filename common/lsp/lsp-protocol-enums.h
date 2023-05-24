@@ -63,6 +63,12 @@ enum SymbolKind {
   kOperator = 25,
   kTypeParameter = 26,
 };
+
+enum DocumentHighlightKind {
+  kText = 1,
+  kRead = 2,
+  kWrite = 3,
+};
 }  // namespace lsp
 }  // namespace verible
 #endif  // COMMON_LSP_LSP_PROTOCOL_ENUMS_H

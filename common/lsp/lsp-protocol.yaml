@@ -149,7 +149,7 @@ DocumentHighlightParams:
 
 DocumentHighlight:         # response documentHighlight is [] of this.
   range: Range
-  # there is also a highlight kind to distinguish read/write
+  kind?: integer           # enum DocumentHighlightKind
 
 # -- textDocument/formatting, textDocument/rangeFormatting
 DocumentFormattingParams:
