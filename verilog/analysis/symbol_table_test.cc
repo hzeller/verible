@@ -39,7 +39,7 @@ namespace verilog {
 // Directly test some SymbolTable internals.
 class SymbolTable::Tester : public SymbolTable {
  public:
-  explicit Tester(VerilogProject* project) : SymbolTable(project) {}
+  explicit Tester(VerilogProject *project) : SymbolTable(project) {}
 
   using SymbolTable::MutableRoot;
 };
@@ -58,11 +58,11 @@ using verible::file::testing::ScopedTestFile;
 using TestVerilogSourceFile = InMemoryVerilogSourceFile;
 
 struct ScopePathPrinter {
-  const SymbolTableNode& node;
+  const SymbolTableNode &node;
 };
 
-static std::ostream& operator<<(std::ostream& stream,
-                                const ScopePathPrinter& p) {
+static std::ostream &operator<<(std::ostream &stream,
+                                const ScopePathPrinter &p) {
   return SymbolTableNodeFullPath(stream, p.node);
 }
 
@@ -73,7 +73,7 @@ static std::ostream& operator<<(std::ostream& stream,
   const auto found_##dest(map.find(key)); /* iterator */ \
   ASSERT_NE(found_##dest, map.end())                     \
       << "No element at \"" << key << "\" in " #map;     \
-  const auto& dest ABSL_ATTRIBUTE_UNUSED(                \
+  const auto &dest ABSL_ATTRIBUTE_UNUSED(                \
       found_##dest->second); /* mapped_type */
 
 // Assert that container is not empty, and reference its first element.
@@ -81,14 +81,14 @@ static std::ostream& operator<<(std::ostream& stream,
 // Defined as a macro for meaningful line numbers on failure.
 #define ASSIGN_MUST_HAVE_FIRST_ELEMENT(dest, container) \
   ASSERT_FALSE(container.empty());                      \
-  const auto& dest(*container.begin());
+  const auto &dest(*container.begin());
 
 // Assert that container has exactly one-element, and reference it.
 // Works on any container with .size() and .begin().
 // Defined as a macro for meaningful line numbers on failure.
 #define ASSIGN_MUST_HAVE_UNIQUE(dest, container) \
   ASSERT_EQ(container.size(), 1);                \
-  const auto& dest(*container.begin());
+  const auto &dest(*container.begin());
 
 // Shorthand for asserting that a symbol table lookup from
 // (const SymbolTableNode& scope) using (absl::string_view key) must succeed,
@@ -102,8 +102,8 @@ static std::ostream& operator<<(std::ostream& stream,
   ASSERT_NE(found_##dest, (scope).end())                                  \
       << "No symbol at \"" << key << "\" in " << ScopePathPrinter{scope}; \
   EXPECT_EQ(found_##dest->first, key);                                    \
-  const SymbolTableNode& dest(found_##dest->second);                      \
-  const SymbolInfo& dest##_info ABSL_ATTRIBUTE_UNUSED(dest.Value())
+  const SymbolTableNode &dest(found_##dest->second);                      \
+  const SymbolInfo &dest##_info ABSL_ATTRIBUTE_UNUSED(dest.Value())
 
 // For SymbolInfo::references_map_view_type only: Assert that there is exactly
 // one element at 'key' in 'map' and assign it to 'dest' (DependentReferences).
@@ -151,7 +151,7 @@ TEST(ReferenceComponentTest, MatchesMetatypeTest) {
         .identifier = "",
         .ref_type = ReferenceType::kUnqualified,
         .required_metatype = SymbolMetaType::kUnspecified};
-    for (const auto& other :
+    for (const auto &other :
          {SymbolMetaType::kUnspecified, SymbolMetaType::kParameter,
           SymbolMetaType::kFunction, SymbolMetaType::kTask}) {
       const auto status = component.MatchesMetatype(other);
@@ -163,12 +163,12 @@ TEST(ReferenceComponentTest, MatchesMetatypeTest) {
         .identifier = "",
         .ref_type = ReferenceType::kUnqualified,
         .required_metatype = SymbolMetaType::kCallable};
-    for (const auto& other :
+    for (const auto &other :
          {SymbolMetaType::kFunction, SymbolMetaType::kTask}) {
       const auto status = component.MatchesMetatype(other);
       EXPECT_TRUE(status.ok()) << status.message();
     }
-    for (const auto& other : {SymbolMetaType::kModule, SymbolMetaType::kPackage,
+    for (const auto &other : {SymbolMetaType::kModule, SymbolMetaType::kPackage,
                               SymbolMetaType::kClass}) {
       const auto status = component.MatchesMetatype(other);
       EXPECT_FALSE(status.ok())
@@ -180,12 +180,12 @@ TEST(ReferenceComponentTest, MatchesMetatypeTest) {
         .identifier = "",
         .ref_type = ReferenceType::kUnqualified,
         .required_metatype = SymbolMetaType::kClass};
-    for (const auto& other :
+    for (const auto &other :
          {SymbolMetaType::kClass, SymbolMetaType::kTypeAlias}) {
       const auto status = component.MatchesMetatype(other);
       EXPECT_TRUE(status.ok()) << status.message();
     }
-    for (const auto& other :
+    for (const auto &other :
          {SymbolMetaType::kModule, SymbolMetaType::kPackage,
           SymbolMetaType::kFunction, SymbolMetaType::kTask}) {
       const auto status = component.MatchesMetatype(other);
@@ -199,7 +199,7 @@ TEST(ReferenceComponentTest, MatchesMetatypeTest) {
         .ref_type = ReferenceType::kUnqualified,
         .required_metatype = SymbolMetaType::kFunction};
 
-    for (const auto& other :
+    for (const auto &other :
          {SymbolMetaType::kUnspecified, SymbolMetaType::kParameter,
           SymbolMetaType::kModule, SymbolMetaType::kTask,
           SymbolMetaType::kClass}) {
@@ -387,8 +387,8 @@ TEST(SymbolTablePrintTest, PrintClass) {
 TEST(BuildSymbolTableTest, IntegrityCheckResolvedSymbol) {
   const auto test_func = []() {
     SymbolTable::Tester symbol_table_1(nullptr), symbol_table_2(nullptr);
-    SymbolTableNode& root1(symbol_table_1.MutableRoot());
-    SymbolTableNode& root2(symbol_table_2.MutableRoot());
+    SymbolTableNode &root1(symbol_table_1.MutableRoot());
+    SymbolTableNode &root2(symbol_table_2.MutableRoot());
     // Deliberately point from one symbol table to the other.
     // To avoid an use-after-free AddressSanitizer error,
     // mind the destruction ordering here:
@@ -409,8 +409,8 @@ TEST(BuildSymbolTableTest, IntegrityCheckResolvedSymbol) {
 TEST(BuildSymbolTableTest, IntegrityCheckDeclaredType) {
   const auto test_func = []() {
     SymbolTable::Tester symbol_table_1(nullptr), symbol_table_2(nullptr);
-    SymbolTableNode& root1(symbol_table_1.MutableRoot());
-    SymbolTableNode& root2(symbol_table_2.MutableRoot());
+    SymbolTableNode &root1(symbol_table_1.MutableRoot());
+    SymbolTableNode &root2(symbol_table_2.MutableRoot());
     // Deliberately point from one symbol table to the other.
     // To avoid an use-after-free AddressSanitizer error,
     // mind the destruction ordering here:
@@ -434,7 +434,7 @@ TEST(BuildSymbolTableTest, InvalidSyntax) {
   constexpr absl::string_view invalid_codes[] = {
       "module;\nendmodule\n",
   };
-  for (const auto& code : invalid_codes) {
+  for (const auto &code : invalid_codes) {
     TestVerilogSourceFile src("foobar.sv", code);
     const auto status = src.Parse();
     EXPECT_FALSE(status.ok());
@@ -465,7 +465,7 @@ TEST(BuildSymbolTableTest, AvoidCrashFromFuzzer) {
       "n#7;\n",
       "c#1;;=P;\n",
   };
-  for (const auto& code : codes) {
+  for (const auto &code : codes) {
     TestVerilogSourceFile src("foobar.sv", code);
     const auto status = src.Parse();  // don't care if code is valid or not
     SymbolTable symbol_table(nullptr);
@@ -488,7 +488,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationSingleEmpty) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -515,7 +515,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalNetsVariables) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -527,7 +527,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalNetsVariables) {
   EXPECT_EMPTY_STATUSES(build_diagnostics);
 
   static constexpr absl::string_view members[] = {"w1", "w2", "l1", "l2"};
-  for (const auto& member : members) {
+  for (const auto &member : members) {
     MUST_ASSIGN_LOOKUP_SYMBOL(member_node, module_node, member);
     EXPECT_EQ(member_node_info.metatype,
               SymbolMetaType::kDataNetVariableInstance);
@@ -551,7 +551,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalDuplicateNets) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -595,12 +595,12 @@ TEST(BuildSymbolTableTest, ModuleDeclarationConditionalGenerateAnonymous) {
       "    wire z;\n"
       "endmodule\n",
   };
-  for (const auto& code : source_variants) {
+  for (const auto &code : source_variants) {
     TestVerilogSourceFile src("foobar.sv", code);
     const auto status = src.Parse();
     ASSERT_TRUE(status.ok()) << status.message();
     SymbolTable symbol_table(nullptr);
-    const SymbolTableNode& root_symbol(symbol_table.Root());
+    const SymbolTableNode &root_symbol(symbol_table.Root());
 
     const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
     EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -614,24 +614,24 @@ TEST(BuildSymbolTableTest, ModuleDeclarationConditionalGenerateAnonymous) {
     ASSERT_EQ(module_node.Children().size(), 3);
     auto iter = module_node.Children().begin();
     {
-      const SymbolTableNode& gen_block(iter->second);  // anonymous "...-0"
-      const SymbolInfo& gen_block_info(gen_block.Value());
+      const SymbolTableNode &gen_block(iter->second);  // anonymous "...-0"
+      const SymbolInfo &gen_block_info(gen_block.Value());
       EXPECT_EQ(gen_block_info.metatype, SymbolMetaType::kGenerate);
       MUST_ASSIGN_LOOKUP_SYMBOL(wire_x, gen_block, "x");
       EXPECT_EQ(wire_x_info.metatype, SymbolMetaType::kDataNetVariableInstance);
       ++iter;
     }
     {
-      const SymbolTableNode& gen_block(iter->second);  // anonymous "...-1"
-      const SymbolInfo& gen_block_info(gen_block.Value());
+      const SymbolTableNode &gen_block(iter->second);  // anonymous "...-1"
+      const SymbolInfo &gen_block_info(gen_block.Value());
       EXPECT_EQ(gen_block_info.metatype, SymbolMetaType::kGenerate);
       MUST_ASSIGN_LOOKUP_SYMBOL(wire_y, gen_block, "y");
       EXPECT_EQ(wire_y_info.metatype, SymbolMetaType::kDataNetVariableInstance);
       ++iter;
     }
     {
-      const SymbolTableNode& gen_block(iter->second);  // anonymous "...-2"
-      const SymbolInfo& gen_block_info(gen_block.Value());
+      const SymbolTableNode &gen_block(iter->second);  // anonymous "...-2"
+      const SymbolInfo &gen_block_info(gen_block.Value());
       EXPECT_EQ(gen_block_info.metatype, SymbolMetaType::kGenerate);
       MUST_ASSIGN_LOOKUP_SYMBOL(wire_z, gen_block, "z");
       EXPECT_EQ(wire_z_info.metatype, SymbolMetaType::kDataNetVariableInstance);
@@ -660,7 +660,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationConditionalGenerateLabeled) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -708,7 +708,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationWithPorts) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -720,7 +720,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationWithPorts) {
             nullptr);  // there is no module meta-type
 
   static constexpr absl::string_view members[] = {"clk", "q"};
-  for (const auto& member : members) {
+  for (const auto &member : members) {
     MUST_ASSIGN_LOOKUP_SYMBOL(member_node, module_node, member);
     EXPECT_EQ(member_node_info.metatype,
               SymbolMetaType::kDataNetVariableInstance);
@@ -742,13 +742,13 @@ TEST(BuildSymbolTableTest, ModuleDeclarationMultiple) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
 
   const absl::string_view expected_modules[] = {"m1", "m2"};
-  for (const auto& expected_module : expected_modules) {
+  for (const auto &expected_module : expected_modules) {
     MUST_ASSIGN_LOOKUP_SYMBOL(module_node, root_symbol, expected_module);
     EXPECT_EQ(module_node_info.metatype, SymbolMetaType::kModule);
     EXPECT_EQ(module_node_info.file_origin, &src);
@@ -770,7 +770,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationDuplicate) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -800,7 +800,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationDuplicateSeparateFiles) {
   const auto status2 = src2.Parse();
   ASSERT_TRUE(status2.ok()) << status2.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics1 = BuildSymbolTable(src, &symbol_table);
   const auto build_diagnostics = BuildSymbolTable(src2, &symbol_table);
@@ -832,7 +832,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationNested) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -867,7 +867,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationNestedDuplicate) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -901,13 +901,13 @@ TEST(BuildSymbolTableTest, ModuleInstance) {
       "module pp;\n"
       "endmodule\n",
   };
-  for (const auto& code : source_variants) {
+  for (const auto &code : source_variants) {
     VLOG(1) << "code:\n" << code;
     TestVerilogSourceFile src("foobar.sv", code);
     const auto status = src.Parse();
     ASSERT_TRUE(status.ok()) << status.message();
     SymbolTable symbol_table(nullptr);
-    const SymbolTableNode& root_symbol(symbol_table.Root());
+    const SymbolTableNode &root_symbol(symbol_table.Root());
 
     const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
     EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -927,9 +927,9 @@ TEST(BuildSymbolTableTest, ModuleInstance) {
       const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
       {
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-        const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+        const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
         ASSERT_NE(ref_node, nullptr);
-        const ReferenceComponent& ref(ref_node->Value());
+        const ReferenceComponent &ref(ref_node->Value());
         EXPECT_EQ(ref.identifier, "pp");
         EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                         src.GetTextStructure()->Contents()));
@@ -948,7 +948,7 @@ TEST(BuildSymbolTableTest, ModuleInstance) {
     EXPECT_TRUE(rr_info.local_references_to_bind.empty());
     EXPECT_NE(rr_info.declared_type.user_defined_type, nullptr);
     {
-      const ReferenceComponent& pp_type(
+      const ReferenceComponent &pp_type(
           rr_info.declared_type.user_defined_type->Value());
       EXPECT_EQ(pp_type.identifier, "pp");
       EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -976,7 +976,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceUndefined) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -990,9 +990,9 @@ TEST(BuildSymbolTableTest, ModuleInstanceUndefined) {
     const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
     ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
     {  // verify that a reference to "pp" was established
-      const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "pp");
       EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                       src.GetTextStructure()->Contents()));
@@ -1007,7 +1007,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceUndefined) {
   EXPECT_TRUE(rr_info.local_references_to_bind.empty());
   EXPECT_NE(rr_info.declared_type.user_defined_type, nullptr);
   {
-    const ReferenceComponent& pp_type(
+    const ReferenceComponent &pp_type(
         rr_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(pp_type.identifier, "pp");
     EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -1056,12 +1056,12 @@ TEST(BuildSymbolTableTest, ModuleInstanceTwoInSameDecl) {
       "module pp;\n"
       "endmodule\n",
   };
-  for (const auto& code : source_variants) {
+  for (const auto &code : source_variants) {
     TestVerilogSourceFile src("foobar.sv", code);
     const auto status = src.Parse();
     ASSERT_TRUE(status.ok()) << status.message();
     SymbolTable symbol_table(nullptr);
-    const SymbolTableNode& root_symbol(symbol_table.Root());
+    const SymbolTableNode &root_symbol(symbol_table.Root());
 
     const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
     EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1077,9 +1077,9 @@ TEST(BuildSymbolTableTest, ModuleInstanceTwoInSameDecl) {
       ASSERT_EQ(qq_info.local_references_to_bind.size(), 3);
       const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-      const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "pp");
       EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                       src.GetTextStructure()->Contents()));
@@ -1090,12 +1090,12 @@ TEST(BuildSymbolTableTest, ModuleInstanceTwoInSameDecl) {
 
     // "r1" and "r2" are both instances of type "pp"
     static constexpr absl::string_view pp_instances[] = {"r1", "r2"};
-    for (const auto& pp_inst : pp_instances) {
+    for (const auto &pp_inst : pp_instances) {
       MUST_ASSIGN_LOOKUP_SYMBOL(rr, qq, pp_inst);
       EXPECT_TRUE(rr_info.local_references_to_bind.empty());
       EXPECT_NE(rr_info.declared_type.user_defined_type, nullptr);
       {
-        const ReferenceComponent& pp_type(
+        const ReferenceComponent &pp_type(
             rr_info.declared_type.user_defined_type->Value());
         EXPECT_EQ(pp_type.identifier, "pp");
         EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -1110,7 +1110,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceTwoInSameDecl) {
       symbol_table.Resolve(&resolve_diagnostics);  // nothing to resolve
       EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
-      for (const auto& pp_inst : pp_instances) {
+      for (const auto &pp_inst : pp_instances) {
         MUST_ASSIGN_LOOKUP_SYMBOL(rr, qq, pp_inst);
         EXPECT_TRUE(rr_info.local_references_to_bind.empty());
         // Verify that typeof(r1,r2) successfully resolved to module pp.
@@ -1137,7 +1137,7 @@ TEST(BuildSymbolTableTest, ModuleInstancePositionalPortConnection) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1201,7 +1201,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortConnection) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1235,13 +1235,13 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortConnection) {
   EXPECT_EQ(d_ref->LastLeaf()->Value().identifier, "d");
   EXPECT_EQ(d_ref->LastLeaf()->Value().resolved_symbol, nullptr);
 
-  const ReferenceComponentNode& m_inst_ref_root(*m_inst_ref->components);
+  const ReferenceComponentNode &m_inst_ref_root(*m_inst_ref->components);
   ASSERT_EQ(m_inst_ref_root.Children().size(), 2);
   const ReferenceComponentMap port_refs(
       ReferenceComponentNodeMapView(m_inst_ref_root));
 
   ASSIGN_MUST_FIND(clk_ref, port_refs, "clk");
-  const ReferenceComponent& clk_ref_comp(clk_ref->Value());
+  const ReferenceComponent &clk_ref_comp(clk_ref->Value());
   EXPECT_EQ(clk_ref_comp.identifier, "clk");
   EXPECT_EQ(clk_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(clk_ref_comp.required_metatype,
@@ -1249,7 +1249,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortConnection) {
   EXPECT_EQ(clk_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND(q_ref, port_refs, "q");
-  const ReferenceComponent& q_ref_comp(q_ref->Value());
+  const ReferenceComponent &q_ref_comp(q_ref->Value());
   EXPECT_EQ(q_ref_comp.identifier, "q");
   EXPECT_EQ(q_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(q_ref_comp.required_metatype,
@@ -1294,7 +1294,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1329,13 +1329,13 @@ TEST(BuildSymbolTableTest,
   EXPECT_EQ(d_ref->LastLeaf()->Value().identifier, "d");
   EXPECT_EQ(d_ref->LastLeaf()->Value().resolved_symbol, nullptr);
 
-  const ReferenceComponentNode& m_inst_ref_root(*m_inst_ref->components);
+  const ReferenceComponentNode &m_inst_ref_root(*m_inst_ref->components);
   ASSERT_EQ(m_inst_ref_root.Children().size(), 2);
   const ReferenceComponentMap port_refs(
       ReferenceComponentNodeMapView(m_inst_ref_root));
 
   ASSIGN_MUST_FIND(clk_ref, port_refs, "clk");
-  const ReferenceComponent& clk_ref_comp(clk_ref->Value());
+  const ReferenceComponent &clk_ref_comp(clk_ref->Value());
   EXPECT_EQ(clk_ref_comp.identifier, "clk");
   EXPECT_EQ(clk_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(clk_ref_comp.required_metatype,
@@ -1344,7 +1344,7 @@ TEST(BuildSymbolTableTest,
   EXPECT_EQ(clk_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_FIND(q_ref, port_refs, "q");
-  const ReferenceComponent& q_ref_comp(q_ref->Value());
+  const ReferenceComponent &q_ref_comp(q_ref->Value());
   EXPECT_EQ(q_ref_comp.identifier, "q");
   EXPECT_EQ(q_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(q_ref_comp.required_metatype,
@@ -1384,7 +1384,7 @@ TEST(BuildSymbolTableTest, ModuleInstancePositionalParameterAssignment) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1439,7 +1439,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedParameterAssignment) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1466,20 +1466,20 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedParameterAssignment) {
   const auto ref_map(rr_node_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(m_type_ref, ref_map, "m");
 
-  const ReferenceComponentNode& m_type_ref_root(*m_type_ref->components);
+  const ReferenceComponentNode &m_type_ref_root(*m_type_ref->components);
   ASSERT_EQ(m_type_ref_root.Children().size(), 2);
   const ReferenceComponentMap param_refs(
       ReferenceComponentNodeMapView(m_type_ref_root));
 
   ASSIGN_MUST_FIND(n_ref, param_refs, "N");
-  const ReferenceComponent& n_ref_comp(n_ref->Value());
+  const ReferenceComponent &n_ref_comp(n_ref->Value());
   EXPECT_EQ(n_ref_comp.identifier, "N");
   EXPECT_EQ(n_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(n_ref_comp.required_metatype, SymbolMetaType::kParameter);
   EXPECT_EQ(n_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND(p_ref, param_refs, "P");
-  const ReferenceComponent& p_ref_comp(p_ref->Value());
+  const ReferenceComponent &p_ref_comp(p_ref->Value());
   EXPECT_EQ(p_ref_comp.identifier, "P");
   EXPECT_EQ(p_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(p_ref_comp.required_metatype, SymbolMetaType::kParameter);
@@ -1504,7 +1504,7 @@ TEST(BuildSymbolTableTest, TimerAsModuleNameRegressionIssue917) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1528,7 +1528,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortIsParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1555,13 +1555,13 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortIsParameter) {
   const auto ref_map(rr_node_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(m_type_ref, ref_map, "m");
 
-  const ReferenceComponentNode& m_type_ref_root(*m_type_ref->components);
+  const ReferenceComponentNode &m_type_ref_root(*m_type_ref->components);
   ASSERT_EQ(m_type_ref_root.Children().size(), 1);
   const ReferenceComponentMap param_refs(
       ReferenceComponentNodeMapView(m_type_ref_root));
 
   ASSIGN_MUST_FIND(clk_ref, param_refs, "clk");
-  const ReferenceComponent& clk_ref_comp(clk_ref->Value());
+  const ReferenceComponent &clk_ref_comp(clk_ref->Value());
   EXPECT_EQ(clk_ref_comp.identifier, "clk");
   EXPECT_EQ(clk_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(clk_ref_comp.required_metatype, SymbolMetaType::kParameter);
@@ -1596,7 +1596,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedParameterIsPort) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1623,13 +1623,13 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedParameterIsPort) {
   const auto ref_map(rr_node_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(m_inst_ref, ref_map, "m_inst");
 
-  const ReferenceComponentNode& m_inst_ref_root(*m_inst_ref->components);
+  const ReferenceComponentNode &m_inst_ref_root(*m_inst_ref->components);
   ASSERT_EQ(m_inst_ref_root.Children().size(), 1);
   const ReferenceComponentMap port_refs(
       ReferenceComponentNodeMapView(m_inst_ref_root));
 
   ASSIGN_MUST_FIND(n_ref, port_refs, "N");
-  const ReferenceComponent& n_ref_comp(n_ref->Value());
+  const ReferenceComponent &n_ref_comp(n_ref->Value());
   EXPECT_EQ(n_ref_comp.identifier, "N");
   EXPECT_EQ(n_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(n_ref_comp.required_metatype,
@@ -1666,7 +1666,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortConnectionNonexistentPort) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1683,13 +1683,13 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortConnectionNonexistentPort) {
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(m_inst_ref, ref_map, "m_inst");
   ASSERT_NE(m_inst_ref, nullptr);
 
-  const ReferenceComponentNode& m_inst_ref_root(*m_inst_ref->components);
+  const ReferenceComponentNode &m_inst_ref_root(*m_inst_ref->components);
   ASSERT_EQ(m_inst_ref_root.Children().size(), 2);
   const ReferenceComponentMap port_refs(
       ReferenceComponentNodeMapView(m_inst_ref_root));
 
   ASSIGN_MUST_FIND(clk_ref, port_refs, "clk");
-  const ReferenceComponent& clk_ref_comp(clk_ref->Value());
+  const ReferenceComponent &clk_ref_comp(clk_ref->Value());
   EXPECT_EQ(clk_ref_comp.identifier, "clk");
   EXPECT_EQ(clk_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(clk_ref_comp.required_metatype,
@@ -1697,7 +1697,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedPortConnectionNonexistentPort) {
   EXPECT_EQ(clk_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND(p_ref, port_refs, "p");
-  const ReferenceComponent& p_ref_comp(p_ref->Value());
+  const ReferenceComponent &p_ref_comp(p_ref->Value());
   EXPECT_EQ(p_ref_comp.identifier, "p");
   EXPECT_EQ(p_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(p_ref_comp.required_metatype,
@@ -1738,7 +1738,7 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedParameterNonexistentError) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1765,20 +1765,20 @@ TEST(BuildSymbolTableTest, ModuleInstanceNamedParameterNonexistentError) {
   const auto ref_map(rr_node_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(m_type_ref, ref_map, "m");
 
-  const ReferenceComponentNode& m_type_ref_root(*m_type_ref->components);
+  const ReferenceComponentNode &m_type_ref_root(*m_type_ref->components);
   ASSERT_EQ(m_type_ref_root.Children().size(), 2);
   const ReferenceComponentMap param_refs(
       ReferenceComponentNodeMapView(m_type_ref_root));
 
   ASSIGN_MUST_FIND(n_ref, param_refs, "N");
-  const ReferenceComponent& n_ref_comp(n_ref->Value());
+  const ReferenceComponent &n_ref_comp(n_ref->Value());
   EXPECT_EQ(n_ref_comp.identifier, "N");
   EXPECT_EQ(n_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(n_ref_comp.required_metatype, SymbolMetaType::kParameter);
   EXPECT_EQ(n_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND(q_ref, param_refs, "Q");
-  const ReferenceComponent& q_ref_comp(q_ref->Value());
+  const ReferenceComponent &q_ref_comp(q_ref->Value());
   EXPECT_EQ(q_ref_comp.identifier, "Q");
   EXPECT_EQ(q_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(q_ref_comp.required_metatype, SymbolMetaType::kParameter);
@@ -1802,7 +1802,7 @@ TEST(BuildSymbolTableTest, OneGlobalIntParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1827,7 +1827,7 @@ TEST(BuildSymbolTableTest, OneGlobalUndefinedTypeParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1861,7 +1861,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterExpression) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1880,7 +1880,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterExpression) {
   EXPECT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ref, ref_map, "mint");
-  const ReferenceComponent& ref_comp(ref->components->Value());
+  const ReferenceComponent &ref_comp(ref->components->Value());
   EXPECT_TRUE(is_leaf(*ref->components));
   EXPECT_EQ(ref_comp.identifier, "mint");
   EXPECT_EQ(ref_comp.ref_type, ReferenceType::kUnqualified);
@@ -1902,7 +1902,7 @@ TEST(BuildSymbolTableTest, OneUnresolvedReferenceInExpression) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1918,7 +1918,7 @@ TEST(BuildSymbolTableTest, OneUnresolvedReferenceInExpression) {
   EXPECT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ref, ref_map, "spice");
-  const ReferenceComponent& ref_comp(ref->components->Value());
+  const ReferenceComponent &ref_comp(ref->components->Value());
   EXPECT_TRUE(is_leaf(*ref->components));
   EXPECT_EQ(ref_comp.identifier, "spice");
   EXPECT_EQ(ref_comp.ref_type, ReferenceType::kUnqualified);
@@ -1943,7 +1943,7 @@ TEST(BuildSymbolTableTest, PackageDeclarationSingle) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1970,7 +1970,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterFromPackageToRoot) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -1981,7 +1981,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterFromPackageToRoot) {
   ASSERT_EQ(p_pkg_info.local_references_to_bind.size(), 1);
   const auto ref_map(p_pkg_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ref, ref_map, "mint");
-  const ReferenceComponent& mint_ref(ref->components->Value());
+  const ReferenceComponent &mint_ref(ref->components->Value());
   EXPECT_EQ(mint_ref.identifier, "mint");
   EXPECT_EQ(mint_ref.resolved_symbol, nullptr);  // not yet resolved
 
@@ -2015,7 +2015,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterFromRootToPackage) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2027,10 +2027,10 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterFromRootToPackage) {
   // p_mint_ref is the reference chain for "p::mint".
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(p_mint_ref, ref_map, "p");
-  const ReferenceComponent& p_ref(p_mint_ref->components->Value());
+  const ReferenceComponent &p_ref(p_mint_ref->components->Value());
   EXPECT_EQ(p_ref.identifier, "p");
   EXPECT_EQ(p_ref.resolved_symbol, nullptr);  // not yet resolved
-  const ReferenceComponent& mint_ref(p_mint_ref->LastLeaf()->Value());
+  const ReferenceComponent &mint_ref(p_mint_ref->LastLeaf()->Value());
   EXPECT_EQ(mint_ref.identifier, "mint");
   EXPECT_EQ(mint_ref.resolved_symbol, nullptr);  // not yet resolved
 
@@ -2064,7 +2064,7 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterFromRootToPackageNoSuchMember) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2076,10 +2076,10 @@ TEST(BuildSymbolTableTest, ReferenceOneParameterFromRootToPackageNoSuchMember) {
   // p_mint_ref is the reference chain for "p::mint".
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(p_mint_ref, ref_map, "p");
-  const ReferenceComponent& p_ref(p_mint_ref->components->Value());
+  const ReferenceComponent &p_ref(p_mint_ref->components->Value());
   EXPECT_EQ(p_ref.identifier, "p");
   EXPECT_EQ(p_ref.resolved_symbol, nullptr);  // not yet resolved
-  const ReferenceComponent& zzz_ref(p_mint_ref->LastLeaf()->Value());
+  const ReferenceComponent &zzz_ref(p_mint_ref->LastLeaf()->Value());
   EXPECT_EQ(zzz_ref.identifier, "zzz");
   EXPECT_EQ(zzz_ref.resolved_symbol, nullptr);  // not yet resolved
 
@@ -2115,7 +2115,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationWithParameters) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2128,16 +2128,16 @@ TEST(BuildSymbolTableTest, ModuleDeclarationWithParameters) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(w_param, module_node, "W");
   EXPECT_EQ(w_param_info.metatype, SymbolMetaType::kParameter);
-  const ReferenceComponentNode* w_type_ref =
+  const ReferenceComponentNode *w_type_ref =
       w_param_info.declared_type.user_defined_type;
   EXPECT_EQ(w_type_ref, nullptr);  // int is primitive type
 
   MUST_ASSIGN_LOOKUP_SYMBOL(b_param, module_node, "B");
   EXPECT_EQ(b_param_info.metatype, SymbolMetaType::kParameter);
-  const ReferenceComponentNode* b_type_ref =
+  const ReferenceComponentNode *b_type_ref =
       b_param_info.declared_type.user_defined_type;
   ASSERT_NE(b_type_ref, nullptr);
-  const ReferenceComponent& b_type_ref_comp(b_type_ref->Value());
+  const ReferenceComponent &b_type_ref_comp(b_type_ref->Value());
   EXPECT_EQ(b_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(b_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(b_type_ref_comp.identifier, "bar");
@@ -2146,13 +2146,13 @@ TEST(BuildSymbolTableTest, ModuleDeclarationWithParameters) {
   const auto ref_map(module_node_info.LocalReferencesMapViewForTesting());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(w_ref, ref_map, "W");
-  const ReferenceComponent& w_ref_comp(w_ref->components->Value());
+  const ReferenceComponent &w_ref_comp(w_ref->components->Value());
   EXPECT_EQ(w_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(w_ref_comp.identifier, "W");
   EXPECT_EQ(w_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(bar_ref, ref_map, "bar");
-  const ReferenceComponent& bar_ref_comp(bar_ref->components->Value());
+  const ReferenceComponent &bar_ref_comp(bar_ref->components->Value());
   EXPECT_EQ(bar_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(bar_ref_comp.identifier, "bar");
   EXPECT_EQ(bar_ref_comp.resolved_symbol, nullptr);  // not yet resolved
@@ -2184,7 +2184,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalsDependOnParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2197,7 +2197,7 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalsDependOnParameter) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(n_param, module_m, "N");
   EXPECT_EQ(n_param_info.metatype, SymbolMetaType::kParameter);
-  const ReferenceComponentNode* n_type_ref =
+  const ReferenceComponentNode *n_type_ref =
       n_param_info.declared_type.user_defined_type;
   EXPECT_EQ(n_type_ref, nullptr);  // int is primitive type
 
@@ -2206,8 +2206,8 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalsDependOnParameter) {
 
   ASSIGN_MUST_FIND(n_refs, ref_map, "N");
   ASSERT_EQ(n_refs.size(), 6);  // all references to "N" parameter
-  for (const auto& n_ref : n_refs) {
-    const ReferenceComponent& n_ref_comp(n_ref->components->Value());
+  for (const auto &n_ref : n_refs) {
+    const ReferenceComponent &n_ref_comp(n_ref->components->Value());
     EXPECT_EQ(n_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(n_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(n_ref_comp.identifier, "N");
@@ -2220,8 +2220,8 @@ TEST(BuildSymbolTableTest, ModuleDeclarationLocalsDependOnParameter) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // All references to "N" resolved.
-    for (const auto& n_ref : n_refs) {
-      const ReferenceComponent& n_ref_comp(n_ref->components->Value());
+    for (const auto &n_ref : n_refs) {
+      const ReferenceComponent &n_ref_comp(n_ref->components->Value());
       EXPECT_EQ(n_ref_comp.resolved_symbol, &n_param);  // resolved successfully
     }
   }
@@ -2235,7 +2235,7 @@ TEST(BuildSymbolTableTest, ModuleSingleImplicitDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2248,7 +2248,7 @@ TEST(BuildSymbolTableTest, ModuleSingleImplicitDeclaration) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(a_variable, module_m, "a");
   EXPECT_EQ(a_variable_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* a_type_ref =
+  const ReferenceComponentNode *a_type_ref =
       a_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(a_type_ref, nullptr);  // implicit type is primitive type
   EXPECT_TRUE(a_variable_info.declared_type.implicit);
@@ -2258,8 +2258,8 @@ TEST(BuildSymbolTableTest, ModuleSingleImplicitDeclaration) {
 
   ASSIGN_MUST_FIND(a_refs, ref_map, "a");
   ASSERT_EQ(a_refs.size(), 1);  // all references to "a" parameter
-  for (const auto& a_ref : a_refs) {
-    const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+  for (const auto &a_ref : a_refs) {
+    const ReferenceComponent &a_ref_comp(a_ref->components->Value());
     EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(a_ref_comp.identifier, "a");
@@ -2273,8 +2273,8 @@ TEST(BuildSymbolTableTest, ModuleSingleImplicitDeclaration) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // All references to "a" resolved.
-    for (const auto& a_ref : a_refs) {
-      const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    for (const auto &a_ref : a_refs) {
+      const ReferenceComponent &a_ref_comp(a_ref->components->Value());
       EXPECT_EQ(a_ref_comp.resolved_symbol,
                 &a_variable);  // resolved successfully
     }
@@ -2290,7 +2290,7 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2303,7 +2303,7 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclaration) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(a_variable, module_m, "a");
   EXPECT_EQ(a_variable_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* a_type_ref =
+  const ReferenceComponentNode *a_type_ref =
       a_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(a_type_ref, nullptr);  // implicit type is primitive type
   EXPECT_TRUE(a_variable_info.declared_type.implicit);
@@ -2314,16 +2314,16 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclaration) {
   ASSIGN_MUST_FIND(a_refs, ref_map, "a");
   ASSERT_EQ(a_refs.size(), 2);  // all references to "a" parameter
   {
-    const auto& a_ref = *a_refs.begin();
-    const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    const auto &a_ref = *a_refs.begin();
+    const ReferenceComponent &a_ref_comp(a_ref->components->Value());
     EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(a_ref_comp.identifier, "a");
     EXPECT_EQ(a_ref_comp.resolved_symbol, &a_variable);  // pre-resolved
   }
   {
-    const auto& a_ref = *std::next(a_refs.begin());
-    const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    const auto &a_ref = *std::next(a_refs.begin());
+    const ReferenceComponent &a_ref_comp(a_ref->components->Value());
     EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(a_ref_comp.identifier, "a");
@@ -2336,8 +2336,8 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclaration) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // All references to "a" resolved.
-    for (const auto& a_ref : a_refs) {
-      const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    for (const auto &a_ref : a_refs) {
+      const ReferenceComponent &a_ref_comp(a_ref->components->Value());
       EXPECT_EQ(a_ref_comp.resolved_symbol,
                 &a_variable);  // resolved successfully
     }
@@ -2355,7 +2355,7 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclarationInSubScope) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2368,7 +2368,7 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclarationInSubScope) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(a_variable, module_m, "a");
   EXPECT_EQ(a_variable_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* a_type_ref =
+  const ReferenceComponentNode *a_type_ref =
       a_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(a_type_ref, nullptr);  // implicit type is primitive type
   EXPECT_TRUE(a_variable_info.declared_type.implicit);
@@ -2378,8 +2378,8 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclarationInSubScope) {
 
   ASSIGN_MUST_FIND(a_refs, ref_map, "a");
   ASSERT_EQ(a_refs.size(), 1);  // all references to "a" parameter
-  for (const auto& a_ref : a_refs) {
-    const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+  for (const auto &a_ref : a_refs) {
+    const ReferenceComponent &a_ref_comp(a_ref->components->Value());
     EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(a_ref_comp.identifier, "a");
@@ -2397,8 +2397,8 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclarationInSubScope) {
 
   ASSIGN_MUST_FIND(n_a_refs, n_ref_map, "a");
   ASSERT_EQ(n_a_refs.size(), 1);  // references to "a" net in "n" module
-  for (const auto& n_a_ref : n_a_refs) {
-    const ReferenceComponent& n_a_ref_comp(n_a_ref->components->Value());
+  for (const auto &n_a_ref : n_a_refs) {
+    const ReferenceComponent &n_a_ref_comp(n_a_ref->components->Value());
     EXPECT_EQ(n_a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(n_a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(n_a_ref_comp.identifier, "a");
@@ -2413,14 +2413,14 @@ TEST(BuildSymbolTableTest, ModuleReferenceToImplicitDeclarationInSubScope) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // All references to "a" resolved.
-    for (const auto& a_ref : a_refs) {
-      const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    for (const auto &a_ref : a_refs) {
+      const ReferenceComponent &a_ref_comp(a_ref->components->Value());
       EXPECT_EQ(a_ref_comp.resolved_symbol,
                 &a_variable);  // resolved successfully
     }
 
-    for (const auto& n_a_ref : n_a_refs) {
-      const ReferenceComponent& n_a_ref_comp(n_a_ref->components->Value());
+    for (const auto &n_a_ref : n_a_refs) {
+      const ReferenceComponent &n_a_ref_comp(n_a_ref->components->Value());
       EXPECT_EQ(n_a_ref_comp.resolved_symbol,
                 &a_variable);  // resolved successfully
     }
@@ -2439,7 +2439,7 @@ TEST(BuildSymbolTableTest, ModuleExplicitDeclarationInSubScope) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2452,7 +2452,7 @@ TEST(BuildSymbolTableTest, ModuleExplicitDeclarationInSubScope) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(a_variable, module_m, "a");
   EXPECT_EQ(a_variable_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* a_type_ref =
+  const ReferenceComponentNode *a_type_ref =
       a_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(a_type_ref, nullptr);  // implicit type is primitive type
   EXPECT_TRUE(a_variable_info.declared_type.implicit);
@@ -2462,8 +2462,8 @@ TEST(BuildSymbolTableTest, ModuleExplicitDeclarationInSubScope) {
 
   ASSIGN_MUST_FIND(a_refs, ref_map, "a");
   ASSERT_EQ(a_refs.size(), 1);  // all references to "a" parameter
-  for (const auto& a_ref : a_refs) {
-    const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+  for (const auto &a_ref : a_refs) {
+    const ReferenceComponent &a_ref_comp(a_ref->components->Value());
     EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(a_ref_comp.identifier, "a");
@@ -2479,7 +2479,7 @@ TEST(BuildSymbolTableTest, ModuleExplicitDeclarationInSubScope) {
   MUST_ASSIGN_LOOKUP_SYMBOL(n_a_variable, module_n, "a");
   EXPECT_EQ(n_a_variable_info.metatype,
             SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* n_a_type_ref =
+  const ReferenceComponentNode *n_a_type_ref =
       n_a_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(n_a_type_ref, nullptr);
   EXPECT_FALSE(n_a_variable_info.declared_type.implicit);
@@ -2489,8 +2489,8 @@ TEST(BuildSymbolTableTest, ModuleExplicitDeclarationInSubScope) {
 
   ASSIGN_MUST_FIND(n_a_refs, n_ref_map, "a");
   ASSERT_EQ(n_a_refs.size(), 1);  // references to "a" net in "n" module
-  for (const auto& n_a_ref : n_a_refs) {
-    const ReferenceComponent& n_a_ref_comp(n_a_ref->components->Value());
+  for (const auto &n_a_ref : n_a_refs) {
+    const ReferenceComponent &n_a_ref_comp(n_a_ref->components->Value());
     EXPECT_EQ(n_a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(n_a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(n_a_ref_comp.identifier, "a");
@@ -2505,14 +2505,14 @@ TEST(BuildSymbolTableTest, ModuleExplicitDeclarationInSubScope) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // All references to "a" resolved.
-    for (const auto& a_ref : a_refs) {
-      const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    for (const auto &a_ref : a_refs) {
+      const ReferenceComponent &a_ref_comp(a_ref->components->Value());
       EXPECT_EQ(a_ref_comp.resolved_symbol,
                 &a_variable);  // resolved successfully
     }
 
-    for (const auto& n_a_ref : n_a_refs) {
-      const ReferenceComponent& n_a_ref_comp(n_a_ref->components->Value());
+    for (const auto &n_a_ref : n_a_refs) {
+      const ReferenceComponent &n_a_ref_comp(n_a_ref->components->Value());
       EXPECT_EQ(n_a_ref_comp.resolved_symbol,
                 &n_a_variable);  // resolved successfully
     }
@@ -2529,7 +2529,7 @@ TEST(BuildSymbolTableTest, ModuleExplicitAndImplicitDeclarations) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2542,14 +2542,14 @@ TEST(BuildSymbolTableTest, ModuleExplicitAndImplicitDeclarations) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(a_variable, module_m, "a");
   EXPECT_EQ(a_variable_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* a_type_ref =
+  const ReferenceComponentNode *a_type_ref =
       a_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(a_type_ref, nullptr);  // implicit type is primitive type
   EXPECT_TRUE(a_variable_info.declared_type.implicit);
 
   MUST_ASSIGN_LOOKUP_SYMBOL(b_variable, module_m, "b");
   EXPECT_EQ(b_variable_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* b_type_ref =
+  const ReferenceComponentNode *b_type_ref =
       b_variable_info.declared_type.user_defined_type;
   EXPECT_EQ(b_type_ref, nullptr);
   EXPECT_FALSE(b_variable_info.declared_type.implicit);
@@ -2559,8 +2559,8 @@ TEST(BuildSymbolTableTest, ModuleExplicitAndImplicitDeclarations) {
 
   ASSIGN_MUST_FIND(a_refs, ref_map, "a");
   ASSERT_EQ(a_refs.size(), 1);  // all references to "a" parameter
-  for (const auto& a_ref : a_refs) {
-    const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+  for (const auto &a_ref : a_refs) {
+    const ReferenceComponent &a_ref_comp(a_ref->components->Value());
     EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(a_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(a_ref_comp.identifier, "a");
@@ -2569,8 +2569,8 @@ TEST(BuildSymbolTableTest, ModuleExplicitAndImplicitDeclarations) {
 
   ASSIGN_MUST_FIND(b_refs, ref_map, "b");
   ASSERT_EQ(b_refs.size(), 1);
-  for (const auto& b_ref : b_refs) {
-    const ReferenceComponent& b_ref_comp(b_ref->components->Value());
+  for (const auto &b_ref : b_refs) {
+    const ReferenceComponent &b_ref_comp(b_ref->components->Value());
     EXPECT_EQ(b_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(b_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(b_ref_comp.identifier, "b");
@@ -2584,15 +2584,15 @@ TEST(BuildSymbolTableTest, ModuleExplicitAndImplicitDeclarations) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // All references to "a" resolved.
-    for (const auto& a_ref : a_refs) {
-      const ReferenceComponent& a_ref_comp(a_ref->components->Value());
+    for (const auto &a_ref : a_refs) {
+      const ReferenceComponent &a_ref_comp(a_ref->components->Value());
       EXPECT_EQ(a_ref_comp.resolved_symbol,
                 &a_variable);  // resolved successfully
     }
 
     // All references to "b" resolved.
-    for (const auto& b_ref : b_refs) {
-      const ReferenceComponent& b_ref_comp(b_ref->components->Value());
+    for (const auto &b_ref : b_refs) {
+      const ReferenceComponent &b_ref_comp(b_ref->components->Value());
       EXPECT_EQ(b_ref_comp.resolved_symbol,
                 &b_variable);  // resolved successfully
     }
@@ -2622,7 +2622,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingle) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2651,7 +2651,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationNested) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2691,7 +2691,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationWithParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2704,7 +2704,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationWithParameter) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(n_param, class_cc, "N");
   EXPECT_EQ(n_param_info.metatype, SymbolMetaType::kParameter);
-  const ReferenceComponentNode* n_type_ref =
+  const ReferenceComponentNode *n_type_ref =
       n_param_info.declared_type.user_defined_type;
   EXPECT_EQ(n_type_ref, nullptr);  // int is primitive type
 
@@ -2726,7 +2726,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMember) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2738,7 +2738,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMember) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(size_field, class_cc, "size");
   EXPECT_EQ(size_field_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* size_type_ref =
+  const ReferenceComponentNode *size_type_ref =
       size_field_info.declared_type.user_defined_type;
   EXPECT_EQ(size_type_ref, nullptr);  // int is primitive type
   EXPECT_EQ(
@@ -2748,7 +2748,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMember) {
   MUST_ASSIGN_LOOKUP_SYMBOL(count_field, class_cc, "count");
   EXPECT_EQ(count_field_info.metatype,
             SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* count_type_ref =
+  const ReferenceComponentNode *count_type_ref =
       count_field_info.declared_type.user_defined_type;
   EXPECT_EQ(count_type_ref, nullptr);  // int is primitive type
   EXPECT_EQ(verible::StringSpanOfSymbol(
@@ -2772,7 +2772,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMemberMultiDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2785,7 +2785,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMemberMultiDeclaration) {
   MUST_ASSIGN_LOOKUP_SYMBOL(height_field, class_cc, "height");
   EXPECT_EQ(height_field_info.metatype,
             SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* height_type_ref =
+  const ReferenceComponentNode *height_type_ref =
       height_field_info.declared_type.user_defined_type;
   EXPECT_EQ(height_type_ref, nullptr);  // int is primitive type
   EXPECT_EQ(verible::StringSpanOfSymbol(
@@ -2795,7 +2795,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMemberMultiDeclaration) {
   MUST_ASSIGN_LOOKUP_SYMBOL(width_field, class_cc, "width");
   EXPECT_EQ(width_field_info.metatype,
             SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* width_type_ref =
+  const ReferenceComponentNode *width_type_ref =
       width_field_info.declared_type.user_defined_type;
   EXPECT_EQ(width_type_ref, nullptr);  // int is primitive type
   EXPECT_EQ(verible::StringSpanOfSymbol(
@@ -2822,7 +2822,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMemberAccessedFromMethod) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2834,7 +2834,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMemberAccessedFromMethod) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(size_field, class_cc, "size");
   EXPECT_EQ(size_field_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* size_type_ref =
+  const ReferenceComponentNode *size_type_ref =
       size_field_info.declared_type.user_defined_type;
   EXPECT_EQ(size_type_ref, nullptr);  // int is primitive type
   EXPECT_EQ(
@@ -2847,7 +2847,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationDataMemberAccessedFromMethod) {
   const auto ref_map(get_size_info.LocalReferencesMapViewForTesting());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(size_ref, ref_map, "size");
-  const ReferenceComponent& size_ref_comp(size_ref->components->Value());
+  const ReferenceComponent &size_ref_comp(size_ref->components->Value());
   EXPECT_EQ(size_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(size_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(size_ref_comp.resolved_symbol, nullptr);
@@ -2874,7 +2874,7 @@ TEST(BuildSymbolTableTest, ClassDataMemberAccessedDirectly) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2886,7 +2886,7 @@ TEST(BuildSymbolTableTest, ClassDataMemberAccessedDirectly) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(size_field, class_cc, "size");
   EXPECT_EQ(size_field_info.metatype, SymbolMetaType::kDataNetVariableInstance);
-  const ReferenceComponentNode* size_type_ref =
+  const ReferenceComponentNode *size_type_ref =
       size_field_info.declared_type.user_defined_type;
   EXPECT_EQ(size_type_ref, nullptr);  // int is primitive type
   EXPECT_EQ(
@@ -2902,15 +2902,15 @@ TEST(BuildSymbolTableTest, ClassDataMemberAccessedDirectly) {
 
   const auto ref_map(get_size_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_data_ref, ref_map, "cc_data");
-  const ReferenceComponent& cc_data_ref_comp(cc_data_ref->components->Value());
+  const ReferenceComponent &cc_data_ref_comp(cc_data_ref->components->Value());
   EXPECT_EQ(cc_data_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_data_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_data_ref_comp.resolved_symbol, nullptr);
 
   ASSERT_EQ(cc_data_ref->components->Children().size(), 1);
-  const ReferenceComponentNode& size_ref(
+  const ReferenceComponentNode &size_ref(
       cc_data_ref->components->Children().front());
-  const ReferenceComponent& size_ref_comp(size_ref.Value());
+  const ReferenceComponent &size_ref_comp(size_ref.Value());
   EXPECT_EQ(size_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(size_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(size_ref_comp.resolved_symbol, nullptr);
@@ -2934,7 +2934,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingleInheritance) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -2955,7 +2955,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingleInheritance) {
   EXPECT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(base_ref, ref_map, "base");
-  const ReferenceComponent& base_ref_comp(base_ref->components->Value());
+  const ReferenceComponent &base_ref_comp(base_ref->components->Value());
   EXPECT_EQ(base_ref_comp.identifier, "base");
   EXPECT_EQ(base_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(base_ref_comp.required_metatype, SymbolMetaType::kClass);
@@ -2989,7 +2989,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingleInheritanceAcrossPackage) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3013,16 +3013,16 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingleInheritanceAcrossPackage) {
   EXPECT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_ref, ref_map, "pp");
-  const ReferenceComponent& pp_ref_comp(pp_ref->components->Value());
+  const ReferenceComponent &pp_ref_comp(pp_ref->components->Value());
   EXPECT_EQ(pp_ref_comp.identifier, "pp");
   EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
   ASSERT_EQ(pp_ref->components->Children().size(), 1);
-  const ReferenceComponentNode& base_ref(
+  const ReferenceComponentNode &base_ref(
       pp_ref->components->Children().front());
-  const ReferenceComponent& base_ref_comp(base_ref.Value());
+  const ReferenceComponent &base_ref_comp(base_ref.Value());
   EXPECT_EQ(base_ref_comp.identifier, "base");
   EXPECT_EQ(base_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(base_ref_comp.required_metatype, SymbolMetaType::kClass);
@@ -3060,7 +3060,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingleInheritancePackageToPackage) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3088,16 +3088,16 @@ TEST(BuildSymbolTableTest, ClassDeclarationSingleInheritancePackageToPackage) {
   EXPECT_EQ(package_qq_info.local_references_to_bind.size(), 1);
   const auto ref_map(package_qq_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_ref, ref_map, "pp");
-  const ReferenceComponent& pp_ref_comp(pp_ref->components->Value());
+  const ReferenceComponent &pp_ref_comp(pp_ref->components->Value());
   EXPECT_EQ(pp_ref_comp.identifier, "pp");
   EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
   ASSERT_EQ(pp_ref->components->Children().size(), 1);
-  const ReferenceComponentNode& base_ref(
+  const ReferenceComponentNode &base_ref(
       pp_ref->components->Children().front());
-  const ReferenceComponent& base_ref_comp(base_ref.Value());
+  const ReferenceComponent &base_ref_comp(base_ref.Value());
   EXPECT_EQ(base_ref_comp.identifier, "base");
   EXPECT_EQ(base_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(base_ref_comp.required_metatype, SymbolMetaType::kClass);
@@ -3135,7 +3135,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationInheritanceFromNestedClass) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3163,16 +3163,16 @@ TEST(BuildSymbolTableTest, ClassDeclarationInheritanceFromNestedClass) {
   EXPECT_EQ(class_qq_info.local_references_to_bind.size(), 1);
   const auto ref_map(class_qq_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_ref, ref_map, "pp");
-  const ReferenceComponent& pp_ref_comp(pp_ref->components->Value());
+  const ReferenceComponent &pp_ref_comp(pp_ref->components->Value());
   EXPECT_EQ(pp_ref_comp.identifier, "pp");
   EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
   ASSERT_EQ(pp_ref->components->Children().size(), 1);
-  const ReferenceComponentNode& base_ref(
+  const ReferenceComponentNode &base_ref(
       pp_ref->components->Children().front());
-  const ReferenceComponent& base_ref_comp(base_ref.Value());
+  const ReferenceComponent &base_ref_comp(base_ref.Value());
   EXPECT_EQ(base_ref_comp.identifier, "base");
   EXPECT_EQ(base_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(base_ref_comp.required_metatype, SymbolMetaType::kClass);
@@ -3205,7 +3205,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationInLineConstructorDefinition) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3241,7 +3241,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationOutOfLineConstructorDefinition) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3263,13 +3263,13 @@ TEST(BuildSymbolTableTest, ClassDeclarationOutOfLineConstructorDefinition) {
   // Expect a "C::new" reference from the out-of-line definition.
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(class_c_ref, ref_map, "C");
-  const ReferenceComponent& c_ref_comp(class_c_ref->components->Value());
+  const ReferenceComponent &c_ref_comp(class_c_ref->components->Value());
   EXPECT_EQ(c_ref_comp.identifier, "C");
   EXPECT_EQ(c_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(c_ref_comp.required_metatype, SymbolMetaType::kClass);
   // out-of-line class and method reference must be resolved at build-time
   EXPECT_NE(c_ref_comp.resolved_symbol, nullptr);
-  const ReferenceComponent& ctor_ref_comp(class_c_ref->LastLeaf()->Value());
+  const ReferenceComponent &ctor_ref_comp(class_c_ref->LastLeaf()->Value());
   EXPECT_EQ(ctor_ref_comp.identifier, "new");
   EXPECT_EQ(ctor_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(ctor_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -3298,7 +3298,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceInheritedMemberFromMethod) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3327,7 +3327,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceInheritedMemberFromMethod) {
   EXPECT_EQ(get_count_info.local_references_to_bind.size(), 1);
   const auto ref_map(get_count_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(count_ref, ref_map, "count");
-  const ReferenceComponent& count_ref_comp(count_ref->components->Value());
+  const ReferenceComponent &count_ref_comp(count_ref->components->Value());
   EXPECT_EQ(count_ref_comp.identifier, "count");
   EXPECT_EQ(count_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(count_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -3367,7 +3367,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceGrandparentMember) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3402,7 +3402,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceGrandparentMember) {
   EXPECT_EQ(get_count_info.local_references_to_bind.size(), 1);
   const auto ref_map(get_count_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(count_ref, ref_map, "count");
-  const ReferenceComponent& count_ref_comp(count_ref->components->Value());
+  const ReferenceComponent &count_ref_comp(count_ref->components->Value());
   EXPECT_EQ(count_ref_comp.identifier, "count");
   EXPECT_EQ(count_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(count_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -3412,14 +3412,14 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceGrandparentMember) {
   // Make sure the "derived" reference is linked from the "more_derived" class.
   const auto root_refs = root_symbol.Value().LocalReferencesMapViewForTesting();
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(base_ref, root_refs, "base");
-  const ReferenceComponent& base_ref_comp(base_ref->components->Value());
+  const ReferenceComponent &base_ref_comp(base_ref->components->Value());
   EXPECT_EQ(base_ref_comp.identifier, "base");
   EXPECT_EQ(base_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(base_ref_comp.required_metatype, SymbolMetaType::kClass);
   EXPECT_EQ(base_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(derived_ref, root_refs, "derived");
-  const ReferenceComponent& derived_ref_comp(derived_ref->components->Value());
+  const ReferenceComponent &derived_ref_comp(derived_ref->components->Value());
   EXPECT_EQ(derived_ref_comp.identifier, "derived");
   EXPECT_EQ(derived_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(derived_ref_comp.required_metatype, SymbolMetaType::kClass);
@@ -3463,7 +3463,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3502,7 +3502,7 @@ TEST(BuildSymbolTableTest,
   const auto ref_map(get_count_info.LocalReferencesMapViewForTesting());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(derived_type_ref, ref_map, "derived");
-  const ReferenceComponent& derived_type_ref_comp(
+  const ReferenceComponent &derived_type_ref_comp(
       derived_type_ref->components->Value());
   EXPECT_EQ(derived_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(derived_type_ref_comp.required_metatype,
@@ -3514,16 +3514,16 @@ TEST(BuildSymbolTableTest,
             derived_type_ref->components.get());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(dd_ref, ref_map, "dd");
-  const ReferenceComponent& dd_ref_comp(dd_ref->components->Value());
+  const ReferenceComponent &dd_ref_comp(dd_ref->components->Value());
   EXPECT_EQ(dd_ref_comp.identifier, "dd");
   EXPECT_EQ(dd_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(dd_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(dd_ref_comp.resolved_symbol, nullptr);
 
   ASSERT_EQ(dd_ref->components->Children().size(), 1);
-  const ReferenceComponentNode& dd_count_ref(
+  const ReferenceComponentNode &dd_count_ref(
       dd_ref->components->Children().front());
-  const ReferenceComponent& dd_count_ref_comp(dd_count_ref.Value());
+  const ReferenceComponent &dd_count_ref_comp(dd_count_ref.Value());
   EXPECT_EQ(dd_count_ref_comp.identifier, "count");
   EXPECT_EQ(dd_count_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(dd_count_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -3568,7 +3568,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceInheritedBaseClassMethod) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3597,7 +3597,7 @@ TEST(BuildSymbolTableTest, ClassDeclarationReferenceInheritedBaseClassMethod) {
   EXPECT_EQ(get_count_info.local_references_to_bind.size(), 1);
   const auto ref_map(get_count_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(count_ref, ref_map, "count");
-  const ReferenceComponent& count_ref_comp(count_ref->components->Value());
+  const ReferenceComponent &count_ref_comp(count_ref->components->Value());
   EXPECT_EQ(count_ref_comp.identifier, "count");
   EXPECT_EQ(count_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(count_ref_comp.required_metatype, SymbolMetaType::kCallable);
@@ -3637,7 +3637,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3676,7 +3676,7 @@ TEST(BuildSymbolTableTest,
   const auto ref_map(get_count_info.LocalReferencesMapViewForTesting());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(derived_type_ref, ref_map, "derived");
-  const ReferenceComponent& derived_type_ref_comp(
+  const ReferenceComponent &derived_type_ref_comp(
       derived_type_ref->components->Value());
   EXPECT_EQ(derived_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(derived_type_ref_comp.required_metatype,
@@ -3688,16 +3688,16 @@ TEST(BuildSymbolTableTest,
             derived_type_ref->components.get());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(dd_ref, ref_map, "dd");
-  const ReferenceComponent& dd_ref_comp(dd_ref->components->Value());
+  const ReferenceComponent &dd_ref_comp(dd_ref->components->Value());
   EXPECT_EQ(dd_ref_comp.identifier, "dd");
   EXPECT_EQ(dd_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(dd_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(dd_ref_comp.resolved_symbol, nullptr);
 
   ASSERT_EQ(dd_ref->components->Children().size(), 1);
-  const ReferenceComponentNode& dd_count_ref(
+  const ReferenceComponentNode &dd_count_ref(
       dd_ref->components->Children().front());
-  const ReferenceComponent& dd_count_ref_comp(dd_count_ref.Value());
+  const ReferenceComponent &dd_count_ref_comp(dd_count_ref.Value());
   EXPECT_EQ(dd_count_ref_comp.identifier, "count");
   EXPECT_EQ(dd_count_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(dd_count_ref_comp.required_metatype, SymbolMetaType::kCallable);
@@ -3735,7 +3735,7 @@ TEST(BuildSymbolTableTest, TypeParameterizedModuleDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3767,7 +3767,7 @@ TEST(BuildSymbolTableTest, TypeParameterizedClassDataDeclarations) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3792,8 +3792,8 @@ TEST(BuildSymbolTableTest, TypeParameterizedClassDataDeclarations) {
   ASSIGN_MUST_FIND(cc_refs, ref_map, "cc");
   EXPECT_EQ(cc_refs.size(), 2);
 
-  for (const auto& cc_ref : cc_refs) {
-    const ReferenceComponent& cc_ref_comp(cc_ref->components->Value());
+  for (const auto &cc_ref : cc_refs) {
+    const ReferenceComponent &cc_ref_comp(cc_ref->components->Value());
     EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(cc_ref_comp.identifier, "cc");
@@ -3802,7 +3802,7 @@ TEST(BuildSymbolTableTest, TypeParameterizedClassDataDeclarations) {
 
   // Of the two "cc" type refs, the outer one is the first one, by ordering of
   // textual position among references that start with the same identifier.
-  const DependentReferences& data_cc_type(**cc_refs.begin());
+  const DependentReferences &data_cc_type(**cc_refs.begin());
   EXPECT_EQ(data_info.declared_type.user_defined_type,
             data_cc_type.LastTypeComponent());
 
@@ -3811,8 +3811,8 @@ TEST(BuildSymbolTableTest, TypeParameterizedClassDataDeclarations) {
     symbol_table.Resolve(&resolve_diagnostics);
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
-    for (const auto& cc_ref : cc_refs) {
-      const ReferenceComponent& cc_ref_comp(cc_ref->components->Value());
+    for (const auto &cc_ref : cc_refs) {
+      const ReferenceComponent &cc_ref_comp(cc_ref->components->Value());
       EXPECT_EQ(cc_ref_comp.resolved_symbol, &cc_class);
     }
     // type of "data" is resolved
@@ -3837,7 +3837,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3870,17 +3870,17 @@ TEST(BuildSymbolTableTest,
   EXPECT_EQ(pp_refs.size(), 3);
 
   // all "pp::cc" references have the same structure
-  for (const auto& pp_ref : pp_refs) {
-    const ReferenceComponent& pp_ref_comp(pp_ref->components->Value());
+  for (const auto &pp_ref : pp_refs) {
+    const ReferenceComponent &pp_ref_comp(pp_ref->components->Value());
     EXPECT_EQ(pp_ref_comp.identifier, "pp");
     EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
     ASSERT_EQ(pp_ref->components->Children().size(), 1);
-    const ReferenceComponentNode& cc_ref(
+    const ReferenceComponentNode &cc_ref(
         pp_ref->components->Children().front());
-    const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+    const ReferenceComponent &cc_ref_comp(cc_ref.Value());
     EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(cc_ref_comp.identifier, "cc");
@@ -3889,7 +3889,7 @@ TEST(BuildSymbolTableTest,
 
   // Of all the "pp::cc" type refs, the outer one is the first one, by ordering
   // of textual position among references that start with the same identifier.
-  const DependentReferences& data_cc_type(**pp_refs.begin());
+  const DependentReferences &data_cc_type(**pp_refs.begin());
   EXPECT_EQ(data_info.declared_type.user_defined_type,
             data_cc_type.LastTypeComponent());
 
@@ -3898,13 +3898,13 @@ TEST(BuildSymbolTableTest,
     symbol_table.Resolve(&resolve_diagnostics);
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
-    for (const auto& pp_ref : pp_refs) {
-      const ReferenceComponent& pp_ref_comp(pp_ref->components->Value());
+    for (const auto &pp_ref : pp_refs) {
+      const ReferenceComponent &pp_ref_comp(pp_ref->components->Value());
       EXPECT_EQ(pp_ref_comp.resolved_symbol, &pp_package);
 
-      const ReferenceComponentNode& cc_ref(
+      const ReferenceComponentNode &cc_ref(
           pp_ref->components->Children().front());
-      const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+      const ReferenceComponent &cc_ref_comp(cc_ref.Value());
       EXPECT_EQ(cc_ref_comp.resolved_symbol, &cc_class);
     }
     // type of "data" is resolved
@@ -3925,7 +3925,7 @@ TEST(BuildSymbolTableTest, NestedTypeParameterizedClassDataDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -3961,17 +3961,17 @@ TEST(BuildSymbolTableTest, NestedTypeParameterizedClassDataDeclaration) {
   EXPECT_EQ(outer_refs.size(), 3);
 
   // all "pp::cc" references have the same structure
-  for (const auto& outer_ref : outer_refs) {
-    const ReferenceComponent& outer_ref_comp(outer_ref->components->Value());
+  for (const auto &outer_ref : outer_refs) {
+    const ReferenceComponent &outer_ref_comp(outer_ref->components->Value());
     EXPECT_EQ(outer_ref_comp.identifier, "outer");
     EXPECT_EQ(outer_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(outer_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(outer_ref_comp.resolved_symbol, nullptr);
 
     ASSERT_EQ(outer_ref->components->Children().size(), 1);
-    const ReferenceComponentNode& cc_ref(
+    const ReferenceComponentNode &cc_ref(
         outer_ref->components->Children().front());
-    const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+    const ReferenceComponent &cc_ref_comp(cc_ref.Value());
     EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(cc_ref_comp.identifier, "cc");
@@ -3981,7 +3981,7 @@ TEST(BuildSymbolTableTest, NestedTypeParameterizedClassDataDeclaration) {
   // Of all the "outer::cc" type refs, the outer one is the first one, by
   // ordering of textual position among references that start with the same
   // identifier.
-  const DependentReferences& data_cc_type(**outer_refs.begin());
+  const DependentReferences &data_cc_type(**outer_refs.begin());
   EXPECT_EQ(data_info.declared_type.user_defined_type,
             data_cc_type.LastTypeComponent());
 
@@ -3990,13 +3990,13 @@ TEST(BuildSymbolTableTest, NestedTypeParameterizedClassDataDeclaration) {
     symbol_table.Resolve(&resolve_diagnostics);
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
-    for (const auto& outer_ref : outer_refs) {
-      const ReferenceComponent& outer_ref_comp(outer_ref->components->Value());
+    for (const auto &outer_ref : outer_refs) {
+      const ReferenceComponent &outer_ref_comp(outer_ref->components->Value());
       EXPECT_EQ(outer_ref_comp.resolved_symbol, &outer_class);
 
-      const ReferenceComponentNode& cc_ref(
+      const ReferenceComponentNode &cc_ref(
           outer_ref->components->Children().front());
-      const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+      const ReferenceComponent &cc_ref_comp(cc_ref.Value());
       EXPECT_EQ(cc_ref_comp.resolved_symbol, &cc_class);
     }
     // type of "data" is resolved
@@ -4018,7 +4018,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4045,7 +4045,7 @@ TEST(BuildSymbolTableTest,
   const auto ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(cc_refs, ref_map, "cc");
   ASSIGN_MUST_HAVE_UNIQUE(cc_ref, cc_refs);
-  const ReferenceComponent& cc_ref_comp(cc_ref->components->Value());
+  const ReferenceComponent &cc_ref_comp(cc_ref->components->Value());
   EXPECT_EQ(cc_ref_comp.identifier, "cc");
   EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -4054,20 +4054,20 @@ TEST(BuildSymbolTableTest,
   const ReferenceComponentMap param_ref_map(
       ReferenceComponentNodeMapView(*cc_ref->components));
   ASSIGN_MUST_FIND(s_ref, param_ref_map, "S");
-  const ReferenceComponent& s_ref_comp(s_ref->Value());
+  const ReferenceComponent &s_ref_comp(s_ref->Value());
   EXPECT_EQ(s_ref_comp.identifier, "S");
   EXPECT_EQ(s_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(s_ref_comp.required_metatype, SymbolMetaType::kParameter);
   EXPECT_EQ(s_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_FIND(t_ref, param_ref_map, "T");
-  const ReferenceComponent& t_ref_comp(t_ref->Value());
+  const ReferenceComponent &t_ref_comp(t_ref->Value());
   EXPECT_EQ(t_ref_comp.identifier, "T");
   EXPECT_EQ(t_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(t_ref_comp.required_metatype, SymbolMetaType::kParameter);
   EXPECT_EQ(t_ref_comp.resolved_symbol, nullptr);
 
-  const DependentReferences& data_cc_type(*cc_ref);
+  const DependentReferences &data_cc_type(*cc_ref);
   EXPECT_EQ(data_info.declared_type.user_defined_type,
             data_cc_type.components.get());
 
@@ -4099,7 +4099,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4135,8 +4135,8 @@ TEST(BuildSymbolTableTest,
   EXPECT_EQ(outer_refs.size(), 3);
 
   // all "outer::cc" references have the same structure
-  for (const auto& outer_ref : outer_refs) {
-    const ReferenceComponent& outer_ref_comp(outer_ref->components->Value());
+  for (const auto &outer_ref : outer_refs) {
+    const ReferenceComponent &outer_ref_comp(outer_ref->components->Value());
     EXPECT_EQ(outer_ref_comp.identifier, "outer");
     EXPECT_EQ(outer_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(outer_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -4144,25 +4144,25 @@ TEST(BuildSymbolTableTest,
 
     ASSERT_EQ(outer_ref->components->Children().size(), 2);
 
-    const ReferenceComponentNode& s_param_ref(
+    const ReferenceComponentNode &s_param_ref(
         outer_ref->components->Children().front());
-    const ReferenceComponent& s_param_ref_comp(s_param_ref.Value());
+    const ReferenceComponent &s_param_ref_comp(s_param_ref.Value());
     EXPECT_EQ(s_param_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(s_param_ref_comp.required_metatype, SymbolMetaType::kParameter);
     EXPECT_EQ(s_param_ref_comp.identifier, "S");
     EXPECT_EQ(s_param_ref_comp.resolved_symbol, nullptr);
 
-    const ReferenceComponentNode& cc_ref(
+    const ReferenceComponentNode &cc_ref(
         outer_ref->components->Children().back());
-    const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+    const ReferenceComponent &cc_ref_comp(cc_ref.Value());
     EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(cc_ref_comp.identifier, "cc");
     EXPECT_EQ(cc_ref_comp.resolved_symbol, nullptr);
 
     ASSERT_EQ(cc_ref.Children().size(), 1);
-    const ReferenceComponentNode& t_param_ref(cc_ref.Children().front());
-    const ReferenceComponent& t_param_ref_comp(t_param_ref.Value());
+    const ReferenceComponentNode &t_param_ref(cc_ref.Children().front());
+    const ReferenceComponent &t_param_ref_comp(t_param_ref.Value());
     EXPECT_EQ(t_param_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(t_param_ref_comp.required_metatype, SymbolMetaType::kParameter);
     EXPECT_EQ(t_param_ref_comp.identifier, "T");
@@ -4172,7 +4172,7 @@ TEST(BuildSymbolTableTest,
   // Of all the "outer::cc" type refs, the outer one is the first one, by
   // ordering of textual position among references that start with the same
   // identifier.
-  const DependentReferences& data_cc_type(**outer_refs.begin());
+  const DependentReferences &data_cc_type(**outer_refs.begin());
   EXPECT_EQ(data_info.declared_type.user_defined_type,
             data_cc_type.LastTypeComponent());
 
@@ -4181,22 +4181,22 @@ TEST(BuildSymbolTableTest,
     symbol_table.Resolve(&resolve_diagnostics);
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
-    for (const auto& outer_ref : outer_refs) {
-      const ReferenceComponent& outer_ref_comp(outer_ref->components->Value());
+    for (const auto &outer_ref : outer_refs) {
+      const ReferenceComponent &outer_ref_comp(outer_ref->components->Value());
       EXPECT_EQ(outer_ref_comp.resolved_symbol, &outer_class);
 
-      const ReferenceComponentNode& s_param_ref(
+      const ReferenceComponentNode &s_param_ref(
           outer_ref->components->Children().front());
-      const ReferenceComponent& s_param_ref_comp(s_param_ref.Value());
+      const ReferenceComponent &s_param_ref_comp(s_param_ref.Value());
       EXPECT_EQ(s_param_ref_comp.resolved_symbol, &s_type_param);
 
-      const ReferenceComponentNode& cc_ref(
+      const ReferenceComponentNode &cc_ref(
           outer_ref->components->Children().back());
-      const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+      const ReferenceComponent &cc_ref_comp(cc_ref.Value());
       EXPECT_EQ(cc_ref_comp.resolved_symbol, &cc_class);
 
-      const ReferenceComponentNode& t_param_ref(cc_ref.Children().front());
-      const ReferenceComponent& t_param_ref_comp(t_param_ref.Value());
+      const ReferenceComponentNode &t_param_ref(cc_ref.Children().front());
+      const ReferenceComponent &t_param_ref_comp(t_param_ref.Value());
       EXPECT_EQ(t_param_ref_comp.resolved_symbol, &t_type_param);
     }
     // type of "data" is resolved
@@ -4213,7 +4213,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationNoReturnType) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4241,7 +4241,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationWithPort) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4279,7 +4279,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationWithLocalVariable) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4315,7 +4315,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationVoidReturnType) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4346,7 +4346,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationClassReturnType) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4359,10 +4359,10 @@ TEST(BuildSymbolTableTest, FunctionDeclarationClassReturnType) {
   EXPECT_EQ(verible::StringSpanOfSymbol(
                 *function_ff_info.declared_type.syntax_origin),
             "cc");
-  const ReferenceComponentNode* cc_ref =
+  const ReferenceComponentNode *cc_ref =
       function_ff_info.declared_type.user_defined_type;
   ASSERT_NE(cc_ref, nullptr);
-  const ReferenceComponent& cc_ref_comp(cc_ref->Value());
+  const ReferenceComponent &cc_ref_comp(cc_ref->Value());
   EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_ref_comp.identifier, "cc");
@@ -4390,7 +4390,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationInModule) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4403,7 +4403,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationInModule) {
   EXPECT_EQ(verible::StringSpanOfSymbol(
                 *function_ff_info.declared_type.syntax_origin),
             "void");
-  const ReferenceComponentNode* ff_type =
+  const ReferenceComponentNode *ff_type =
       function_ff_info.declared_type.user_defined_type;
   EXPECT_EQ(ff_type, nullptr);
 
@@ -4428,7 +4428,7 @@ TEST(BuildSymbolTableTest, ClassMethodFunctionDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4441,7 +4441,7 @@ TEST(BuildSymbolTableTest, ClassMethodFunctionDeclaration) {
   EXPECT_EQ(verible::StringSpanOfSymbol(
                 *function_ff_info.declared_type.syntax_origin),
             "int");
-  const ReferenceComponentNode* ff_type =
+  const ReferenceComponentNode *ff_type =
       function_ff_info.declared_type.user_defined_type;
   EXPECT_EQ(ff_type, nullptr);
 
@@ -4473,7 +4473,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4492,19 +4492,19 @@ TEST(BuildSymbolTableTest,
             "aa::vv");
 
   // return type points to the last component of the chain, "vv"
-  const ReferenceComponentNode* vv_ref =
+  const ReferenceComponentNode *vv_ref =
       function_ff_info.declared_type.user_defined_type;
   ASSERT_NE(vv_ref, nullptr);
-  const ReferenceComponent& vv_ref_comp(vv_ref->Value());
+  const ReferenceComponent &vv_ref_comp(vv_ref->Value());
   EXPECT_EQ(vv_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(vv_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(vv_ref_comp.identifier, "vv");
   EXPECT_EQ(vv_ref_comp.resolved_symbol, nullptr);
 
   // dependent reference parent is "aa" in "aa::vv"
-  const ReferenceComponentNode* aa_ref = vv_ref->Parent();
+  const ReferenceComponentNode *aa_ref = vv_ref->Parent();
   ASSERT_NE(aa_ref, nullptr);
-  const ReferenceComponent& aa_ref_comp(aa_ref->Value());
+  const ReferenceComponent &aa_ref_comp(aa_ref->Value());
   EXPECT_EQ(aa_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(aa_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(aa_ref_comp.identifier, "aa");
@@ -4535,7 +4535,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineMissingOuterClass) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   {
@@ -4571,7 +4571,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineInvalidModuleInjection) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   {
@@ -4594,8 +4594,8 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineInvalidModuleInjection) {
   EXPECT_EQ(mm_ref->components->Value().resolved_symbol, nullptr);
 
   // Method injection will not happen for modules.
-  const ReferenceComponentNode* ff_ref = mm_ref->LastLeaf();
-  const ReferenceComponent& ref(ff_ref->Value());
+  const ReferenceComponentNode *ff_ref = mm_ref->LastLeaf();
+  const ReferenceComponent &ref(ff_ref->Value());
   EXPECT_EQ(ref.identifier, "ff");
   EXPECT_EQ(ref.resolved_symbol, nullptr);
 
@@ -4620,7 +4620,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineMissingPrototype) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   {
@@ -4645,8 +4645,8 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineMissingPrototype) {
   EXPECT_EQ(cc_ref->components->Value().resolved_symbol, &class_cc);
 
   // Method reference is resolved to the injected symbol.
-  const ReferenceComponentNode* ff_ref = cc_ref->LastLeaf();
-  const ReferenceComponent& ref(ff_ref->Value());
+  const ReferenceComponentNode *ff_ref = cc_ref->LastLeaf();
+  const ReferenceComponent &ref(ff_ref->Value());
   EXPECT_EQ(ref.identifier, "ff");
   EXPECT_EQ(ref.resolved_symbol, &method_ff);
 
@@ -4669,7 +4669,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationMethodPrototypeOnly) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4713,7 +4713,7 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineWithMethodPrototype) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4748,8 +4748,8 @@ TEST(BuildSymbolTableTest, FunctionDeclarationOutOfLineWithMethodPrototype) {
   EXPECT_EQ(cc_ref->components->Value().resolved_symbol, &class_cc);
 
   // Method reference is resolved to the injected symbol.
-  const ReferenceComponentNode* ff_ref = cc_ref->LastLeaf();
-  const ReferenceComponent& ref(ff_ref->Value());
+  const ReferenceComponentNode *ff_ref = cc_ref->LastLeaf();
+  const ReferenceComponent &ref(ff_ref->Value());
   EXPECT_EQ(ref.identifier, "ff");
   EXPECT_EQ(ref.resolved_symbol, &method_ff);
 
@@ -4774,7 +4774,7 @@ TEST(BuildSymbolTableTest, TaskDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4803,7 +4803,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationInPackage) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4833,7 +4833,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationInModule) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4863,7 +4863,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationInClass) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4891,7 +4891,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationWithPorts) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -4927,7 +4927,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineMissingOuterClass) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   {
@@ -4964,7 +4964,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineMissingPrototype) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   {
@@ -4989,8 +4989,8 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineMissingPrototype) {
   EXPECT_EQ(cc_ref->components->Value().resolved_symbol, &class_cc);
 
   // Method reference is resolved to the injected symbol.
-  const ReferenceComponentNode* tt_ref = cc_ref->LastLeaf();
-  const ReferenceComponent& ref(tt_ref->Value());
+  const ReferenceComponentNode *tt_ref = cc_ref->LastLeaf();
+  const ReferenceComponent &ref(tt_ref->Value());
   EXPECT_EQ(ref.identifier, "tt");
   EXPECT_EQ(ref.resolved_symbol, &method_tt);
 
@@ -5014,7 +5014,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineInvalidPackageInjection) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   {
@@ -5037,8 +5037,8 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineInvalidPackageInjection) {
   EXPECT_EQ(pp_ref->components->Value().resolved_symbol, nullptr);
 
   // Method injection will not happen for packages.
-  const ReferenceComponentNode* tt_ref = pp_ref->LastLeaf();
-  const ReferenceComponent& ref(tt_ref->Value());
+  const ReferenceComponentNode *tt_ref = pp_ref->LastLeaf();
+  const ReferenceComponent &ref(tt_ref->Value());
   EXPECT_EQ(ref.identifier, "tt");
   EXPECT_EQ(ref.resolved_symbol, nullptr);
 
@@ -5061,7 +5061,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationMethodPrototypeOnly) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5101,7 +5101,7 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineWithMethodPrototype) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5133,8 +5133,8 @@ TEST(BuildSymbolTableTest, TaskDeclarationOutOfLineWithMethodPrototype) {
   EXPECT_EQ(cc_ref->components->Value().resolved_symbol, &class_cc);
 
   // Method reference is resolved to the injected symbol.
-  const ReferenceComponentNode* tt_ref = cc_ref->LastLeaf();
-  const ReferenceComponent& ref(tt_ref->Value());
+  const ReferenceComponentNode *tt_ref = cc_ref->LastLeaf();
+  const ReferenceComponent &ref(tt_ref->Value());
   EXPECT_EQ(ref.identifier, "tt");
   EXPECT_EQ(ref.resolved_symbol, &method_tt);
 
@@ -5163,7 +5163,7 @@ TEST(BuildSymbolTableTest, OutOfLineDefinitionMismatchesPrototype) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   ASSIGN_MUST_HAVE_UNIQUE(err, build_diagnostics);
@@ -5192,8 +5192,8 @@ TEST(BuildSymbolTableTest, OutOfLineDefinitionMismatchesPrototype) {
   EXPECT_EQ(cc_ref->components->Value().resolved_symbol, &class_cc);
 
   // Method reference "tt" fails to resolve due to metatype mismatch.
-  const ReferenceComponentNode* tt_ref = cc_ref->LastLeaf();
-  const ReferenceComponent& ref(tt_ref->Value());
+  const ReferenceComponentNode *tt_ref = cc_ref->LastLeaf();
+  const ReferenceComponent &ref(tt_ref->Value());
   EXPECT_EQ(ref.identifier, "tt");
   EXPECT_EQ(ref.resolved_symbol, nullptr);
 
@@ -5225,7 +5225,7 @@ TEST(BuildSymbolTableTest, FunctionCallResolvedSameScope) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5240,7 +5240,7 @@ TEST(BuildSymbolTableTest, FunctionCallResolvedSameScope) {
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 1);
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5262,7 +5262,7 @@ TEST(BuildSymbolTableTest, FunctionCallUnresolved) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5274,7 +5274,7 @@ TEST(BuildSymbolTableTest, FunctionCallUnresolved) {
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 1);
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5300,7 +5300,7 @@ TEST(BuildSymbolTableTest, FunctionCallUnresolvedNamedParameters) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5312,7 +5312,7 @@ TEST(BuildSymbolTableTest, FunctionCallUnresolvedNamedParameters) {
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 1);
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5320,7 +5320,7 @@ TEST(BuildSymbolTableTest, FunctionCallUnresolvedNamedParameters) {
       ReferenceComponentNodeMapView(*tt_ref->components));
 
   ASSIGN_MUST_FIND(a_ref, param_refs, "a");
-  const ReferenceComponent& a_ref_comp(a_ref->Value());
+  const ReferenceComponent &a_ref_comp(a_ref->Value());
   EXPECT_EQ(a_ref_comp.identifier, "a");
   EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(a_ref_comp.required_metatype,
@@ -5328,7 +5328,7 @@ TEST(BuildSymbolTableTest, FunctionCallUnresolvedNamedParameters) {
   EXPECT_EQ(a_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND(b_ref, param_refs, "b");
-  const ReferenceComponent& b_ref_comp(b_ref->Value());
+  const ReferenceComponent &b_ref_comp(b_ref->Value());
   EXPECT_EQ(b_ref_comp.identifier, "b");
   EXPECT_EQ(b_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(b_ref_comp.required_metatype,
@@ -5362,7 +5362,7 @@ TEST(BuildSymbolTableTest, FunctionCallResolvedNamedParameters) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5387,7 +5387,7 @@ TEST(BuildSymbolTableTest, FunctionCallResolvedNamedParameters) {
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 1);
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5395,7 +5395,7 @@ TEST(BuildSymbolTableTest, FunctionCallResolvedNamedParameters) {
       ReferenceComponentNodeMapView(*tt_ref->components));
 
   ASSIGN_MUST_FIND(a_ref, param_refs, "a");
-  const ReferenceComponent& a_ref_comp(a_ref->Value());
+  const ReferenceComponent &a_ref_comp(a_ref->Value());
   EXPECT_EQ(a_ref_comp.identifier, "a");
   EXPECT_EQ(a_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(a_ref_comp.required_metatype,
@@ -5403,7 +5403,7 @@ TEST(BuildSymbolTableTest, FunctionCallResolvedNamedParameters) {
   EXPECT_EQ(a_ref_comp.resolved_symbol, nullptr);  // not yet resolved
 
   ASSIGN_MUST_FIND(b_ref, param_refs, "b");
-  const ReferenceComponent& b_ref_comp(b_ref->Value());
+  const ReferenceComponent &b_ref_comp(b_ref->Value());
   EXPECT_EQ(b_ref_comp.identifier, "b");
   EXPECT_EQ(b_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(b_ref_comp.required_metatype,
@@ -5432,7 +5432,7 @@ TEST(BuildSymbolTableTest, CallNonFunction) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5447,7 +5447,7 @@ TEST(BuildSymbolTableTest, CallNonFunction) {
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 1);
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5475,7 +5475,7 @@ TEST(BuildSymbolTableTest, NestedCallsArguments) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5493,7 +5493,7 @@ TEST(BuildSymbolTableTest, NestedCallsArguments) {
   EXPECT_EQ(function_tt_info.local_references_to_bind.size(), 1);
   const auto tt_ref_map(function_tt_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(aa_ref, tt_ref_map, "aa");
-  const ReferenceComponent& aa_ref_comp(aa_ref->components->Value());
+  const ReferenceComponent &aa_ref_comp(aa_ref->components->Value());
   EXPECT_EQ(aa_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(aa_ref_comp.resolved_symbol, nullptr);
 
@@ -5501,8 +5501,8 @@ TEST(BuildSymbolTableTest, NestedCallsArguments) {
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 3);
   const auto vv_ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(tt_refs, vv_ref_map, "tt");
-  for (const auto& tt_ref : tt_refs) {
-    const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  for (const auto &tt_ref : tt_refs) {
+    const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
     EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
     EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
   }
@@ -5515,8 +5515,8 @@ TEST(BuildSymbolTableTest, NestedCallsArguments) {
     EXPECT_EQ(aa_ref_comp.resolved_symbol, &arg_aa);
 
     // Calls to "tt" are all resolved.
-    for (const auto& tt_ref : tt_refs) {
-      const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+    for (const auto &tt_ref : tt_refs) {
+      const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
       EXPECT_EQ(tt_ref_comp.resolved_symbol, &function_tt);
     }
   }
@@ -5530,7 +5530,7 @@ TEST(BuildSymbolTableTest, SelfRecursion) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5542,7 +5542,7 @@ TEST(BuildSymbolTableTest, SelfRecursion) {
   EXPECT_EQ(function_tt_info.local_references_to_bind.size(), 1);
   const auto tt_ref_map(function_tt_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, tt_ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5567,7 +5567,7 @@ TEST(BuildSymbolTableTest, MutualRecursion) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5582,14 +5582,14 @@ TEST(BuildSymbolTableTest, MutualRecursion) {
   EXPECT_EQ(function_tt_info.local_references_to_bind.size(), 1);
   const auto tt_ref_map(function_tt_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(vv_ref, tt_ref_map, "vv");
-  const ReferenceComponent& vv_ref_comp(vv_ref->components->Value());
+  const ReferenceComponent &vv_ref_comp(vv_ref->components->Value());
   EXPECT_EQ(vv_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(vv_ref_comp.resolved_symbol, nullptr);
 
   EXPECT_EQ(function_vv_info.local_references_to_bind.size(), 1);
   const auto vv_ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(tt_ref, vv_ref_map, "tt");
-  const ReferenceComponent& tt_ref_comp(tt_ref->components->Value());
+  const ReferenceComponent &tt_ref_comp(tt_ref->components->Value());
   EXPECT_EQ(tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(tt_ref_comp.resolved_symbol, nullptr);
 
@@ -5617,7 +5617,7 @@ TEST(BuildSymbolTableTest, PackageQualifiedFunctionCall) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5635,12 +5635,12 @@ TEST(BuildSymbolTableTest, PackageQualifiedFunctionCall) {
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_ref, ref_map, "pp");
   ASSERT_EQ(pp_ref->components->Children().size(), 1);
-  const ReferenceComponent& pp_ref_comp(pp_ref->components->Value());
+  const ReferenceComponent &pp_ref_comp(pp_ref->components->Value());
   EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponent& tt_ref_comp(
+  const ReferenceComponent &tt_ref_comp(
       pp_ref->components->Children().front().Value());
   EXPECT_EQ(tt_ref_comp.identifier, "tt");
   EXPECT_EQ(tt_ref_comp.ref_type, ReferenceType::kDirectMember);
@@ -5671,7 +5671,7 @@ TEST(BuildSymbolTableTest, ClassQualifiedFunctionCall) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5689,12 +5689,12 @@ TEST(BuildSymbolTableTest, ClassQualifiedFunctionCall) {
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_ref, ref_map, "cc");
   ASSERT_EQ(cc_ref->components->Children().size(), 1);
-  const ReferenceComponent& cc_ref_comp(cc_ref->components->Value());
+  const ReferenceComponent &cc_ref_comp(cc_ref->components->Value());
   EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponent& tt_ref_comp(
+  const ReferenceComponent &tt_ref_comp(
       cc_ref->components->Children().front().Value());
   EXPECT_EQ(tt_ref_comp.identifier, "tt");
   EXPECT_EQ(tt_ref_comp.ref_type, ReferenceType::kDirectMember);
@@ -5722,7 +5722,7 @@ TEST(BuildSymbolTableTest, ClassQualifiedFunctionCallUnresolved) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5737,12 +5737,12 @@ TEST(BuildSymbolTableTest, ClassQualifiedFunctionCallUnresolved) {
   const auto ref_map(function_vv_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_ref, ref_map, "cc");
   ASSERT_EQ(cc_ref->components->Children().size(), 1);
-  const ReferenceComponent& cc_ref_comp(cc_ref->components->Value());
+  const ReferenceComponent &cc_ref_comp(cc_ref->components->Value());
   EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponent& tt_ref_comp(
+  const ReferenceComponent &tt_ref_comp(
       cc_ref->components->Children().front().Value());
   EXPECT_EQ(tt_ref_comp.identifier, "tt");
   EXPECT_EQ(tt_ref_comp.ref_type, ReferenceType::kDirectMember);
@@ -5774,7 +5774,7 @@ TEST(BuildSymbolTableTest, ClassMethodCall) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5795,17 +5795,17 @@ TEST(BuildSymbolTableTest, ClassMethodCall) {
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_type_ref, ref_map,
                                    "cc");  // "cc" is a type
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref->components->Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref->components->Value());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_obj_ref, ref_map,
                                    "cc_obj");  // "cc_obj" is data
   ASSERT_EQ(cc_obj_ref->components->Children().size(), 1);
-  const ReferenceComponent& cc_obj_ref_comp(cc_obj_ref->components->Value());
+  const ReferenceComponent &cc_obj_ref_comp(cc_obj_ref->components->Value());
   EXPECT_EQ(cc_obj_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_obj_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_obj_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponent& tt_ref_comp(
+  const ReferenceComponent &tt_ref_comp(
       cc_obj_ref->components->Children().front().Value());
   EXPECT_EQ(tt_ref_comp.identifier, "tt");
   EXPECT_EQ(tt_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
@@ -5835,7 +5835,7 @@ TEST(BuildSymbolTableTest, ClassMethodCallUnresolved) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5853,17 +5853,17 @@ TEST(BuildSymbolTableTest, ClassMethodCallUnresolved) {
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_type_ref, ref_map,
                                    "cc");  // "cc" is a type
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref->components->Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref->components->Value());
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(cc_obj_ref, ref_map,
                                    "cc_obj");  // "cc_obj" is data
   ASSERT_EQ(cc_obj_ref->components->Children().size(), 1);
-  const ReferenceComponent& cc_obj_ref_comp(cc_obj_ref->components->Value());
+  const ReferenceComponent &cc_obj_ref_comp(cc_obj_ref->components->Value());
   EXPECT_EQ(cc_obj_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_obj_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_obj_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponent& tt_ref_comp(
+  const ReferenceComponent &tt_ref_comp(
       cc_obj_ref->components->Children().front().Value());
   EXPECT_EQ(tt_ref_comp.identifier, "tt");
   EXPECT_EQ(tt_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
@@ -5901,7 +5901,7 @@ TEST(BuildSymbolTableTest, ChainedMethodCall) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -5934,27 +5934,27 @@ TEST(BuildSymbolTableTest, ChainedMethodCall) {
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(dd_type_ref, ref_map,
                                    "dd");  // "dd" is a type
-  const ReferenceComponent& dd_type_ref_comp(dd_type_ref->components->Value());
+  const ReferenceComponent &dd_type_ref_comp(dd_type_ref->components->Value());
 
   // Examine the dd_obj.gg().tt() reference chain.
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(dd_obj_ref, ref_map,
                                    "dd_obj");  // "dd_obj" is data
   ASSERT_EQ(dd_obj_ref->components->Children().size(), 1);
-  const ReferenceComponent& dd_obj_ref_comp(dd_obj_ref->components->Value());
+  const ReferenceComponent &dd_obj_ref_comp(dd_obj_ref->components->Value());
   EXPECT_EQ(dd_obj_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(dd_obj_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(dd_obj_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponentNode& dd_gg_ref(
+  const ReferenceComponentNode &dd_gg_ref(
       dd_obj_ref->components->Children().front());
-  const ReferenceComponent& dd_gg_ref_comp(dd_gg_ref.Value());
+  const ReferenceComponent &dd_gg_ref_comp(dd_gg_ref.Value());
   EXPECT_EQ(dd_gg_ref_comp.identifier, "gg");
   EXPECT_EQ(dd_gg_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(dd_gg_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(dd_gg_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponentNode& dd_gg_tt_ref(dd_gg_ref.Children().front());
-  const ReferenceComponent& dd_gg_tt_ref_comp(dd_gg_tt_ref.Value());
+  const ReferenceComponentNode &dd_gg_tt_ref(dd_gg_ref.Children().front());
+  const ReferenceComponent &dd_gg_tt_ref_comp(dd_gg_tt_ref.Value());
   EXPECT_EQ(dd_gg_tt_ref_comp.identifier, "tt");
   EXPECT_EQ(dd_gg_tt_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(dd_gg_tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
@@ -6001,7 +6001,7 @@ TEST(BuildSymbolTableTest, ChainedMethodCallReturnTypeNotAClass) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6034,27 +6034,27 @@ TEST(BuildSymbolTableTest, ChainedMethodCallReturnTypeNotAClass) {
 
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(dd_type_ref, ref_map,
                                    "dd");  // "dd" is a type
-  const ReferenceComponent& dd_type_ref_comp(dd_type_ref->components->Value());
+  const ReferenceComponent &dd_type_ref_comp(dd_type_ref->components->Value());
 
   // Examine the dd_obj.gg().tt() reference chain.
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(dd_obj_ref, ref_map,
                                    "dd_obj");  // "dd_obj" is data
   ASSERT_EQ(dd_obj_ref->components->Children().size(), 1);
-  const ReferenceComponent& dd_obj_ref_comp(dd_obj_ref->components->Value());
+  const ReferenceComponent &dd_obj_ref_comp(dd_obj_ref->components->Value());
   EXPECT_EQ(dd_obj_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(dd_obj_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(dd_obj_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponentNode& dd_gg_ref(
+  const ReferenceComponentNode &dd_gg_ref(
       dd_obj_ref->components->Children().front());
-  const ReferenceComponent& dd_gg_ref_comp(dd_gg_ref.Value());
+  const ReferenceComponent &dd_gg_ref_comp(dd_gg_ref.Value());
   EXPECT_EQ(dd_gg_ref_comp.identifier, "gg");
   EXPECT_EQ(dd_gg_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(dd_gg_ref_comp.required_metatype, SymbolMetaType::kCallable);
   EXPECT_EQ(dd_gg_ref_comp.resolved_symbol, nullptr);
 
-  const ReferenceComponentNode& dd_gg_tt_ref(dd_gg_ref.Children().front());
-  const ReferenceComponent& dd_gg_tt_ref_comp(dd_gg_tt_ref.Value());
+  const ReferenceComponentNode &dd_gg_tt_ref(dd_gg_ref.Children().front());
+  const ReferenceComponent &dd_gg_tt_ref_comp(dd_gg_tt_ref.Value());
   EXPECT_EQ(dd_gg_tt_ref_comp.identifier, "tt");
   EXPECT_EQ(dd_gg_tt_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(dd_gg_tt_ref_comp.required_metatype, SymbolMetaType::kCallable);
@@ -6090,7 +6090,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeData) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6101,12 +6101,12 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeData) {
   // Find the symbol that is a struct (anon), which is not "data".
   const auto found =
       std::find_if(root_symbol.Children().begin(), root_symbol.Children().end(),
-                   [](const SymbolTableNode::key_value_type& p) {
+                   [](const SymbolTableNode::key_value_type &p) {
                      return p.first != "data";
                    });
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
@@ -6121,9 +6121,9 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeData) {
 
   // Expect to bind anonymous struct immediately.
   ASSERT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       root_symbol.Value().local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6154,7 +6154,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiFields) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6165,12 +6165,12 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiFields) {
   // Find the symbol that is a struct (anon), which is not "data".
   const auto found =
       std::find_if(root_symbol.Children().begin(), root_symbol.Children().end(),
-                   [](const SymbolTableNode::key_value_type& p) {
+                   [](const SymbolTableNode::key_value_type &p) {
                      return p.first != "data";
                    });
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
@@ -6193,9 +6193,9 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiFields) {
 
   // Expect to bind anonymous struct immediately.
   ASSERT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       root_symbol.Value().local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6229,7 +6229,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiDeclaration) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6240,12 +6240,12 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiDeclaration) {
   // Find the symbol that is a struct (anon), which is not "data".
   const auto found =
       std::find_if(root_symbol.Children().begin(), root_symbol.Children().end(),
-                   [](const SymbolTableNode::key_value_type& p) {
+                   [](const SymbolTableNode::key_value_type &p) {
                      return p.first != "data";
                    });
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
@@ -6268,9 +6268,9 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiDeclaration) {
 
   // Expect to bind anonymous struct immediately.
   ASSERT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       root_symbol.Value().local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6300,7 +6300,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariables) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6311,12 +6311,12 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariables) {
   // Find the first symbol that is a struct (anon).
   const auto found = std::find_if(
       root_symbol.Children().begin(), root_symbol.Children().end(),
-      [](const SymbolTableNode::key_value_type& p) {
+      [](const SymbolTableNode::key_value_type &p) {
         return p.second.Value().metatype == SymbolMetaType::kStruct;
       });
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
@@ -6331,9 +6331,9 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariables) {
 
   // Expect to bind anonymous struct immediately.
   ASSERT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       root_symbol.Value().local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6369,7 +6369,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariables) {
   }
 }
 
-static bool IsStruct(const SymbolTableNode::key_value_type& p) {
+static bool IsStruct(const SymbolTableNode::key_value_type &p) {
   return p.second.Value().metatype == SymbolMetaType::kStruct;
 }
 
@@ -6384,7 +6384,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariablesDistinctTypes) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6396,22 +6396,22 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariablesDistinctTypes) {
   const auto found = std::find_if(root_symbol.Children().begin(),
                                   root_symbol.Children().end(), IsStruct);
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
   const auto found_2 =
       std::find_if(std::next(found), root_symbol.Children().end(), IsStruct);
   ASSERT_NE(found_2, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct_2(found_2->second);
-  const SymbolInfo& anon_struct_2_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct_2(found_2->second);
+  const SymbolInfo &anon_struct_2_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_2_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_2_info.local_references_to_bind.empty());
 
   // Struct has one member.  Both structs have the same elements and structure,
   // but have distinct scopes in the symbol table.
-  for (const auto* anon_struct_iter : {&anon_struct, &anon_struct_2}) {
+  for (const auto *anon_struct_iter : {&anon_struct, &anon_struct_2}) {
     MUST_ASSIGN_LOOKUP_SYMBOL(int_size, *anon_struct_iter, "size");
     EXPECT_EQ(int_size_info.metatype, SymbolMetaType::kDataNetVariableInstance);
     EXPECT_EQ(int_size_info.file_origin, &src);
@@ -6423,17 +6423,17 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeDataMultiVariablesDistinctTypes) {
 
   // Expect to bind both anonymous structs immediately.
   ASSERT_EQ(root_symbol.Value().local_references_to_bind.size(), 2);
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       root_symbol.Value().local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
   EXPECT_EQ(anon_struct_ref_comp.resolved_symbol, &anon_struct);
 
-  const DependentReferences& anon_struct_2_ref(
+  const DependentReferences &anon_struct_2_ref(
       root_symbol.Value().local_references_to_bind.back());
-  const ReferenceComponent& anon_struct_2_ref_comp(
+  const ReferenceComponent &anon_struct_2_ref_comp(
       anon_struct_2_ref.components->Value());
   EXPECT_EQ(anon_struct_2_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_2_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6481,7 +6481,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeFunctionParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6495,12 +6495,12 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeFunctionParameter) {
   // Find the symbol that is a struct (anon).
   const auto found = std::find_if(
       ff_function.Children().begin(), ff_function.Children().end(),
-      [](const SymbolTableNode::key_value_type& p) {
+      [](const SymbolTableNode::key_value_type &p) {
         return p.second.Value().metatype == SymbolMetaType::kStruct;
       });
   ASSERT_NE(found, ff_function.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
@@ -6516,7 +6516,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeFunctionParameter) {
   const auto ref_map(ff_function_info.LocalReferencesMapViewForTesting());
   // Expect one type reference and one reference rooted at "data".
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(data_ref, ref_map, "data");
-  const ReferenceComponent& data_ref_comp(data_ref->components->Value());
+  const ReferenceComponent &data_ref_comp(data_ref->components->Value());
   EXPECT_EQ(data_ref_comp.identifier, "data");
   EXPECT_EQ(data_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(data_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -6524,21 +6524,21 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeFunctionParameter) {
 
   // "data.weight"
   ASSIGN_MUST_HAVE_UNIQUE(weight_ref, data_ref->components->Children());
-  const ReferenceComponent& weight_ref_comp(weight_ref.Value());
+  const ReferenceComponent &weight_ref_comp(weight_ref.Value());
   EXPECT_EQ(weight_ref_comp.identifier, "weight");
   EXPECT_EQ(weight_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(weight_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(weight_ref_comp.resolved_symbol, nullptr);
 
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       **std::find_if(ref_map.begin(), ref_map.end(),
-                     [](const decltype(ref_map)::value_type& r) {
+                     [](const decltype(ref_map)::value_type &r) {
                        return (*r.second.begin())
                                   ->components->Value()
                                   .required_metatype == SymbolMetaType::kStruct;
                      })
             ->second.begin());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6574,7 +6574,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNested) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6586,8 +6586,8 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNested) {
   const auto outer_found = std::find_if(root_symbol.Children().begin(),
                                         root_symbol.Children().end(), IsStruct);
   ASSERT_NE(outer_found, root_symbol.Children().end());
-  const SymbolTableNode& outer_anon_struct(outer_found->second);
-  const SymbolInfo& outer_anon_struct_info(outer_anon_struct.Value());
+  const SymbolTableNode &outer_anon_struct(outer_found->second);
+  const SymbolInfo &outer_anon_struct_info(outer_anon_struct.Value());
   EXPECT_EQ(outer_anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_EQ(outer_anon_struct_info.local_references_to_bind.size(), 1);
   // Expect one anonymous struct definition inside the outer struct.
@@ -6605,16 +6605,16 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNested) {
       std::find_if(outer_anon_struct.Children().begin(),
                    outer_anon_struct.Children().end(), IsStruct);
   ASSERT_NE(inner_found, outer_anon_struct.Children().end());
-  const SymbolTableNode& inner_anon_struct(inner_found->second);
-  const SymbolInfo& inner_anon_struct_info(inner_anon_struct.Value());
+  const SymbolTableNode &inner_anon_struct(inner_found->second);
+  const SymbolInfo &inner_anon_struct_info(inner_anon_struct.Value());
   EXPECT_EQ(inner_anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(inner_anon_struct_info.local_references_to_bind.empty());
 
   // "foo"'s type is pre-bound to the inner anonymous struct.
-  const ReferenceComponentNode* foo_type =
+  const ReferenceComponentNode *foo_type =
       struct_foo_info.declared_type.user_defined_type;
   ASSERT_NE(foo_type, nullptr);
-  const ReferenceComponent& foo_type_comp(foo_type->Value());
+  const ReferenceComponent &foo_type_comp(foo_type->Value());
   EXPECT_EQ(foo_type_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(foo_type_comp.required_metatype, SymbolMetaType::kStruct);
   EXPECT_EQ(foo_type_comp.resolved_symbol, &inner_anon_struct);
@@ -6630,9 +6630,9 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNested) {
 
   // Expect to bind (outer) anonymous struct immediately.
   ASSERT_EQ(root_symbol.Value().local_references_to_bind.size(), 1);
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       root_symbol.Value().local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6669,7 +6669,7 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNestedMemberReference) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6685,8 +6685,8 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNestedMemberReference) {
   const auto outer_found = std::find_if(function_ff.Children().begin(),
                                         function_ff.Children().end(), IsStruct);
   ASSERT_NE(outer_found, function_ff.Children().end());
-  const SymbolTableNode& outer_anon_struct(outer_found->second);
-  const SymbolInfo& outer_anon_struct_info(outer_anon_struct.Value());
+  const SymbolTableNode &outer_anon_struct(outer_found->second);
+  const SymbolInfo &outer_anon_struct_info(outer_anon_struct.Value());
   EXPECT_EQ(outer_anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_EQ(outer_anon_struct_info.local_references_to_bind.size(), 1);
   // Expect one anonymous struct definition inside the outer struct.
@@ -6704,16 +6704,16 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNestedMemberReference) {
       std::find_if(outer_anon_struct.Children().begin(),
                    outer_anon_struct.Children().end(), IsStruct);
   ASSERT_NE(inner_found, outer_anon_struct.Children().end());
-  const SymbolTableNode& inner_anon_struct(inner_found->second);
-  const SymbolInfo& inner_anon_struct_info(inner_anon_struct.Value());
+  const SymbolTableNode &inner_anon_struct(inner_found->second);
+  const SymbolInfo &inner_anon_struct_info(inner_anon_struct.Value());
   EXPECT_EQ(inner_anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(inner_anon_struct_info.local_references_to_bind.empty());
 
   // "foo"'s type is pre-bound to the inner anonymous struct.
-  const ReferenceComponentNode* foo_type =
+  const ReferenceComponentNode *foo_type =
       struct_foo_info.declared_type.user_defined_type;
   ASSERT_NE(foo_type, nullptr);
-  const ReferenceComponent& foo_type_comp(foo_type->Value());
+  const ReferenceComponent &foo_type_comp(foo_type->Value());
   EXPECT_EQ(foo_type_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(foo_type_comp.required_metatype, SymbolMetaType::kStruct);
   EXPECT_EQ(foo_type_comp.resolved_symbol, &inner_anon_struct);
@@ -6731,9 +6731,9 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNestedMemberReference) {
   // First reference to anonymous struct, second reference to "data".
   ASSERT_EQ(function_ff_info.local_references_to_bind.size(), 2);
 
-  const DependentReferences& anon_struct_ref(
+  const DependentReferences &anon_struct_ref(
       function_ff_info.local_references_to_bind.front());
-  const ReferenceComponent& anon_struct_ref_comp(
+  const ReferenceComponent &anon_struct_ref_comp(
       anon_struct_ref.components->Value());
   EXPECT_EQ(anon_struct_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_struct_ref_comp.required_metatype, SymbolMetaType::kStruct);
@@ -6747,23 +6747,23 @@ TEST(BuildSymbolTableTest, AnonymousStructTypeNestedMemberReference) {
             anon_struct_ref.LastLeaf());
 
   // Find the "data.foo.size" reference
-  const DependentReferences& data_ref(
+  const DependentReferences &data_ref(
       function_ff_info.local_references_to_bind.back());
-  const ReferenceComponent& data_ref_comp(data_ref.components->Value());
+  const ReferenceComponent &data_ref_comp(data_ref.components->Value());
   EXPECT_EQ(data_ref_comp.identifier, "data");
   EXPECT_EQ(data_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(data_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(data_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(data_foo_ref, data_ref.components->Children());
-  const ReferenceComponent& data_foo_ref_comp(data_foo_ref.Value());
+  const ReferenceComponent &data_foo_ref_comp(data_foo_ref.Value());
   EXPECT_EQ(data_foo_ref_comp.identifier, "foo");
   EXPECT_EQ(data_foo_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(data_foo_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(data_foo_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(data_foo_size_ref, data_foo_ref.Children());
-  const ReferenceComponent& data_foo_size_ref_comp(data_foo_size_ref.Value());
+  const ReferenceComponent &data_foo_size_ref_comp(data_foo_size_ref.Value());
   EXPECT_EQ(data_foo_size_ref_comp.identifier, "size");
   EXPECT_EQ(data_foo_size_ref_comp.ref_type,
             ReferenceType::kMemberOfTypeOfParent);
@@ -6793,7 +6793,7 @@ TEST(BuildSymbolTableTest, AnonymousEnumTypeData) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6807,12 +6807,12 @@ TEST(BuildSymbolTableTest, AnonymousEnumTypeData) {
   // Find the symbol that is a enum (anon)
   const auto found = std::find_if(
       root_symbol.Children().begin(), root_symbol.Children().end(),
-      [](const SymbolTableNode::key_value_type& p) {
+      [](const SymbolTableNode::key_value_type &p) {
         return p.first != "data" && p.first != "idle" && p.first != "busy";
       });
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_enum(found->second);
-  const SymbolInfo& anon_enum_info(anon_enum.Value());
+  const SymbolTableNode &anon_enum(found->second);
+  const SymbolInfo &anon_enum_info(anon_enum.Value());
   EXPECT_EQ(anon_enum_info.metatype, SymbolMetaType::kEnumType);
   EXPECT_TRUE(anon_enum_info.local_references_to_bind.empty());
 
@@ -6832,24 +6832,24 @@ TEST(BuildSymbolTableTest, AnonymousEnumTypeData) {
   // Find idle symbol
   const auto found_enum_idle =
       std::find_if(root_symbol.Children().begin(), root_symbol.Children().end(),
-                   [](const SymbolTableNode::key_value_type& p) {
+                   [](const SymbolTableNode::key_value_type &p) {
                      return p.first == "idle";
                    });
   ASSERT_NE(found_enum_idle, root_symbol.Children().end());
-  const SymbolTableNode& enum_idle(found_enum_idle->second);
-  const SymbolInfo& enum_idle_info(enum_idle.Value());
+  const SymbolTableNode &enum_idle(found_enum_idle->second);
+  const SymbolInfo &enum_idle_info(enum_idle.Value());
   EXPECT_EQ(enum_idle_info.metatype, SymbolMetaType::kTypeAlias);
   EXPECT_TRUE(enum_idle_info.local_references_to_bind.empty());
 
   // Find busy symbol
   const auto found_enum_busy =
       std::find_if(root_symbol.Children().begin(), root_symbol.Children().end(),
-                   [](const SymbolTableNode::key_value_type& p) {
+                   [](const SymbolTableNode::key_value_type &p) {
                      return p.first == "busy";
                    });
   ASSERT_NE(found_enum_busy, root_symbol.Children().end());
-  const SymbolTableNode& enum_busy(found_enum_busy->second);
-  const SymbolInfo& enum_busy_info(enum_busy.Value());
+  const SymbolTableNode &enum_busy(found_enum_busy->second);
+  const SymbolInfo &enum_busy_info(enum_busy.Value());
   EXPECT_EQ(enum_busy_info.metatype, SymbolMetaType::kTypeAlias);
   EXPECT_TRUE(enum_busy_info.local_references_to_bind.empty());
 
@@ -6858,20 +6858,20 @@ TEST(BuildSymbolTableTest, AnonymousEnumTypeData) {
 
   // Expect them to bind immediately.
 
-  const ReferenceComponent& anon_enum_ref_comp(
+  const ReferenceComponent &anon_enum_ref_comp(
       root_symbol.Value().local_references_to_bind[2].LastLeaf()->Value());
   EXPECT_EQ(anon_enum_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(anon_enum_ref_comp.required_metatype, SymbolMetaType::kEnumType);
   EXPECT_EQ(anon_enum_ref_comp.resolved_symbol, &anon_enum);
 
-  const ReferenceComponent& enum_idle_ref_comp(
+  const ReferenceComponent &enum_idle_ref_comp(
       root_symbol.Value().local_references_to_bind[0].LastLeaf()->Value());
   EXPECT_EQ(enum_idle_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(enum_idle_ref_comp.required_metatype,
             SymbolMetaType::kEnumConstant);
   EXPECT_EQ(enum_idle_ref_comp.resolved_symbol, &busy);
 
-  const ReferenceComponent& enum_busy_ref_comp(
+  const ReferenceComponent &enum_busy_ref_comp(
       root_symbol.Value().local_references_to_bind[1].LastLeaf()->Value());
   EXPECT_EQ(enum_busy_ref_comp.ref_type, ReferenceType::kImmediate);
   EXPECT_EQ(enum_busy_ref_comp.required_metatype,
@@ -6883,7 +6883,7 @@ TEST(BuildSymbolTableTest, AnonymousEnumTypeData) {
   EXPECT_EQ(data_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(data_info.file_origin, &src);
 
-  const DependentReferences& anon_enum_ref(
+  const DependentReferences &anon_enum_ref(
       root_symbol.Value().local_references_to_bind[2]);
   EXPECT_EQ(data_info.declared_type.user_defined_type,
             anon_enum_ref.LastLeaf());
@@ -6907,7 +6907,7 @@ TEST(BuildSymbolTableTest, TypedefPrimitive) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6923,7 +6923,7 @@ TEST(BuildSymbolTableTest, TypedefPrimitive) {
   // Expect one type reference to "number".
   ASSIGN_MUST_HAVE_UNIQUE(number_ref,
                           root_symbol.Value().local_references_to_bind);
-  const ReferenceComponent& number_ref_comp(number_ref.components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref.components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -6950,7 +6950,7 @@ TEST(BuildSymbolTableTest, TypedefTransitive) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -6971,7 +6971,7 @@ TEST(BuildSymbolTableTest, TypedefTransitive) {
 
   // Expect one type reference to "num".
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(num_ref, ref_map, "num");
-  const ReferenceComponent& num_ref_comp(num_ref->components->Value());
+  const ReferenceComponent &num_ref_comp(num_ref->components->Value());
   EXPECT_EQ(num_ref_comp.identifier, "num");
   EXPECT_EQ(num_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(num_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -6979,7 +6979,7 @@ TEST(BuildSymbolTableTest, TypedefTransitive) {
 
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND_EXACTLY_ONE_REF(number_ref, ref_map, "number");
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7011,7 +7011,7 @@ TEST(BuildSymbolTableTest, TypedefClass) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7029,11 +7029,11 @@ TEST(BuildSymbolTableTest, TypedefClass) {
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
   // Expect one type reference to "number", and one to "cc".
-  const auto& ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
+  const auto &ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
 
   ASSIGN_MUST_FIND(cc_type_refs, ref_map, "cc");
   ASSIGN_MUST_HAVE_UNIQUE(cc_type_ref, cc_type_refs);
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref->components->Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref->components->Value());
   EXPECT_EQ(cc_type_ref_comp.identifier, "cc");
   EXPECT_EQ(cc_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7041,7 +7041,7 @@ TEST(BuildSymbolTableTest, TypedefClass) {
 
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7071,7 +7071,7 @@ TEST(BuildSymbolTableTest, TypedefClassPackageQualified) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7092,19 +7092,19 @@ TEST(BuildSymbolTableTest, TypedefClassPackageQualified) {
   EXPECT_EQ(foo_var_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
-  const auto& ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
+  const auto &ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
 
   // Expect one type reference to "pp::cc".
   ASSIGN_MUST_FIND(pp_type_refs, ref_map, "pp");
   ASSIGN_MUST_HAVE_UNIQUE(pp_type_ref, pp_type_refs);
-  const ReferenceComponent& pp_type_ref_comp(pp_type_ref->components->Value());
+  const ReferenceComponent &pp_type_ref_comp(pp_type_ref->components->Value());
   EXPECT_EQ(pp_type_ref_comp.identifier, "pp");
   EXPECT_EQ(pp_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_type_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(cc_type_ref, pp_type_ref->components->Children());
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref.Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref.Value());
   EXPECT_EQ(cc_type_ref_comp.identifier, "cc");
   EXPECT_EQ(cc_type_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(cc_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7113,7 +7113,7 @@ TEST(BuildSymbolTableTest, TypedefClassPackageQualified) {
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7140,7 +7140,7 @@ TEST(BuildSymbolTableTest, TypedefClassUnresolvedQualifiedReferenceBase) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7153,19 +7153,19 @@ TEST(BuildSymbolTableTest, TypedefClassUnresolvedQualifiedReferenceBase) {
   EXPECT_EQ(foo_var_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
-  const auto& ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
+  const auto &ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
 
   // Expect one type reference to "pp::cc".
   ASSIGN_MUST_FIND(pp_type_refs, ref_map, "pp");
   ASSIGN_MUST_HAVE_UNIQUE(pp_type_ref, pp_type_refs);
-  const ReferenceComponent& pp_type_ref_comp(pp_type_ref->components->Value());
+  const ReferenceComponent &pp_type_ref_comp(pp_type_ref->components->Value());
   EXPECT_EQ(pp_type_ref_comp.identifier, "pp");
   EXPECT_EQ(pp_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_type_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(cc_type_ref, pp_type_ref->components->Children());
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref.Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref.Value());
   EXPECT_EQ(cc_type_ref_comp.identifier, "cc");
   EXPECT_EQ(cc_type_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(cc_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7174,7 +7174,7 @@ TEST(BuildSymbolTableTest, TypedefClassUnresolvedQualifiedReferenceBase) {
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7205,7 +7205,7 @@ TEST(BuildSymbolTableTest, TypedefClassPartiallyResolvedQualifiedReference) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7221,26 +7221,26 @@ TEST(BuildSymbolTableTest, TypedefClassPartiallyResolvedQualifiedReference) {
   EXPECT_EQ(foo_var_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
-  const auto& ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
+  const auto &ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
 
   // Expect one type reference to "pp::cc::dd".
   ASSIGN_MUST_FIND(pp_type_refs, ref_map, "pp");
   ASSIGN_MUST_HAVE_UNIQUE(pp_type_ref, pp_type_refs);
-  const ReferenceComponent& pp_type_ref_comp(pp_type_ref->components->Value());
+  const ReferenceComponent &pp_type_ref_comp(pp_type_ref->components->Value());
   EXPECT_EQ(pp_type_ref_comp.identifier, "pp");
   EXPECT_EQ(pp_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(pp_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(pp_type_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(cc_type_ref, pp_type_ref->components->Children());
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref.Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref.Value());
   EXPECT_EQ(cc_type_ref_comp.identifier, "cc");
   EXPECT_EQ(cc_type_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(cc_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(cc_type_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(dd_type_ref, cc_type_ref.Children());
-  const ReferenceComponent& dd_type_ref_comp(dd_type_ref.Value());
+  const ReferenceComponent &dd_type_ref_comp(dd_type_ref.Value());
   EXPECT_EQ(dd_type_ref_comp.identifier, "dd");
   EXPECT_EQ(dd_type_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(dd_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7249,7 +7249,7 @@ TEST(BuildSymbolTableTest, TypedefClassPartiallyResolvedQualifiedReference) {
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7280,7 +7280,7 @@ TEST(BuildSymbolTableTest, TypedefOfClassTypeParameter) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7302,11 +7302,11 @@ TEST(BuildSymbolTableTest, TypedefOfClassTypeParameter) {
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
   // Expect one type reference to "number", and one to "T".
-  const auto& ref_map(cc_class_info.LocalReferencesMapViewForTesting());
+  const auto &ref_map(cc_class_info.LocalReferencesMapViewForTesting());
 
   ASSIGN_MUST_FIND(t_type_refs, ref_map, "T");
   ASSIGN_MUST_HAVE_UNIQUE(t_type_ref, t_type_refs);
-  const ReferenceComponent& t_type_ref_comp(t_type_ref->components->Value());
+  const ReferenceComponent &t_type_ref_comp(t_type_ref->components->Value());
   EXPECT_EQ(t_type_ref_comp.identifier, "T");
   EXPECT_EQ(t_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(t_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7314,7 +7314,7 @@ TEST(BuildSymbolTableTest, TypedefOfClassTypeParameter) {
 
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7345,7 +7345,7 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassPositionalParams) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7370,11 +7370,11 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassPositionalParams) {
   EXPECT_EQ(foo_var_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
-  const auto& ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
+  const auto &ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7383,15 +7383,15 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassPositionalParams) {
   // Expect two type references to "pp::cc".
   ASSIGN_MUST_FIND(pp_refs, ref_map, "pp");
   EXPECT_EQ(pp_refs.size(), 2);
-  for (const auto& pp_ref_iter : pp_refs) {
-    const ReferenceComponent& pp_ref_comp(pp_ref_iter->components->Value());
+  for (const auto &pp_ref_iter : pp_refs) {
+    const ReferenceComponent &pp_ref_comp(pp_ref_iter->components->Value());
     EXPECT_EQ(pp_ref_comp.identifier, "pp");
     EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
     ASSIGN_MUST_HAVE_UNIQUE(cc_ref, pp_ref_iter->components->Children());
-    const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+    const ReferenceComponent &cc_ref_comp(cc_ref.Value());
     EXPECT_EQ(cc_ref_comp.identifier, "cc");
     EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7407,12 +7407,12 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassPositionalParams) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // Resolve "pp::cc" type references
-    for (const auto& pp_ref_iter : pp_refs) {
-      const ReferenceComponent& pp_ref_comp(pp_ref_iter->components->Value());
+    for (const auto &pp_ref_iter : pp_refs) {
+      const ReferenceComponent &pp_ref_comp(pp_ref_iter->components->Value());
       EXPECT_EQ(pp_ref_comp.resolved_symbol, &pp_package);
 
       ASSIGN_MUST_HAVE_UNIQUE(cc_ref, pp_ref_iter->components->Children());
-      const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+      const ReferenceComponent &cc_ref_comp(cc_ref.Value());
       EXPECT_EQ(cc_ref_comp.resolved_symbol, &cc_class);
     }
     // Resolve "number" type reference.
@@ -7431,7 +7431,7 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassNamedParams) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7456,11 +7456,11 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassNamedParams) {
   EXPECT_EQ(foo_var_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
-  const auto& ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
+  const auto &ref_map(root_symbol.Value().LocalReferencesMapViewForTesting());
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND(number_refs, ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7469,22 +7469,22 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassNamedParams) {
   // Expect two type references to "pp::cc#(.T(...))".
   ASSIGN_MUST_FIND(pp_refs, ref_map, "pp");
   EXPECT_EQ(pp_refs.size(), 2);
-  for (const auto& pp_ref_iter : pp_refs) {
-    const ReferenceComponent& pp_ref_comp(pp_ref_iter->components->Value());
+  for (const auto &pp_ref_iter : pp_refs) {
+    const ReferenceComponent &pp_ref_comp(pp_ref_iter->components->Value());
     EXPECT_EQ(pp_ref_comp.identifier, "pp");
     EXPECT_EQ(pp_ref_comp.ref_type, ReferenceType::kUnqualified);
     EXPECT_EQ(pp_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(pp_ref_comp.resolved_symbol, nullptr);
 
     ASSIGN_MUST_HAVE_UNIQUE(cc_ref, pp_ref_iter->components->Children());
-    const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+    const ReferenceComponent &cc_ref_comp(cc_ref.Value());
     EXPECT_EQ(cc_ref_comp.identifier, "cc");
     EXPECT_EQ(cc_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(cc_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
     EXPECT_EQ(cc_ref_comp.resolved_symbol, nullptr);
 
     ASSIGN_MUST_HAVE_UNIQUE(t_param_ref, cc_ref.Children());
-    const ReferenceComponent& t_param_ref_comp(t_param_ref.Value());
+    const ReferenceComponent &t_param_ref_comp(t_param_ref.Value());
     EXPECT_EQ(t_param_ref_comp.identifier, "T");
     EXPECT_EQ(t_param_ref_comp.ref_type, ReferenceType::kDirectMember);
     EXPECT_EQ(t_param_ref_comp.required_metatype, SymbolMetaType::kParameter);
@@ -7500,16 +7500,16 @@ TEST(BuildSymbolTableTest, TypedefOfParameterizedClassNamedParams) {
     EXPECT_EMPTY_STATUSES(resolve_diagnostics);
 
     // Resolve "pp::cc#(.T(...))" type references
-    for (const auto& pp_ref_iter : pp_refs) {
-      const ReferenceComponent& pp_ref_comp(pp_ref_iter->components->Value());
+    for (const auto &pp_ref_iter : pp_refs) {
+      const ReferenceComponent &pp_ref_comp(pp_ref_iter->components->Value());
       EXPECT_EQ(pp_ref_comp.resolved_symbol, &pp_package);
 
       ASSIGN_MUST_HAVE_UNIQUE(cc_ref, pp_ref_iter->components->Children());
-      const ReferenceComponent& cc_ref_comp(cc_ref.Value());
+      const ReferenceComponent &cc_ref_comp(cc_ref.Value());
       EXPECT_EQ(cc_ref_comp.resolved_symbol, &cc_class);
 
       ASSIGN_MUST_HAVE_UNIQUE(t_param_ref, cc_ref.Children());
-      const ReferenceComponent& t_param_ref_comp(t_param_ref.Value());
+      const ReferenceComponent &t_param_ref_comp(t_param_ref.Value());
       EXPECT_EQ(t_param_ref_comp.resolved_symbol, &t_type_param);
     }
     // Resolve "number" type reference.
@@ -7524,7 +7524,7 @@ TEST(BuildSymbolTableTest, InvalidMemberLookupOfAliasedType) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7538,18 +7538,18 @@ TEST(BuildSymbolTableTest, InvalidMemberLookupOfAliasedType) {
             "int");
 
   // Expect one type reference to "number".
-  const auto& get_count_ref_map(
+  const auto &get_count_ref_map(
       root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(number_refs, get_count_ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(number_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(number_count_ref, number_ref->components->Children());
-  const ReferenceComponent& number_count_ref_comp(number_count_ref.Value());
+  const ReferenceComponent &number_count_ref_comp(number_count_ref.Value());
   EXPECT_EQ(number_count_ref_comp.identifier, "count");
   EXPECT_EQ(number_count_ref_comp.ref_type, ReferenceType::kDirectMember);
   EXPECT_EQ(number_count_ref_comp.required_metatype,
@@ -7586,7 +7586,7 @@ TEST(BuildSymbolTableTest, InvalidMemberLookupOfTypedefPrimitive) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7609,11 +7609,11 @@ TEST(BuildSymbolTableTest, InvalidMemberLookupOfTypedefPrimitive) {
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
   // Expect one type reference to "number".
-  const auto& get_count_ref_map(
+  const auto &get_count_ref_map(
       get_count_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(number_refs, get_count_ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7621,14 +7621,14 @@ TEST(BuildSymbolTableTest, InvalidMemberLookupOfTypedefPrimitive) {
 
   ASSIGN_MUST_FIND(foo_refs, get_count_ref_map, "foo");
   ASSIGN_MUST_HAVE_UNIQUE(foo_ref, foo_refs);
-  const ReferenceComponent& foo_ref_comp(foo_ref->components->Value());
+  const ReferenceComponent &foo_ref_comp(foo_ref->components->Value());
   EXPECT_EQ(foo_ref_comp.identifier, "foo");
   EXPECT_EQ(foo_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(foo_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(foo_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(foo_count_ref, foo_ref->components->Children());
-  const ReferenceComponent& foo_count_ref_comp(foo_count_ref.Value());
+  const ReferenceComponent &foo_count_ref_comp(foo_count_ref.Value());
   EXPECT_EQ(foo_count_ref_comp.identifier, "count");
   EXPECT_EQ(foo_count_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(foo_count_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7665,7 +7665,7 @@ TEST(BuildSymbolTableTest, AccessClassMemberThroughTypedef) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7693,11 +7693,11 @@ TEST(BuildSymbolTableTest, AccessClassMemberThroughTypedef) {
   EXPECT_EQ(foo_var_info.file_origin, &src);
 
   // Expect one type reference to "cc".
-  const auto& root_ref_map(
+  const auto &root_ref_map(
       root_symbol.Value().LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(cc_type_refs, root_ref_map, "cc");
   ASSIGN_MUST_HAVE_UNIQUE(cc_type_ref, cc_type_refs);
-  const ReferenceComponent& cc_type_ref_comp(cc_type_ref->components->Value());
+  const ReferenceComponent &cc_type_ref_comp(cc_type_ref->components->Value());
   EXPECT_EQ(cc_type_ref_comp.identifier, "cc");
   EXPECT_EQ(cc_type_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(cc_type_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7707,11 +7707,11 @@ TEST(BuildSymbolTableTest, AccessClassMemberThroughTypedef) {
             cc_type_ref->LastTypeComponent());
 
   // Expect one type reference to "number".
-  const auto& get_count_ref_map(
+  const auto &get_count_ref_map(
       get_count_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(number_refs, get_count_ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7719,14 +7719,14 @@ TEST(BuildSymbolTableTest, AccessClassMemberThroughTypedef) {
 
   ASSIGN_MUST_FIND(foo_refs, get_count_ref_map, "foo");
   ASSIGN_MUST_HAVE_UNIQUE(foo_ref, foo_refs);
-  const ReferenceComponent& foo_ref_comp(foo_ref->components->Value());
+  const ReferenceComponent &foo_ref_comp(foo_ref->components->Value());
   EXPECT_EQ(foo_ref_comp.identifier, "foo");
   EXPECT_EQ(foo_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(foo_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(foo_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(foo_count_ref, foo_ref->components->Children());
-  const ReferenceComponent& foo_count_ref_comp(foo_count_ref.Value());
+  const ReferenceComponent &foo_count_ref_comp(foo_count_ref.Value());
   EXPECT_EQ(foo_count_ref_comp.identifier, "count");
   EXPECT_EQ(foo_count_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(foo_count_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7760,7 +7760,7 @@ TEST(BuildSymbolTableTest, AccessStructMemberThroughTypedef) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7769,8 +7769,8 @@ TEST(BuildSymbolTableTest, AccessStructMemberThroughTypedef) {
   const auto found = std::find_if(root_symbol.Children().begin(),
                                   root_symbol.Children().end(), IsStruct);
   ASSERT_NE(found, root_symbol.Children().end());
-  const SymbolTableNode& anon_struct(found->second);
-  const SymbolInfo& anon_struct_info(anon_struct.Value());
+  const SymbolTableNode &anon_struct(found->second);
+  const SymbolInfo &anon_struct_info(anon_struct.Value());
   EXPECT_EQ(anon_struct_info.metatype, SymbolMetaType::kStruct);
   EXPECT_TRUE(anon_struct_info.local_references_to_bind.empty());
 
@@ -7799,11 +7799,11 @@ TEST(BuildSymbolTableTest, AccessStructMemberThroughTypedef) {
             &anon_struct);
 
   // Expect one type reference to "number".
-  const auto& get_count_ref_map(
+  const auto &get_count_ref_map(
       get_count_info.LocalReferencesMapViewForTesting());
   ASSIGN_MUST_FIND(number_refs, get_count_ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7811,14 +7811,14 @@ TEST(BuildSymbolTableTest, AccessStructMemberThroughTypedef) {
 
   ASSIGN_MUST_FIND(foo_refs, get_count_ref_map, "foo");
   ASSIGN_MUST_HAVE_UNIQUE(foo_ref, foo_refs);
-  const ReferenceComponent& foo_ref_comp(foo_ref->components->Value());
+  const ReferenceComponent &foo_ref_comp(foo_ref->components->Value());
   EXPECT_EQ(foo_ref_comp.identifier, "foo");
   EXPECT_EQ(foo_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(foo_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
   EXPECT_EQ(foo_ref_comp.resolved_symbol, nullptr);
 
   ASSIGN_MUST_HAVE_UNIQUE(foo_count_ref, foo_ref->components->Children());
-  const ReferenceComponent& foo_count_ref_comp(foo_count_ref.Value());
+  const ReferenceComponent &foo_count_ref_comp(foo_count_ref.Value());
   EXPECT_EQ(foo_count_ref_comp.identifier, "count");
   EXPECT_EQ(foo_count_ref_comp.ref_type, ReferenceType::kMemberOfTypeOfParent);
   EXPECT_EQ(foo_count_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7851,7 +7851,7 @@ TEST(BuildSymbolTableTest, InheritBaseClassThroughTypedef) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -7878,13 +7878,13 @@ TEST(BuildSymbolTableTest, InheritBaseClassThroughTypedef) {
   EXPECT_EQ(count_info.metatype, SymbolMetaType::kDataNetVariableInstance);
   EXPECT_EQ(count_info.file_origin, &src);
 
-  const auto& root_ref_map(
+  const auto &root_ref_map(
       root_symbol.Value().LocalReferencesMapViewForTesting());
 
   // Expect one reference to "base"
   ASSIGN_MUST_FIND(base_type_refs, root_ref_map, "base");
   ASSIGN_MUST_HAVE_UNIQUE(base_type_ref, base_type_refs);
-  const ReferenceComponent& base_type_ref_comp(
+  const ReferenceComponent &base_type_ref_comp(
       base_type_ref->components->Value());
   EXPECT_EQ(base_type_ref_comp.identifier, "base");
   EXPECT_EQ(base_type_ref_comp.ref_type, ReferenceType::kUnqualified);
@@ -7897,7 +7897,7 @@ TEST(BuildSymbolTableTest, InheritBaseClassThroughTypedef) {
   // Expect one reference to "base_alias"
   ASSIGN_MUST_FIND(base_alias_refs, root_ref_map, "base_alias");
   ASSIGN_MUST_HAVE_UNIQUE(base_alias_ref, base_alias_refs);
-  const ReferenceComponent& base_alias_ref_comp(
+  const ReferenceComponent &base_alias_ref_comp(
       base_alias_ref->components->Value());
   EXPECT_EQ(base_alias_ref_comp.identifier, "base_alias");
   EXPECT_EQ(base_alias_ref_comp.ref_type, ReferenceType::kUnqualified);
@@ -7907,13 +7907,13 @@ TEST(BuildSymbolTableTest, InheritBaseClassThroughTypedef) {
   EXPECT_EQ(derived_class_info.parent_type.user_defined_type,
             base_alias_ref->components.get());
 
-  const auto& derived_ref_map(
+  const auto &derived_ref_map(
       derived_class_info.LocalReferencesMapViewForTesting());
 
   // Expect one type reference to "number".
   ASSIGN_MUST_FIND(number_refs, derived_ref_map, "number");
   ASSIGN_MUST_HAVE_UNIQUE(number_ref, number_refs);
-  const ReferenceComponent& number_ref_comp(number_ref->components->Value());
+  const ReferenceComponent &number_ref_comp(number_ref->components->Value());
   EXPECT_EQ(number_ref_comp.identifier, "number");
   EXPECT_EQ(number_ref_comp.ref_type, ReferenceType::kUnqualified);
   EXPECT_EQ(number_ref_comp.required_metatype, SymbolMetaType::kUnspecified);
@@ -7934,18 +7934,18 @@ TEST(BuildSymbolTableTest, InheritBaseClassThroughTypedef) {
   }
 }
 
-static bool SourceFileLess(const TestVerilogSourceFile* left,
-                           const TestVerilogSourceFile* right) {
+static bool SourceFileLess(const TestVerilogSourceFile *left,
+                           const TestVerilogSourceFile *right) {
   return left->ReferencedPath() < right->ReferencedPath();
 }
 
 static void SortSourceFiles(
-    std::vector<const TestVerilogSourceFile*>* sources) {
+    std::vector<const TestVerilogSourceFile *> *sources) {
   std::sort(sources->begin(), sources->end(), SourceFileLess);
 }
 
 static bool PermuteSourceFiles(
-    std::vector<const TestVerilogSourceFile*>* sources) {
+    std::vector<const TestVerilogSourceFile *> *sources) {
   return std::next_permutation(sources->begin(), sources->end(),
                                SourceFileLess);
 }
@@ -7978,16 +7978,16 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
 
   // All permutations of the following file ordering should end up with the
   // same results.
-  std::vector<const TestVerilogSourceFile*> ordering(
+  std::vector<const TestVerilogSourceFile *> ordering(
       {&pp_src, &qq_src, &ss_src});
   // start with the lexicographically "lowest" permutation
   SortSourceFiles(&ordering);
   int count = 0;
   do {
     SymbolTable symbol_table(nullptr);
-    const SymbolTableNode& root_symbol(symbol_table.Root());
+    const SymbolTableNode &root_symbol(symbol_table.Root());
 
-    for (const auto* src : ordering) {
+    for (const auto *src : ordering) {
       const auto build_diagnostics = BuildSymbolTable(*src, &symbol_table);
       EXPECT_EMPTY_STATUSES(build_diagnostics);
     }
@@ -8014,9 +8014,9 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
       const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
       {
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-        const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+        const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
         ASSERT_NE(ref_node, nullptr);
-        const ReferenceComponent& ref(ref_node->Value());
+        const ReferenceComponent &ref(ref_node->Value());
         EXPECT_EQ(ref.identifier, "pp");
         EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                         qq_src.GetTextStructure()->Contents()));
@@ -8037,9 +8037,9 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
       const auto ref_map(ss_info.LocalReferencesMapViewForTesting());
       {
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_type, ref_map, "qq");
-        const ReferenceComponentNode* ref_node = qq_type->LastTypeComponent();
+        const ReferenceComponentNode *ref_node = qq_type->LastTypeComponent();
         ASSERT_NE(ref_node, nullptr);
-        const ReferenceComponent& ref(ref_node->Value());
+        const ReferenceComponent &ref(ref_node->Value());
         EXPECT_EQ(ref.identifier, "qq");
         EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                         ss_src.GetTextStructure()->Contents()));
@@ -8059,7 +8059,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
     {  // Verify pp_inst's type info
       EXPECT_TRUE(pp_inst_info.local_references_to_bind.empty());
       EXPECT_NE(pp_inst_info.declared_type.user_defined_type, nullptr);
-      const ReferenceComponent& pp_type(
+      const ReferenceComponent &pp_type(
           pp_inst_info.declared_type.user_defined_type->Value());
       EXPECT_EQ(pp_type.identifier, "pp");
       EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8071,7 +8071,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstance) {
     {  // Verify qq_inst's type info
       EXPECT_TRUE(qq_inst_info.local_references_to_bind.empty());
       EXPECT_NE(qq_inst_info.declared_type.user_defined_type, nullptr);
-      const ReferenceComponent& qq_type(
+      const ReferenceComponent &qq_type(
           qq_inst_info.declared_type.user_defined_type->Value());
       EXPECT_EQ(qq_type.identifier, "qq");
       EXPECT_EQ(qq_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8124,7 +8124,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
   const ScopedTestFile file3(sources_dir, text3);
 
   // Register files as part of project.
-  for (const auto* file : {&file1, &file2, &file3}) {
+  for (const auto *file : {&file1, &file2, &file3}) {
     const auto status_or_file =
         project.OpenTranslationUnit(Basename(file->filename()));
     ASSERT_TRUE(status_or_file.ok());
@@ -8136,13 +8136,13 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
   // Caller decides order of processing files, which doesn't matter for this
   // example.
   std::vector<absl::Status> build_diagnostics;
-  for (const auto* file : {&file3, &file2, &file1}) {
+  for (const auto *file : {&file3, &file2, &file1}) {
     symbol_table.BuildSingleTranslationUnit(Basename(file->filename()),
                                             &build_diagnostics);
     EXPECT_EMPTY_STATUSES(build_diagnostics);
   }
 
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   // Goal: resolve the reference of "pp" to this definition node.
   MUST_ASSIGN_LOOKUP_SYMBOL(pp, root_symbol, "pp");
@@ -8163,9 +8163,9 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
     const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-      const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "pp");
       EXPECT_EQ(ref.ref_type, ReferenceType::kUnqualified);
       EXPECT_EQ(ref.required_metatype, SymbolMetaType::kUnspecified);
@@ -8184,9 +8184,9 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
     const auto ref_map(ss_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_type, ref_map, "qq");
-      const ReferenceComponentNode* ref_node = qq_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = qq_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "qq");
       EXPECT_EQ(ref.ref_type, ReferenceType::kUnqualified);
       EXPECT_EQ(ref.required_metatype, SymbolMetaType::kUnspecified);
@@ -8204,7 +8204,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
   {  // Verify pp_inst's type info
     EXPECT_TRUE(pp_inst_info.local_references_to_bind.empty());
     EXPECT_NE(pp_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& pp_type(
+    const ReferenceComponent &pp_type(
         pp_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(pp_type.identifier, "pp");
     EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8215,7 +8215,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectOneFileAtATime) {
   {  // Verify qq_inst's type info
     EXPECT_TRUE(qq_inst_info.local_references_to_bind.empty());
     EXPECT_NE(qq_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& qq_type(
+    const ReferenceComponent &qq_type(
         qq_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(qq_type.identifier, "qq");
     EXPECT_EQ(qq_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8279,7 +8279,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
   const ScopedTestFile file3(sources_dir, text3);
 
   // Register files as part of project.
-  for (const auto* file : {&file1, &file2, &file3}) {
+  for (const auto *file : {&file1, &file2, &file3}) {
     const auto status_or_file =
         project.OpenTranslationUnit(Basename(file->filename()));
     ASSERT_TRUE(status_or_file.ok());
@@ -8292,7 +8292,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
   symbol_table.Build(&build_diagnostics);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
 
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   // Goal: resolve the reference of "pp" to this definition node.
   MUST_ASSIGN_LOOKUP_SYMBOL(pp, root_symbol, "pp");
@@ -8313,9 +8313,9 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
     const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-      const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "pp");
       EXPECT_EQ(ref.ref_type, ReferenceType::kUnqualified);
       EXPECT_EQ(ref.required_metatype, SymbolMetaType::kUnspecified);
@@ -8334,9 +8334,9 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
     const auto ref_map(ss_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_type, ref_map, "qq");
-      const ReferenceComponentNode* ref_node = qq_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = qq_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "qq");
       EXPECT_EQ(ref.ref_type, ReferenceType::kUnqualified);
       EXPECT_EQ(ref.required_metatype, SymbolMetaType::kUnspecified);
@@ -8354,7 +8354,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
   {  // Verify pp_inst's type info
     EXPECT_TRUE(pp_inst_info.local_references_to_bind.empty());
     EXPECT_NE(pp_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& pp_type(
+    const ReferenceComponent &pp_type(
         pp_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(pp_type.identifier, "pp");
     EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8365,7 +8365,7 @@ TEST(BuildSymbolTableTest, ModuleInstancesFromProjectFilesGood) {
   {  // Verify qq_inst's type info
     EXPECT_TRUE(qq_inst_info.local_references_to_bind.empty());
     EXPECT_NE(qq_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& qq_type(
+    const ReferenceComponent &qq_type(
         qq_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(qq_type.identifier, "qq");
     EXPECT_EQ(qq_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8408,7 +8408,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
   }
 
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
   EXPECT_EMPTY_STATUSES(build_diagnostics);
@@ -8438,9 +8438,9 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
     const auto ref_map(pp_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ss_type, ref_map, "ss");
-      const ReferenceComponentNode* ref_node = ss_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = ss_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "ss");
       EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                       src.GetTextStructure()->Contents()));
@@ -8461,9 +8461,9 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
     const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-      const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "pp");
       EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                       src.GetTextStructure()->Contents()));
@@ -8484,9 +8484,9 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
     const auto ref_map(ss_info.LocalReferencesMapViewForTesting());
     {
       ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_type, ref_map, "qq");
-      const ReferenceComponentNode* ref_node = qq_type->LastTypeComponent();
+      const ReferenceComponentNode *ref_node = qq_type->LastTypeComponent();
       ASSERT_NE(ref_node, nullptr);
-      const ReferenceComponent& ref(ref_node->Value());
+      const ReferenceComponent &ref(ref_node->Value());
       EXPECT_EQ(ref.identifier, "qq");
       EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                       src.GetTextStructure()->Contents()));
@@ -8506,7 +8506,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
   {  // Verify ss_inst's type info
     EXPECT_TRUE(ss_inst_info.local_references_to_bind.empty());
     EXPECT_NE(ss_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& ss_type(
+    const ReferenceComponent &ss_type(
         ss_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(ss_type.identifier, "ss");
     EXPECT_EQ(ss_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8518,7 +8518,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
   {  // Verify pp_inst's type info
     EXPECT_TRUE(pp_inst_info.local_references_to_bind.empty());
     EXPECT_NE(pp_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& pp_type(
+    const ReferenceComponent &pp_type(
         pp_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(pp_type.identifier, "pp");
     EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8530,7 +8530,7 @@ TEST(BuildSymbolTableTest, SingleFileModuleInstanceCyclicDependencies) {
   {  // Verify qq_inst's type info
     EXPECT_TRUE(qq_inst_info.local_references_to_bind.empty());
     EXPECT_NE(qq_inst_info.declared_type.user_defined_type, nullptr);
-    const ReferenceComponent& qq_type(
+    const ReferenceComponent &qq_type(
         qq_inst_info.declared_type.user_defined_type->Value());
     EXPECT_EQ(qq_type.identifier, "qq");
     EXPECT_EQ(qq_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8589,16 +8589,16 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
 
   // All permutations of the following file ordering should end up with the
   // same results.
-  std::vector<const TestVerilogSourceFile*> ordering(
+  std::vector<const TestVerilogSourceFile *> ordering(
       {&pp_src, &qq_src, &ss_src});
   // start with the lexicographically "lowest" permutation
   SortSourceFiles(&ordering);
   int count = 0;
   do {
     SymbolTable symbol_table(nullptr);
-    const SymbolTableNode& root_symbol(symbol_table.Root());
+    const SymbolTableNode &root_symbol(symbol_table.Root());
 
-    for (const auto* src : ordering) {
+    for (const auto *src : ordering) {
       const auto build_diagnostics = BuildSymbolTable(*src, &symbol_table);
       EXPECT_EMPTY_STATUSES(build_diagnostics);
     }
@@ -8628,9 +8628,9 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
       const auto ref_map(pp_info.LocalReferencesMapViewForTesting());
       {
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(ss_type, ref_map, "ss");
-        const ReferenceComponentNode* ref_node = ss_type->LastTypeComponent();
+        const ReferenceComponentNode *ref_node = ss_type->LastTypeComponent();
         ASSERT_NE(ref_node, nullptr);
-        const ReferenceComponent& ref(ref_node->Value());
+        const ReferenceComponent &ref(ref_node->Value());
         EXPECT_EQ(ref.identifier, "ss");
         EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                         pp_src.GetTextStructure()->Contents()));
@@ -8651,9 +8651,9 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
       const auto ref_map(qq_info.LocalReferencesMapViewForTesting());
       {
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(pp_type, ref_map, "pp");
-        const ReferenceComponentNode* ref_node = pp_type->LastTypeComponent();
+        const ReferenceComponentNode *ref_node = pp_type->LastTypeComponent();
         ASSERT_NE(ref_node, nullptr);
-        const ReferenceComponent& ref(ref_node->Value());
+        const ReferenceComponent &ref(ref_node->Value());
         EXPECT_EQ(ref.identifier, "pp");
         EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                         qq_src.GetTextStructure()->Contents()));
@@ -8674,9 +8674,9 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
       const auto ref_map(ss_info.LocalReferencesMapViewForTesting());
       {
         ASSIGN_MUST_FIND_EXACTLY_ONE_REF(qq_type, ref_map, "qq");
-        const ReferenceComponentNode* ref_node = qq_type->LastTypeComponent();
+        const ReferenceComponentNode *ref_node = qq_type->LastTypeComponent();
         ASSERT_NE(ref_node, nullptr);
-        const ReferenceComponent& ref(ref_node->Value());
+        const ReferenceComponent &ref(ref_node->Value());
         EXPECT_EQ(ref.identifier, "qq");
         EXPECT_TRUE(verible::IsSubRange(ref.identifier,
                                         ss_src.GetTextStructure()->Contents()));
@@ -8696,7 +8696,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
     {  // Verify ss_inst's type info
       EXPECT_TRUE(ss_inst_info.local_references_to_bind.empty());
       EXPECT_NE(ss_inst_info.declared_type.user_defined_type, nullptr);
-      const ReferenceComponent& ss_type(
+      const ReferenceComponent &ss_type(
           ss_inst_info.declared_type.user_defined_type->Value());
       EXPECT_EQ(ss_type.identifier, "ss");
       EXPECT_EQ(ss_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8708,7 +8708,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
     {  // Verify pp_inst's type info
       EXPECT_TRUE(pp_inst_info.local_references_to_bind.empty());
       EXPECT_NE(pp_inst_info.declared_type.user_defined_type, nullptr);
-      const ReferenceComponent& pp_type(
+      const ReferenceComponent &pp_type(
           pp_inst_info.declared_type.user_defined_type->Value());
       EXPECT_EQ(pp_type.identifier, "pp");
       EXPECT_EQ(pp_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8720,7 +8720,7 @@ TEST(BuildSymbolTableTest, MultiFileModuleInstanceCyclicDependencies) {
     {  // Verify qq_inst's type info
       EXPECT_TRUE(qq_inst_info.local_references_to_bind.empty());
       EXPECT_NE(qq_inst_info.declared_type.user_defined_type, nullptr);
-      const ReferenceComponent& qq_type(
+      const ReferenceComponent &qq_type(
           qq_inst_info.declared_type.user_defined_type->Value());
       EXPECT_EQ(qq_type.identifier, "qq");
       EXPECT_EQ(qq_type.resolved_symbol, nullptr);  // nothing resolved yet
@@ -8769,7 +8769,7 @@ TEST(BuildSymbolTableTest, IncludeModuleDefinition) {
   ASSERT_TRUE(file_or_status.ok()) << file_or_status.status().message();
 
   SymbolTable symbol_table(&project);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   std::vector<absl::Status> build_diagnostics;
   symbol_table.Build(&build_diagnostics);
@@ -8777,7 +8777,7 @@ TEST(BuildSymbolTableTest, IncludeModuleDefinition) {
 
   MUST_ASSIGN_LOOKUP_SYMBOL(pp, root_symbol, "pp");
 
-  const VerilogSourceFile* included = project.LookupRegisteredFile("module.sv");
+  const VerilogSourceFile *included = project.LookupRegisteredFile("module.sv");
   ASSERT_NE(included, nullptr);
   EXPECT_EQ(pp_info.file_origin, included);
 
@@ -8825,7 +8825,7 @@ TEST(BuildSymbolTableTest, IncludeFileNotFound) {
   ASSERT_TRUE(file_or_status.ok()) << file_or_status.status().message();
 
   SymbolTable symbol_table(&project);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   std::vector<absl::Status> build_diagnostics;
   symbol_table.Build(&build_diagnostics);
@@ -8922,11 +8922,11 @@ TEST(BuildSymbolTableTest, IncludedTwiceFromOneFile) {
   const auto file_or_status =
       project.OpenTranslationUnit(Basename(pp_src.filename()));
   ASSERT_TRUE(file_or_status.ok()) << file_or_status.status().message();
-  const VerilogSourceFile* pp_file = *file_or_status;
+  const VerilogSourceFile *pp_file = *file_or_status;
   ASSERT_NE(pp_file, nullptr);
 
   SymbolTable symbol_table(&project);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   std::vector<absl::Status> build_diagnostics;
   symbol_table.Build(&build_diagnostics);
@@ -8937,7 +8937,7 @@ TEST(BuildSymbolTableTest, IncludedTwiceFromOneFile) {
   MUST_ASSIGN_LOOKUP_SYMBOL(pp_ww, pp, "ww");
   MUST_ASSIGN_LOOKUP_SYMBOL(qq_ww, qq, "ww");
 
-  const VerilogSourceFile* included = project.LookupRegisteredFile("wires.sv");
+  const VerilogSourceFile *included = project.LookupRegisteredFile("wires.sv");
   ASSERT_NE(included, nullptr);
   EXPECT_EQ(pp_info.file_origin, pp_file);
   EXPECT_EQ(qq_info.file_origin, pp_file);
@@ -8976,17 +8976,17 @@ TEST(BuildSymbolTableTest, IncludedTwiceFromDifferentFiles) {
   const auto pp_file_or_status =
       project.OpenTranslationUnit(Basename(pp_src.filename()));
   ASSERT_TRUE(pp_file_or_status.ok()) << pp_file_or_status.status().message();
-  const VerilogSourceFile* pp_file = *pp_file_or_status;
+  const VerilogSourceFile *pp_file = *pp_file_or_status;
   ASSERT_NE(pp_file, nullptr);
 
   const auto qq_file_or_status =
       project.OpenTranslationUnit(Basename(qq_src.filename()));
   ASSERT_TRUE(qq_file_or_status.ok()) << qq_file_or_status.status().message();
-  const VerilogSourceFile* qq_file = *qq_file_or_status;
+  const VerilogSourceFile *qq_file = *qq_file_or_status;
   ASSERT_NE(qq_file, nullptr);
 
   SymbolTable symbol_table(&project);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   std::vector<absl::Status> build_diagnostics;
   symbol_table.Build(&build_diagnostics);
@@ -8997,7 +8997,7 @@ TEST(BuildSymbolTableTest, IncludedTwiceFromDifferentFiles) {
   MUST_ASSIGN_LOOKUP_SYMBOL(pp_ww, pp, "ww");
   MUST_ASSIGN_LOOKUP_SYMBOL(qq_ww, qq, "ww");
 
-  const VerilogSourceFile* included = project.LookupRegisteredFile("wires.sv");
+  const VerilogSourceFile *included = project.LookupRegisteredFile("wires.sv");
   ASSERT_NE(included, nullptr);
   EXPECT_EQ(pp_info.file_origin, pp_file);
   EXPECT_EQ(qq_info.file_origin, qq_file);
@@ -9036,7 +9036,7 @@ TEST(BuildSymbolTableTest, ModulePortDeclarationDirectionRedefinition) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -9069,7 +9069,7 @@ TEST(BuildSymbolTableTest, ModulePortDeclarationTypeRedefinition) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -9116,7 +9116,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -9170,7 +9170,7 @@ TEST(BuildSymbolTableTest,
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -9201,7 +9201,7 @@ TEST(BuildSymbolTableTest, ModulePortDeclarationTypeMultilineWithPortList) {
   const auto status = src.Parse();
   ASSERT_TRUE(status.ok()) << status.message();
   SymbolTable symbol_table(nullptr);
-  const SymbolTableNode& root_symbol(symbol_table.Root());
+  const SymbolTableNode &root_symbol(symbol_table.Root());
 
   const auto build_diagnostics = BuildSymbolTable(src, &symbol_table);
 
@@ -9252,7 +9252,7 @@ TEST(ParseSourceFileListFromFileTest, VariousValidFiles) {
        "bar/baz.txt\n",
        {"/foo/bar.sv", "bar/baz.txt"}},
   };
-  for (const auto& test : kTestCases) {
+  for (const auto &test : kTestCases) {
     const ScopedTestFile test_file(testing::TempDir(), test.contents);
     FileList file_list;
     const auto status(AppendFileListFromFile(test_file.filename(), &file_list));

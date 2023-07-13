@@ -35,7 +35,7 @@ TEST(CollectInterfaceNamesTest, NonModuleTests) {
       {"function f;\nendfunction", {}},
       {"package pkg;\nendpackage", {}},
   };
-  for (const auto& test : kTestCases) {
+  for (const auto &test : kTestCases) {
     std::set<std::string> preserved;
     EXPECT_OK(
         CollectInterfaceNames(test.first, &preserved, kDefaultPreprocess));
@@ -52,7 +52,7 @@ TEST(CollectInterfaceNamesTest, MinimalistModuleTests) {
       {"module mod #(parameter N = 0);\nendmodule: mod", {"mod", "N"}},
       {"module a;\nendmodule\nmodule b;\nendmodule", {"a", "b"}},
   };
-  for (const auto& test : kTestCases) {
+  for (const auto &test : kTestCases) {
     std::set<std::string> preserved;
     EXPECT_OK(
         CollectInterfaceNames(test.first, &preserved, kDefaultPreprocess));
@@ -89,7 +89,7 @@ TEST(CollectInterfaceNamesTest, BiggerModuleTests) {
        {"ram_model", "clk", "we", "addr", "rdata", "wdata", "ram_wrapper",
         "TheBus", "bus"}},
   };
-  for (const auto& test : kTestCases) {
+  for (const auto &test : kTestCases) {
     std::set<std::string> preserved;
     EXPECT_OK(
         CollectInterfaceNames(test.first, &preserved, kDefaultPreprocess));

@@ -64,22 +64,22 @@ using verible::TokenInfoTestData;
 
 static constexpr verilog::VerilogPreprocess::Config kDefaultPreprocess;
 
-bool TreeContainsToken(const ConcreteSyntaxTree& tree, const TokenInfo& token) {
-  const auto* matching_leaf =
-      FindFirstSubtree(tree.get(), [&](const Symbol& symbol) {
+bool TreeContainsToken(const ConcreteSyntaxTree &tree, const TokenInfo &token) {
+  const auto *matching_leaf =
+      FindFirstSubtree(tree.get(), [&](const Symbol &symbol) {
         if (symbol.Kind() != verible::SymbolKind::kLeaf) return false;
-        const auto* leaf_ptr = down_cast<const SyntaxTreeLeaf*>(&symbol);
+        const auto *leaf_ptr = down_cast<const SyntaxTreeLeaf *>(&symbol);
         return leaf_ptr->get() == token;
       });
   return matching_leaf != nullptr;
 }
 
-void DiagnosticMessagesContainFilename(const VerilogAnalyzer& analyzer,
+void DiagnosticMessagesContainFilename(const VerilogAnalyzer &analyzer,
                                        absl::string_view filename,
                                        bool with_diagnostic_context) {
   const std::vector<std::string> syntax_error_messages(
       analyzer.LinterTokenErrorMessages(with_diagnostic_context));
-  for (const auto& message : syntax_error_messages) {
+  for (const auto &message : syntax_error_messages) {
     EXPECT_TRUE(absl::StrContains(message, filename));
   }
 }
@@ -101,7 +101,7 @@ TEST(AnalyzeVerilogLexerTest, RejectsBadId) {
   const auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->Tokenize();
   EXPECT_FALSE(status.ok());
   EXPECT_FALSE(analyzer_ptr->LexStatus().ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1));
   EXPECT_EQ(rejects.front().phase, AnalysisPhase::kLexPhase);
   DiagnosticMessagesContainFilename(*analyzer_ptr, "<noname>", false);
@@ -115,7 +115,7 @@ TEST(AnalyzeVerilogLexerTest, RejectsMacroBadId) {
   const auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->Tokenize();
   EXPECT_FALSE(status.ok());
   EXPECT_FALSE(analyzer_ptr->LexStatus().ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1));
   EXPECT_EQ(rejects.front().phase, AnalysisPhase::kLexPhase);
   DiagnosticMessagesContainFilename(*analyzer_ptr, "<noname>", false);
@@ -160,7 +160,7 @@ TEST(AnalyzeVerilogExpressionTest, ParsesUnfinishedOp) {
       AnalyzeVerilogExpression("a+", "<file>", kDefaultPreprocess);
   auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->ParseStatus();
   EXPECT_FALSE(status.ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1));
   EXPECT_EQ(rejects.front().phase, AnalysisPhase::kParsePhase);
   DiagnosticMessagesContainFilename(*analyzer_ptr, "<file>", false);
@@ -172,7 +172,7 @@ TEST(AnalyzeVerilogExpressionTest, Unbalanced) {
       AnalyzeVerilogExpression("(a+c", "<file>", kDefaultPreprocess);
   auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->ParseStatus();
   EXPECT_FALSE(status.ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1));
   EXPECT_EQ(rejects.front().phase, AnalysisPhase::kParsePhase);
   DiagnosticMessagesContainFilename(*analyzer_ptr, "<file>", false);
@@ -208,7 +208,7 @@ TEST(AnalyzeVerilogExpressionTest, RejectsModuleItemAttack) {
       AnalyzeVerilogExpression("a; wire foo", "<file>", kDefaultPreprocess);
   auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->ParseStatus();
   EXPECT_FALSE(status.ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1))
       << "got: [\n"
       << verible::SequenceFormatter(rejects, "\n") << "\n]";
@@ -287,9 +287,9 @@ TEST(AnalyzeVerilogClassBodyTest, RejectsModuleItem) {
       "initial begin\nend\n", "<file>", kDefaultPreprocess);
   const auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->ParseStatus();
   EXPECT_FALSE(status.ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1));
-  const auto& first_reject = rejects.front();
+  const auto &first_reject = rejects.front();
   EXPECT_EQ(first_reject.phase, AnalysisPhase::kParsePhase);
   EXPECT_EQ(first_reject.token_info.text(), "initial");
   DiagnosticMessagesContainFilename(*analyzer_ptr, "<file>", false);
@@ -320,7 +320,7 @@ TEST(AnalyzeVerilogClassBodyTest, RejectsWireDeclaration) {
       "wire [3:0] bar;\n", "<file>", kDefaultPreprocess);
   const auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->ParseStatus();
   EXPECT_FALSE(status.ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   EXPECT_THAT(rejects, SizeIs(1));
   EXPECT_EQ(rejects.front().phase, AnalysisPhase::kParsePhase);
   DiagnosticMessagesContainFilename(*analyzer_ptr, "<file>", false);
@@ -495,11 +495,11 @@ TEST(AnalyzeVerilogAutomaticMode, PropertySpecMode) {
 // Tests that automatic mode parsing can detect that some first failing
 // keywords will trigger (successful) re-parsing as a module-body.
 TEST(AnalyzeVerilogAutomaticMode, InferredModuleBodyMode) {
-  constexpr const char* test_cases[] = {
+  constexpr const char *test_cases[] = {
       "always @(posedge clk) begin x<=y; end\n",
       "initial begin x = 0; end;\n",
   };
-  for (const char* code : test_cases) {
+  for (const char *code : test_cases) {
     std::unique_ptr<VerilogAnalyzer> analyzer_ptr =
         VerilogAnalyzer::AnalyzeAutomaticMode(code, "<file>",
                                               kDefaultPreprocess);
@@ -549,7 +549,7 @@ endmodule
 // Tests that automatic mode parsing can detect that some first failing
 // keywords will trigger (successful) re-parsing as a library map.
 TEST(AnalyzeVerilogAutomaticMode, InferredLibraryMapMode) {
-  constexpr const char* test_cases[] = {
+  constexpr const char *test_cases[] = {
       "library foolib bar/*.vg;\n",
       "include bar/*.vg;\n",
       // config_declaration, followed by library declaration
@@ -563,7 +563,7 @@ TEST(AnalyzeVerilogAutomaticMode, InferredLibraryMapMode) {
       "endconfig\n"
       "include foo_inc/bar/...;\n",
   };
-  for (const char* code : test_cases) {
+  for (const char *code : test_cases) {
     std::unique_ptr<VerilogAnalyzer> analyzer_ptr =
         VerilogAnalyzer::AnalyzeAutomaticMode(code, "<file>",
                                               kDefaultPreprocess);
@@ -573,7 +573,7 @@ TEST(AnalyzeVerilogAutomaticMode, InferredLibraryMapMode) {
 }
 
 struct TestCase {
-  const char* code;
+  const char *code;
   bool valid;
 };
 
@@ -591,7 +591,7 @@ TEST(AnalyzeVerilogAutomaticMode, InvalidInputs) {
        true},
       {"`s(};if(k);\n", true},
   };
-  for (const auto& test : test_cases) {
+  for (const auto &test : test_cases) {
     std::unique_ptr<VerilogAnalyzer> analyzer_ptr =
         VerilogAnalyzer::AnalyzeAutomaticMode(test.code, "<file>",
                                               kDefaultPreprocess);
@@ -611,9 +611,9 @@ TEST(AnalyzeVerilogAutomaticMode, InferredModuleBodyModeFarthestFirstError) {
                                             kDefaultPreprocess);
   auto status = ABSL_DIE_IF_NULL(analyzer_ptr)->ParseStatus();
   ASSERT_FALSE(status.ok());
-  const auto& rejects = analyzer_ptr->GetRejectedTokens();
+  const auto &rejects = analyzer_ptr->GetRejectedTokens();
   ASSERT_FALSE(rejects.empty());
-  const auto& token_info = rejects.front().token_info;
+  const auto &token_info = rejects.front().token_info;
   // Expect the first syntax error of the retried parsing:
   const auto expected_tokens =
       test.FindImportantTokens(analyzer_ptr->Data().Contents());
@@ -636,7 +636,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, NoArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -649,7 +649,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, SpaceArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -662,7 +662,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, CommaSeparatedBlankArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -677,7 +677,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, NonExprArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -690,7 +690,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, IntegerArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -703,7 +703,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, IdentifierArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -716,7 +716,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, MacroIdentifierArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -730,7 +730,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, StringArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -744,7 +744,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, EvalStringArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 1);
@@ -758,7 +758,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, BinaryExprArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 3);
@@ -775,7 +775,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, FunctionCallArg) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 4);
@@ -791,7 +791,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, MultipleExpressions) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 2);
@@ -807,7 +807,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, MacroCall) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 2);
@@ -824,7 +824,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, MacroCallNested) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 3);
@@ -844,7 +844,7 @@ TEST(VerilogAnalyzerExpandsMacroArgsTest, MultipleMacroCalls) {
   const auto analyzer =
       std::make_unique<VerilogAnalyzer>(test.code, "<<inline>>");
   EXPECT_OK(analyzer->Analyze());
-  const ConcreteSyntaxTree& tree = analyzer->SyntaxTree();
+  const ConcreteSyntaxTree &tree = analyzer->SyntaxTree();
   const auto search_tokens =
       test.FindImportantTokens(analyzer->Data().Contents());
   ASSERT_EQ(search_tokens.size(), 5);
@@ -909,7 +909,7 @@ TEST_F(VerilogAnalyzerInternalsTest, ScanParsingModeDirective) {
        "// verilog_syntax: evil-mode\n",
        ""},
   };
-  for (const auto& test : test_cases) {
+  for (const auto &test : test_cases) {
     VerilogAnalyzer analyzer(test.first, "<file>", kDefaultPreprocess);
     const auto lexer_status = analyzer.Tokenize();
     EXPECT_OK(lexer_status);

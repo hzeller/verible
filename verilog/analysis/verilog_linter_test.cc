@@ -203,19 +203,19 @@ class VerilogLinterTest : public DefaultLinterConfigTestFixture,
       bool with_diagnostic_contex = false;
       const std::vector<std::string> syntax_error_messages(
           analyzer->LinterTokenErrorMessages(with_diagnostic_contex));
-      for (const auto& message : syntax_error_messages) {
+      for (const auto &message : syntax_error_messages) {
         diagnostics << message << std::endl;
       }
 
       with_diagnostic_contex = true;
       const std::vector<std::string> syntax_error_messages_with_context(
           analyzer->LinterTokenErrorMessages(with_diagnostic_contex));
-      for (const auto& message : syntax_error_messages_with_context) {
+      for (const auto &message : syntax_error_messages_with_context) {
         diagnostics << message << std::endl;
       }
     }
 
-    const auto& text_structure = analyzer->Data();
+    const auto &text_structure = analyzer->Data();
 
     // For testing purposes we want the status returned to reflect
     // lint success, so as long as we have a syntax tree (even if there
@@ -447,8 +447,8 @@ class ViolationFixerTest : public testing::Test {
   LinterConfiguration config_;
 
   absl::Status LintAnalyzeFixText(absl::string_view content,
-                                  ViolationFixer* violation_fixer,
-                                  std::string* fixed_content) const {
+                                  ViolationFixer *violation_fixer,
+                                  std::string *fixed_content) const {
     const ScopedTestFile temp_file(testing::TempDir(), content);
 
     // Run the analyzer to produce a syntax tree from source code.
@@ -456,7 +456,7 @@ class ViolationFixerTest : public testing::Test {
         std::make_unique<VerilogAnalyzer>(content, temp_file.filename());
     const absl::Status status = ABSL_DIE_IF_NULL(analyzer)->Analyze();
 
-    const auto& text_structure = analyzer->Data();
+    const auto &text_structure = analyzer->Data();
 
     const absl::StatusOr<std::vector<verible::LintRuleStatus>> lint_result =
         VerilogLintTextStructure(temp_file.filename(), config_, text_structure);
@@ -509,7 +509,7 @@ class ViolationFixerTest : public testing::Test {
 
     std::initializer_list<ViolationFixer::Answer>::iterator choice_it;
     const ViolationFixer::AnswerChooser answer_chooser =
-        [&choice_it, &choices](const verible::LintViolation&,
+        [&choice_it, &choices](const verible::LintViolation &,
                                absl::string_view) {
           EXPECT_NE(choice_it, choices.end())
               << "AnswerChooser called more times than expected.";
@@ -526,7 +526,7 @@ class ViolationFixerTest : public testing::Test {
 
       for (size_t i = 0; i < input_sources.size(); ++i) {
         const absl::string_view input_source = input_sources[i];
-        std::string& fixed_source = fixed_sources[i];
+        std::string &fixed_source = fixed_sources[i];
 
         const absl::Status status =
             LintAnalyzeFixText(input_source, &violation_fixer, &fixed_source);
@@ -537,7 +537,7 @@ class ViolationFixerTest : public testing::Test {
           << "AnswerChooser called fewer times than expected.";
 
       for (size_t i = 0; i < input_sources.size(); ++i) {
-        const std::string& fixed_source = fixed_sources[i];
+        const std::string &fixed_source = fixed_sources[i];
         const absl::string_view expected_fixed_source =
             *(expected_fixed_sources.begin() + i);
 
@@ -556,7 +556,7 @@ class ViolationFixerTest : public testing::Test {
 
       for (size_t i = 0; i < input_sources.size(); ++i) {
         const absl::string_view input_source = input_sources[i];
-        std::string& fixed_source = fixed_sources[i];
+        std::string &fixed_source = fixed_sources[i];
 
         const absl::Status status =
             LintAnalyzeFixText(input_source, &violation_fixer, &fixed_source);
@@ -570,7 +570,7 @@ class ViolationFixerTest : public testing::Test {
 
       for (size_t i = 0; i < input_sources.size(); ++i) {
         const absl::string_view input_source = input_sources[i];
-        const std::string& fixed_source = fixed_sources[i];
+        const std::string &fixed_source = fixed_sources[i];
         const absl::string_view expected_fixed_source =
             *(expected_fixed_sources.begin() + i);
 

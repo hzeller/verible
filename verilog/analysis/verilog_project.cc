@@ -41,7 +41,7 @@ static constexpr verilog::VerilogPreprocess::Config kPreprocessConfig{
 };
 
 VerilogSourceFile::VerilogSourceFile(absl::string_view referenced_path,
-                                     const absl::Status& status)
+                                     const absl::Status &status)
     : referenced_path_(referenced_path), status_(status) {}
 
 absl::Status VerilogSourceFile::Open() {
@@ -88,7 +88,7 @@ absl::Status VerilogSourceFile::Parse() {
   return status_;
 }
 
-const verible::TextStructureView* VerilogSourceFile::GetTextStructure() const {
+const verible::TextStructureView *VerilogSourceFile::GetTextStructure() const {
   if (analyzed_structure_ == nullptr) return nullptr;
   return &analyzed_structure_->Data();
 }
@@ -100,8 +100,8 @@ std::vector<std::string> VerilogSourceFile::ErrorMessages() const {
   return result;
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const VerilogSourceFile& source) {
+std::ostream &operator<<(std::ostream &stream,
+                         const VerilogSourceFile &source) {
   stream << "referenced path: " << source.ReferencedPath() << std::endl;
   stream << "resolved path: " << source.ResolvedPath() << std::endl;
   stream << "corpus: " << source.Corpus() << std::endl;
@@ -109,7 +109,7 @@ std::ostream& operator<<(std::ostream& stream,
   stream << "status: " << (status.ok() ? "ok" : status.message()) << std::endl;
   const auto content = source.GetContent();
   stream << "have content? " << (!content.empty() ? "yes" : "no") << std::endl;
-  const auto* text_structure = source.GetTextStructure();
+  const auto *text_structure = source.GetTextStructure();
   stream << "have text structure? " << (text_structure ? "yes" : "no")
          << std::endl;
   return stream;
@@ -133,12 +133,12 @@ absl::Status ParsedVerilogSourceFile::Parse() {
   return status_;
 }
 
-const verible::TextStructureView* ParsedVerilogSourceFile::GetTextStructure()
+const verible::TextStructureView *ParsedVerilogSourceFile::GetTextStructure()
     const {
   return text_structure_;
 }
 
-absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenFile(
+absl::StatusOr<VerilogSourceFile *> VerilogProject::OpenFile(
     absl::string_view referenced_filename, absl::string_view resolved_filename,
     absl::string_view corpus) {
   const auto inserted = files_.emplace(
@@ -146,7 +146,7 @@ absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenFile(
                                referenced_filename, resolved_filename, corpus));
   CHECK(inserted.second);  // otherwise, would have already returned above
   const auto file_iter = inserted.first;
-  VerilogSourceFile& file(*file_iter->second);
+  VerilogSourceFile &file(*file_iter->second);
 
   // Read the file's contents.
   const absl::Status status = file.Open();
@@ -179,7 +179,7 @@ bool VerilogProject::RemoveRegisteredFile(
     LOG(INFO) << "Removed " << referenced_filename << " from the project.";
     return true;
   }
-  for (const auto& include_path : include_paths_) {
+  for (const auto &include_path : include_paths_) {
     const std::string resolved_filename =
         verible::file::JoinPath(include_path, referenced_filename);
     if (files_.erase(resolved_filename) == 1) {
@@ -202,7 +202,7 @@ std::string VerilogProject::GetRelativePathToSource(
 }
 
 void VerilogProject::UpdateFileContents(
-    absl::string_view path, const verible::TextStructureView* updatedtext) {
+    absl::string_view path, const verible::TextStructureView *updatedtext) {
   std::string projectpath = GetRelativePathToSource(path);
 
   // If we get a non-null parsed file, use that, otherwise fall back to
@@ -223,7 +223,7 @@ void VerilogProject::UpdateFileContents(
   }
 }
 
-VerilogSourceFile* VerilogProject::LookupRegisteredFileInternal(
+VerilogSourceFile *VerilogProject::LookupRegisteredFileInternal(
     absl::string_view referenced_filename) const {
   const auto opened_file = FindOpenedFile(referenced_filename);
   if (opened_file) {
@@ -234,7 +234,7 @@ VerilogSourceFile* VerilogProject::LookupRegisteredFileInternal(
   }
 
   // Check if this is already opened include file
-  for (const auto& include_path : include_paths_) {
+  for (const auto &include_path : include_paths_) {
     const std::string resolved_filename =
         verible::file::JoinPath(include_path, referenced_filename);
     const auto opened_file = FindOpenedFile(resolved_filename);
@@ -245,7 +245,7 @@ VerilogSourceFile* VerilogProject::LookupRegisteredFileInternal(
   return nullptr;
 }
 
-absl::optional<absl::StatusOr<VerilogSourceFile*>>
+absl::optional<absl::StatusOr<VerilogSourceFile *>>
 VerilogProject::FindOpenedFile(absl::string_view filename) const {
   const auto found = files_.find(filename);
   if (found != files_.end()) {
@@ -256,7 +256,7 @@ VerilogProject::FindOpenedFile(absl::string_view filename) const {
   return absl::nullopt;
 }
 
-absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenTranslationUnit(
+absl::StatusOr<VerilogSourceFile *> VerilogProject::OpenTranslationUnit(
     absl::string_view referenced_filename) {
   // Check for a pre-existing entry to avoid duplicate files.
   {
@@ -287,7 +287,7 @@ absl::Status VerilogProject::IncludeFileNotFoundError(
       "' among the included paths: ", absl::StrJoin(include_paths_, ", ")));
 }
 
-absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenIncludedFile(
+absl::StatusOr<VerilogSourceFile *> VerilogProject::OpenIncludedFile(
     absl::string_view referenced_filename) {
   VLOG(1) << __FUNCTION__ << ", referenced: " << referenced_filename;
   // Check for a pre-existing entry to avoid duplicate files.
@@ -299,7 +299,7 @@ absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenIncludedFile(
   }
 
   // Check if this is already opened include file
-  for (const auto& include_path : include_paths_) {
+  for (const auto &include_path : include_paths_) {
     const std::string resolved_filename =
         verible::file::JoinPath(include_path, referenced_filename);
     const auto opened_file = FindOpenedFile(resolved_filename);
@@ -309,7 +309,7 @@ absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenIncludedFile(
   }
 
   // Locate the file among the base paths.
-  for (const auto& include_path : include_paths_) {
+  for (const auto &include_path : include_paths_) {
     const std::string resolved_filename =
         verible::file::JoinPath(include_path, referenced_filename);
     if (verible::file::FileExists(resolved_filename).ok()) {
@@ -346,7 +346,7 @@ void VerilogProject::AddVirtualFile(absl::string_view resolved_filename,
   }
 }
 
-const VerilogSourceFile* VerilogProject::LookupFileOrigin(
+const VerilogSourceFile *VerilogProject::LookupFileOrigin(
     absl::string_view content_substring) const {
   CHECK(populate_string_maps_)
       << "Populating string maps must be enabled for LookupFileOrigin!";
@@ -360,7 +360,7 @@ const VerilogSourceFile* VerilogProject::LookupFileOrigin(
   const auto found_file = buffer_to_analyzer_map_.find(buffer_start);
   if (found_file == buffer_to_analyzer_map_.end()) return nullptr;
 
-  const VerilogSourceFile* file = found_file->second->second.get();
+  const VerilogSourceFile *file = found_file->second->second.get();
   return file;
 }
 

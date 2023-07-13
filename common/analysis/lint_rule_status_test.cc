@@ -55,11 +55,11 @@ TEST(LintRuleStatusTest, WaiveViolations) {
   EXPECT_FALSE(status.violations.empty());
   EXPECT_FALSE(status.isOk());
   // First, waive nothing.
-  status.WaiveViolations([](const LintViolation&) { return false; });
+  status.WaiveViolations([](const LintViolation &) { return false; });
   EXPECT_FALSE(status.violations.empty());
   EXPECT_FALSE(status.isOk());
   // Second, waive everything.
-  status.WaiveViolations([](const LintViolation&) { return true; });
+  status.WaiveViolations([](const LintViolation &) { return true; });
   EXPECT_TRUE(status.violations.empty());
   EXPECT_TRUE(status.isOk());
 }
@@ -84,14 +84,14 @@ struct LintStatusTest {
   std::vector<LintViolationTest> violations;
 };
 
-void RunLintStatusTest(const LintStatusTest& test) {
+void RunLintStatusTest(const LintStatusTest &test) {
   // Dummy tree so we have something for test cases to point at
   SymbolPtr root = Node();
 
   LintRuleStatus status;
   status.url = test.url;
   status.lint_rule_name = test.rule_name;
-  for (const auto& violation_test : test.violations) {
+  for (const auto &violation_test : test.violations) {
     status.violations.insert(
         LintViolation(violation_test.token, violation_test.reason));
   }
@@ -103,7 +103,7 @@ void RunLintStatusTest(const LintStatusTest& test) {
   auto result_parts = absl::StrSplit(ss.str(), '\n');
   auto part_iterator = result_parts.begin();
 
-  for (const auto& violation_test : test.violations) {
+  for (const auto &violation_test : test.violations) {
     EXPECT_EQ(*part_iterator, violation_test.expected_output);
     part_iterator++;
   }
@@ -145,7 +145,7 @@ TEST(LintRuleStatusFormatterTest, NoOutput) {
   RunLintStatusTest(test);
 }
 
-void RunLintStatusesTest(const LintStatusTest& test, bool show_context) {
+void RunLintStatusesTest(const LintStatusTest &test, bool show_context) {
   // Dummy tree so we have something for test cases to point at
   SymbolPtr root = Node();
 
@@ -190,7 +190,7 @@ void RunLintStatusesTest(const LintStatusTest& test, bool show_context) {
 
   auto part_iterator = result_parts.begin();
 
-  for (const auto& violation_test : test.violations) {
+  for (const auto &violation_test : test.violations) {
     EXPECT_EQ(*part_iterator, violation_test.expected_output);
     part_iterator++;
   }

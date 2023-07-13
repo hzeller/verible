@@ -43,7 +43,7 @@ static constexpr absl::string_view kMessage =
     "Enum names must use lower_snake_case naming convention "
     "and end with _t or _e.";
 
-const LintRuleDescriptor& EnumNameStyleRule::GetDescriptor() {
+const LintRuleDescriptor &EnumNameStyleRule::GetDescriptor() {
   static const LintRuleDescriptor d{
       .name = "enum-name-style",
       .topic = "enumerations",
@@ -54,19 +54,19 @@ const LintRuleDescriptor& EnumNameStyleRule::GetDescriptor() {
   return d;
 }
 
-static const Matcher& TypedefMatcher() {
+static const Matcher &TypedefMatcher() {
   static const Matcher matcher(NodekTypeDeclaration());
   return matcher;
 }
 
-void EnumNameStyleRule::HandleSymbol(const verible::Symbol& symbol,
-                                     const SyntaxTreeContext& context) {
+void EnumNameStyleRule::HandleSymbol(const verible::Symbol &symbol,
+                                     const SyntaxTreeContext &context) {
   verible::matcher::BoundSymbolManager manager;
   if (TypedefMatcher().Matches(symbol, &manager)) {
     // TODO: This can be changed to checking type of child (by index) when we
     // have consistent shape for all kTypeDeclaration nodes.
     if (!FindAllEnumTypes(symbol).empty()) {
-      const auto* identifier_leaf = GetIdentifierFromTypeDeclaration(symbol);
+      const auto *identifier_leaf = GetIdentifierFromTypeDeclaration(symbol);
       const auto name = ABSL_DIE_IF_NULL(identifier_leaf)->get().text();
       if (!verible::IsLowerSnakeCaseWithDigits(name) ||
           !(absl::EndsWith(name, "_t") || absl::EndsWith(name, "_e"))) {

@@ -61,7 +61,7 @@ class VerifyFullTreeFormatTokenRangesTest
 
 TEST_F(VerifyFullTreeFormatTokenRangesTest, ParentChildRangeBeginMismatch) {
   // Construct three partitions, sizes: 1, 3, 2
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   // one short of partition0's begin, and will fail invariant.
   UnwrappedLine all(0, begin + 1);
@@ -88,7 +88,7 @@ TEST_F(VerifyFullTreeFormatTokenRangesTest, ParentChildRangeBeginMismatch) {
 
 TEST_F(VerifyFullTreeFormatTokenRangesTest, ParentChildRangeEndMismatch) {
   // Construct three partitions, sizes: 1, 3, 2
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   // one short of partition2's end, and will fail invariant.
@@ -115,7 +115,7 @@ TEST_F(VerifyFullTreeFormatTokenRangesTest, ParentChildRangeEndMismatch) {
 
 TEST_F(VerifyFullTreeFormatTokenRangesTest, ChildrenRangeDiscontinuity) {
   // Construct three partitions, sizes: 1, 3, 2
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -145,7 +145,7 @@ class FindLargestPartitionsTest : public TokenPartitionTreeTestFixture {};
 // Verify that this finds the K largest leaf partitions.
 TEST_F(FindLargestPartitionsTest, VectorTree) {
   // Construct three partitions, sizes: 1, 3, 2
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -176,7 +176,7 @@ TEST_F(FindLargestPartitionsTest, VectorTree) {
 class FlushLeftSpacingDifferencesTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(FlushLeftSpacingDifferencesTest, EmptyPartitions) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   TokenPartitionTree tree{all};  // no children
@@ -188,7 +188,7 @@ TEST_F(FlushLeftSpacingDifferencesTest, EmptyPartitions) {
 }
 
 TEST_F(FlushLeftSpacingDifferencesTest, OnePartitionsOneToken) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(begin + 1);
@@ -204,7 +204,7 @@ TEST_F(FlushLeftSpacingDifferencesTest, OnePartitionsOneToken) {
 }
 
 TEST_F(FlushLeftSpacingDifferencesTest, OnePartitionsTwoTokens) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(begin + 2);
@@ -220,7 +220,7 @@ TEST_F(FlushLeftSpacingDifferencesTest, OnePartitionsTwoTokens) {
 }
 
 TEST_F(FlushLeftSpacingDifferencesTest, TwoPartitionsOneTokenEach) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(begin + 2);
@@ -238,7 +238,7 @@ TEST_F(FlushLeftSpacingDifferencesTest, TwoPartitionsOneTokenEach) {
 }
 
 TEST_F(FlushLeftSpacingDifferencesTest, TwoPartitionsTwoTokensEach) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(begin + 4);
@@ -265,7 +265,7 @@ TEST_F(TokenPartitionTreePrinterTest, VectorTreeShallow) {
   pre_format_tokens_[3].before.break_decision = SpacingOptions::kMustAppend;
   pre_format_tokens_[4].before.break_penalty = 22;
   pre_format_tokens_[5].before.break_decision = SpacingOptions::kMustWrap;
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -307,7 +307,7 @@ TEST_F(TokenPartitionTreePrinterTest, VectorTreeShallow) {
 
 TEST_F(TokenPartitionTreePrinterTest, VectorTreeDeep) {
   // Construct partitions, sizes: 1, (2, 1), (1, 1)
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -361,7 +361,7 @@ TEST_F(TokenPartitionTreePrinterTest, VectorTreeDeep) {
 class AdjustIndentationTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(AdjustIndentationTest, Relative) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(5, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -391,7 +391,7 @@ TEST_F(AdjustIndentationTest, Relative) {
 }
 
 TEST_F(AdjustIndentationTest, Absolute) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(5, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -420,8 +420,8 @@ TEST_F(AdjustIndentationTest, Absolute) {
   EXPECT_EQ(tree.Children().front().Value().IndentationSpaces(), 2);
 }
 
-static bool PropertiesEqual(const UnwrappedLine& left,
-                            const UnwrappedLine& right) {
+static bool PropertiesEqual(const UnwrappedLine &left,
+                            const UnwrappedLine &right) {
   return (left.TokensRange() == right.TokensRange() &&
           left.IndentationSpaces() == right.IndentationSpaces() &&
           left.PartitionPolicy() == right.PartitionPolicy());
@@ -430,7 +430,7 @@ static bool PropertiesEqual(const UnwrappedLine& left,
 class GroupLeafWithPreviousLeafTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(GroupLeafWithPreviousLeafTest, RootOnly) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -442,7 +442,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, RootOnly) {
   };
 
   const auto saved_tree(tree);  // deep copy
-  auto* group = GroupLeafWithPreviousLeaf(&tree);
+  auto *group = GroupLeafWithPreviousLeaf(&tree);
   EXPECT_EQ(group, nullptr);
 
   // Expect no change.
@@ -453,7 +453,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, RootOnly) {
 }
 
 TEST_F(GroupLeafWithPreviousLeafTest, OneChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -466,7 +466,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, OneChild) {
   ASSERT_FALSE(is_leaf(tree));
 
   const auto saved_tree(tree);  // deep copy
-  auto* group = GroupLeafWithPreviousLeaf(&tree.Children().front());
+  auto *group = GroupLeafWithPreviousLeaf(&tree.Children().front());
   EXPECT_EQ(group, nullptr);
 
   // Expect no change.
@@ -477,7 +477,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, OneChild) {
 }
 
 TEST_F(GroupLeafWithPreviousLeafTest, TwoChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -513,7 +513,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, TwoChild) {
       },
   };
 
-  auto* group = GroupLeafWithPreviousLeaf(&tree.Children().back());
+  auto *group = GroupLeafWithPreviousLeaf(&tree.Children().back());
   EXPECT_EQ(group, &tree.Children().back());
 
   const auto diff = DeepEqual(tree, expected_tree, PropertiesEqual);
@@ -523,7 +523,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, TwoChild) {
 }
 
 TEST_F(GroupLeafWithPreviousLeafTest, TwoGenerations) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -564,7 +564,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, TwoGenerations) {
       },
   };
 
-  auto* group = GroupLeafWithPreviousLeaf(&tree.Children().back());
+  auto *group = GroupLeafWithPreviousLeaf(&tree.Children().back());
   EXPECT_EQ(group, &tree.Children().back().Children().back());
 
   const auto diff = DeepEqual(tree, expected_tree, PropertiesEqual);
@@ -574,7 +574,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, TwoGenerations) {
 }
 
 TEST_F(GroupLeafWithPreviousLeafTest, Cousins) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -629,7 +629,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, Cousins) {
       },
   };
 
-  auto* group =
+  auto *group =
       GroupLeafWithPreviousLeaf(&tree.Children().back().Children().front());
   EXPECT_EQ(group, &tree.Children().front().Children().back());
 
@@ -640,7 +640,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, Cousins) {
 }
 
 TEST_F(GroupLeafWithPreviousLeafTest, ExtendCommonAncestor) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -675,7 +675,7 @@ TEST_F(GroupLeafWithPreviousLeafTest, ExtendCommonAncestor) {
       },
   };
 
-  auto* group = GroupLeafWithPreviousLeaf(&tree.Children().back());
+  auto *group = GroupLeafWithPreviousLeaf(&tree.Children().back());
   EXPECT_EQ(group, &tree.Children().back());
 
   const auto diff = DeepEqual(tree, expected_tree, PropertiesEqual);
@@ -684,15 +684,15 @@ TEST_F(GroupLeafWithPreviousLeafTest, ExtendCommonAncestor) {
                                     << *diff.right << '\n';
 }
 
-static bool TokenRangeEqual(const UnwrappedLine& left,
-                            const UnwrappedLine& right) {
+static bool TokenRangeEqual(const UnwrappedLine &left,
+                            const UnwrappedLine &right) {
   return left.TokensRange() == right.TokensRange();
 }
 
 class MergeLeafIntoPreviousLeafTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(MergeLeafIntoPreviousLeafTest, RootOnly) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -704,7 +704,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, RootOnly) {
   };
 
   const auto saved_tree(tree);  // deep copy
-  auto* parent = MergeLeafIntoPreviousLeaf(&tree);
+  auto *parent = MergeLeafIntoPreviousLeaf(&tree);
   EXPECT_EQ(parent, nullptr);
 
   // Expect no change.
@@ -715,7 +715,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, RootOnly) {
 }
 
 TEST_F(MergeLeafIntoPreviousLeafTest, OneChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -728,7 +728,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, OneChild) {
   ASSERT_FALSE(is_leaf(tree));
 
   const auto saved_tree(tree);  // deep copy
-  auto* parent = MergeLeafIntoPreviousLeaf(&tree.Children().front());
+  auto *parent = MergeLeafIntoPreviousLeaf(&tree.Children().front());
   EXPECT_EQ(parent, nullptr);
 
   // Expect no change.
@@ -739,7 +739,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, OneChild) {
 }
 
 TEST_F(MergeLeafIntoPreviousLeafTest, TwoChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -762,7 +762,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, TwoChild) {
       tree_type{all},
   };
 
-  auto* parent = MergeLeafIntoPreviousLeaf(&tree.Children().back());
+  auto *parent = MergeLeafIntoPreviousLeaf(&tree.Children().back());
   EXPECT_EQ(parent, &tree);
 
   const auto diff = DeepEqual(tree, expected_tree, TokenRangeEqual);
@@ -772,7 +772,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, TwoChild) {
 }
 
 TEST_F(MergeLeafIntoPreviousLeafTest, TwoGenerations) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -809,7 +809,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, TwoGenerations) {
       },
   };
 
-  auto* parent = MergeLeafIntoPreviousLeaf(&tree.Children().back());
+  auto *parent = MergeLeafIntoPreviousLeaf(&tree.Children().back());
   EXPECT_EQ(parent, &tree);
 
   const auto diff = DeepEqual(tree, expected_tree, TokenRangeEqual);
@@ -819,7 +819,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, TwoGenerations) {
 }
 
 TEST_F(MergeLeafIntoPreviousLeafTest, Cousins) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -870,7 +870,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, Cousins) {
       },
   };
 
-  auto* parent =
+  auto *parent =
       MergeLeafIntoPreviousLeaf(&tree.Children().back().Children().front());
   EXPECT_EQ(parent, &tree.Children().back());
 
@@ -883,7 +883,7 @@ TEST_F(MergeLeafIntoPreviousLeafTest, Cousins) {
 class MergeLeafIntoNextLeafTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(MergeLeafIntoNextLeafTest, RootOnly) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -895,7 +895,7 @@ TEST_F(MergeLeafIntoNextLeafTest, RootOnly) {
   };
 
   const auto saved_tree(tree);  // deep copy
-  auto* parent = MergeLeafIntoNextLeaf(&tree);
+  auto *parent = MergeLeafIntoNextLeaf(&tree);
   EXPECT_EQ(parent, nullptr);
 
   // Expect no change.
@@ -906,7 +906,7 @@ TEST_F(MergeLeafIntoNextLeafTest, RootOnly) {
 }
 
 TEST_F(MergeLeafIntoNextLeafTest, OneChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -919,7 +919,7 @@ TEST_F(MergeLeafIntoNextLeafTest, OneChild) {
   ASSERT_FALSE(is_leaf(tree));
 
   const auto saved_tree(tree);  // deep copy
-  auto* parent = MergeLeafIntoNextLeaf(&tree.Children().front());
+  auto *parent = MergeLeafIntoNextLeaf(&tree.Children().front());
   EXPECT_EQ(parent, nullptr);
 
   // Expect no change.
@@ -930,7 +930,7 @@ TEST_F(MergeLeafIntoNextLeafTest, OneChild) {
 }
 
 TEST_F(MergeLeafIntoNextLeafTest, TwoChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -953,7 +953,7 @@ TEST_F(MergeLeafIntoNextLeafTest, TwoChild) {
       tree_type{all},
   };
 
-  auto* parent = MergeLeafIntoNextLeaf(&tree.Children().front());
+  auto *parent = MergeLeafIntoNextLeaf(&tree.Children().front());
   EXPECT_EQ(parent, &tree);
 
   const auto diff = DeepEqual(tree, expected_tree, TokenRangeEqual);
@@ -963,7 +963,7 @@ TEST_F(MergeLeafIntoNextLeafTest, TwoChild) {
 }
 
 TEST_F(MergeLeafIntoNextLeafTest, TwoGenerations) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -1001,7 +1001,7 @@ TEST_F(MergeLeafIntoNextLeafTest, TwoGenerations) {
       tree_type{fused_part},  // fused target partition
   };
 
-  auto* parent =
+  auto *parent =
       MergeLeafIntoNextLeaf(&tree.Children().front().Children().back());
   EXPECT_EQ(parent, &tree.Children().front());
 
@@ -1012,7 +1012,7 @@ TEST_F(MergeLeafIntoNextLeafTest, TwoGenerations) {
 }
 
 TEST_F(MergeLeafIntoNextLeafTest, Cousins) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -1064,7 +1064,7 @@ TEST_F(MergeLeafIntoNextLeafTest, Cousins) {
       },
   };
 
-  auto* parent =
+  auto *parent =
       MergeLeafIntoNextLeaf(&tree.Children().front().Children().back());
   EXPECT_EQ(parent, &tree.Children().front());
 
@@ -1077,7 +1077,7 @@ TEST_F(MergeLeafIntoNextLeafTest, Cousins) {
 class MergeConsecutiveSiblingsTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(MergeConsecutiveSiblingsTest, OneChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -1093,7 +1093,7 @@ TEST_F(MergeConsecutiveSiblingsTest, OneChild) {
 }
 
 TEST_F(MergeConsecutiveSiblingsTest, TwoChild) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -1123,7 +1123,7 @@ TEST_F(MergeConsecutiveSiblingsTest, TwoChild) {
 }
 
 TEST_F(MergeConsecutiveSiblingsTest, TwoGenerations) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   // Construct an artificial tree using the following partitions.
@@ -1181,7 +1181,7 @@ class AnyPartitionSubRangeIsDisabledTest
 
 TEST_F(AnyPartitionSubRangeIsDisabledTest, Various) {
   // Construct three partitions, sizes: 1, 3, 2
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -1245,7 +1245,7 @@ class GetSubpartitionsBetweenBlankLinesTest
     CreateTokenInfosExternalStringBuffer(ftokens_);
 
     // Establish format token ranges per partition.
-    const auto& preformat_tokens = pre_format_tokens_;
+    const auto &preformat_tokens = pre_format_tokens_;
     const auto begin = preformat_tokens.begin();
     UnwrappedLine all(0, begin);
     all.SpanUpToToken(preformat_tokens.end());
@@ -1332,7 +1332,7 @@ class IndentButPreserveOtherSpacingTest : public TokenPartitionTreeTestFixture {
 
 TEST_F(IndentButPreserveOtherSpacingTest, Various) {
   // Construct three partitions, sizes: 1, 3, 2
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
   UnwrappedLine all(0, begin);
   all.SpanUpToToken(preformat_tokens.end());
@@ -1357,11 +1357,11 @@ TEST_F(IndentButPreserveOtherSpacingTest, Various) {
   IndentButPreserveOtherSpacing(range, joined_token_text_, &pre_format_tokens_);
   // The first tokens on each partition need not be preserved, but all
   // subsequent tokens should be preserved.
-  for (const auto& child : range) {
+  for (const auto &child : range) {
     auto token_range = child.Value().TokensRange();
     if (token_range.empty()) continue;
     token_range.pop_front();
-    for (const auto& ftoken : token_range) {
+    for (const auto &ftoken : token_range) {
       EXPECT_EQ(ftoken.before.break_decision, SpacingOptions::kPreserve);
     }
   }
@@ -1370,7 +1370,7 @@ TEST_F(IndentButPreserveOtherSpacingTest, Various) {
 class ReshapeFittingSubpartitionsTest : public TokenPartitionTreeTestFixture {};
 
 TEST_F(ReshapeFittingSubpartitionsTest, NoArguments) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1400,7 +1400,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, NoArguments) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentInSubpartition) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1442,7 +1442,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentInSubpartition) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentInSubpartitionAndTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1488,7 +1488,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentInSubpartitionAndTrailer) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentFlat) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1525,7 +1525,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentFlat) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentFlatAndTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1568,7 +1568,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OneArgumentFlatAndTrailer) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, TwoArguments) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1618,7 +1618,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, TwoArguments) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, TwoArgumentsAndTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1674,7 +1674,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, TwoArgumentsAndTrailer) {
 
 // All fits in one partition
 TEST_F(ReshapeFittingSubpartitionsTest, OnePartition) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1737,7 +1737,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OnePartition) {
 
 // All fits in one partition
 TEST_F(ReshapeFittingSubpartitionsTest, OnePartitionWithTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1801,7 +1801,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OnePartitionWithTrailer) {
 
 // Wrap into two partitions
 TEST_F(ReshapeFittingSubpartitionsTest, TwoPartitions) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1876,7 +1876,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, TwoPartitions) {
 
 // Wrap into two partitions
 TEST_F(ReshapeFittingSubpartitionsTest, TwoPartitionsWithTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1952,7 +1952,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, TwoPartitionsWithTrailer) {
 
 // None fits
 TEST_F(ReshapeFittingSubpartitionsTest, NoneOneFits) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -1992,8 +1992,8 @@ TEST_F(ReshapeFittingSubpartitionsTest, NoneOneFits) {
       },
   };
 
-  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree& node) {
-    auto& uwline = node.Value();
+  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree &node) {
+    auto &uwline = node.Value();
     uwline.SetIndentationSpaces(style.wrap_spaces);
   });
 
@@ -2022,7 +2022,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, NoneOneFits) {
 
 // None fits
 TEST_F(ReshapeFittingSubpartitionsTest, NoneOneFitsWithTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   verible::BasicFormatStyle style;  // default
@@ -2089,7 +2089,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, NoneOneFitsWithTrailer) {
 
 // All fits in one partition
 TEST_F(ReshapeFittingSubpartitionsTest, IndentationOnePartition) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -2128,8 +2128,8 @@ TEST_F(ReshapeFittingSubpartitionsTest, IndentationOnePartition) {
       },
   };
 
-  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree& node) {
-    auto& uwline = node.Value();
+  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree &node) {
+    auto &uwline = node.Value();
     uwline.SetIndentationSpaces(3 + style.indentation_spaces);
   });
 
@@ -2163,7 +2163,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, IndentationOnePartition) {
 
 // All fits in one partition
 TEST_F(ReshapeFittingSubpartitionsTest, IndentationOnePartitionWithTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   verible::BasicFormatStyle style;  // default
@@ -2230,7 +2230,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, IndentationOnePartitionWithTrailer) {
 
 // Wrap into two partitions
 TEST_F(ReshapeFittingSubpartitionsTest, IndentationTwoPartitions) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine header(0, begin);
@@ -2270,8 +2270,8 @@ TEST_F(ReshapeFittingSubpartitionsTest, IndentationTwoPartitions) {
   verible::BasicFormatStyle style;  // default
   style.column_limit = 14 + 7;
 
-  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree& node) {
-    auto& uwline = node.Value();
+  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree &node) {
+    auto &uwline = node.Value();
     uwline.SetIndentationSpaces(7 + style.indentation_spaces);
   });
 
@@ -2326,7 +2326,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, IndentationTwoPartitions) {
 
 // Wrap into two partitions
 TEST_F(ReshapeFittingSubpartitionsTest, IndentationTwoPartitionsWithTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   verible::BasicFormatStyle style;  // default
@@ -2415,7 +2415,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, IndentationTwoPartitionsWithTrailer) {
 
 // One subpartition per line
 TEST_F(ReshapeFittingSubpartitionsTest, OnePerLine) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   verible::BasicFormatStyle style;  // default
@@ -2503,7 +2503,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OnePerLine) {
 
 // One subpartition per line
 TEST_F(ReshapeFittingSubpartitionsTest, OnePerLineWithTrailer) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   verible::BasicFormatStyle style;  // default
@@ -2602,7 +2602,7 @@ TEST_F(ReshapeFittingSubpartitionsTest, OnePerLineWithTrailer) {
 }
 
 TEST_F(ReshapeFittingSubpartitionsTest, AvoidExceedingColumnLimit) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   verible::BasicFormatStyle style;  // default
@@ -2718,7 +2718,7 @@ class ReshapeFittingSubpartitionsFunctionTest
 
 TEST_F(ReshapeFittingSubpartitionsFunctionTest,
        FunctionWithSixArgumentsAndColumnLimit20Characters) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine all(0, begin);
@@ -2763,8 +2763,8 @@ TEST_F(ReshapeFittingSubpartitionsFunctionTest,
   verible::BasicFormatStyle style;
   style.column_limit = 20;
 
-  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree& node) {
-    auto& uwline = node.Value();
+  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree &node) {
+    auto &uwline = node.Value();
     uwline.SetIndentationSpaces(style.wrap_spaces);
   });
 
@@ -2798,7 +2798,7 @@ TEST_F(ReshapeFittingSubpartitionsFunctionTest,
 
 TEST_F(ReshapeFittingSubpartitionsFunctionTest,
        FunctionWithSixArgumentsAndColumnLimit40Characters) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine all(0, begin);
@@ -2843,8 +2843,8 @@ TEST_F(ReshapeFittingSubpartitionsFunctionTest,
   verible::BasicFormatStyle style;
   style.column_limit = 40;
 
-  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree& node) {
-    auto& uwline = node.Value();
+  ApplyPreOrder(tree.Children()[1], [&style](TokenPartitionTree &node) {
+    auto &uwline = node.Value();
     uwline.SetIndentationSpaces(style.wrap_spaces);
   });
 
@@ -2893,7 +2893,7 @@ TEST_F(ReshapeFittingSubpartitionsFunctionTest,
 
 TEST_F(ReshapeFittingSubpartitionsFunctionTest,
        FunctionWithSixArgumentsAndColumnLimit56Characters) {
-  const auto& preformat_tokens = pre_format_tokens_;
+  const auto &preformat_tokens = pre_format_tokens_;
   const auto begin = preformat_tokens.begin();
 
   UnwrappedLine all(0, begin);
@@ -2994,7 +2994,7 @@ TEST_F(ApplyAlreadyFormattedPartitionPropertiesToTokensTest, EmptyTokenRange) {
       SO::kUndecided, SO::kUndecided, SO::kUndecided,
   };
   for (int i = 0; i < static_cast<int>(pre_format_tokens_.size()); ++i) {
-    const auto& token = pre_format_tokens_.at(i);
+    const auto &token = pre_format_tokens_.at(i);
     EXPECT_EQ(token.before.spaces_required, expected_spaces[i])
         << "Token " << i;
     EXPECT_EQ(token.before.break_decision, expected_decision[i])
@@ -3017,7 +3017,7 @@ TEST_F(ApplyAlreadyFormattedPartitionPropertiesToTokensTest, NoInlines) {
       SO::kMustAppend, SO::kMustAppend, SO::kUndecided,
   };
   for (int i = 0; i < static_cast<int>(pre_format_tokens_.size()); ++i) {
-    const auto& token = pre_format_tokens_.at(i);
+    const auto &token = pre_format_tokens_.at(i);
     EXPECT_EQ(token.before.spaces_required, expected_spaces[i])
         << "Token " << i;
     EXPECT_EQ(token.before.break_decision, expected_decision[i])
@@ -3044,7 +3044,7 @@ TEST_F(ApplyAlreadyFormattedPartitionPropertiesToTokensTest, TwoInlines) {
       SO::kMustAppend,    SO::kMustAppend, SO::kUndecided,
   };
   for (int i = 0; i < static_cast<int>(pre_format_tokens_.size()); ++i) {
-    const auto& token = pre_format_tokens_.at(i);
+    const auto &token = pre_format_tokens_.at(i);
     EXPECT_EQ(token.before.spaces_required, expected_spaces[i])
         << "Token " << i;
     EXPECT_EQ(token.before.break_decision, expected_decision[i])
