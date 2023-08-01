@@ -15,7 +15,6 @@
 #ifndef VERIBLE_VERILOG_TOOLS_KYTHE_KYTHE_PROTO_OUTPUT_H_
 #define VERIBLE_VERILOG_TOOLS_KYTHE_KYTHE_PROTO_OUTPUT_H_
 
-#include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "verilog/tools/kythe/kythe_facts.h"
 #include "verilog/tools/kythe/kythe_facts_extractor.h"
 
@@ -32,7 +31,6 @@ class KytheProtoOutput final : public KytheOutput {
   void Emit(const Edge &edge) final;
 
  private:
-  ::google::protobuf::io::FileOutputStream out_;
 };
 
 }  // namespace kythe

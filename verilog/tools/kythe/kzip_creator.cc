@@ -25,7 +25,6 @@
 #include "absl/strings/string_view.h"
 #include "common/util/file_util.h"
 #include "common/util/simple_zip.h"
-#include "third_party/proto/kythe/analysis.pb.h"
 
 namespace verilog {
 namespace kythe {
@@ -61,7 +60,7 @@ std::string KzipCreator::AddSourceFile(absl::string_view path,
 }
 
 absl::Status KzipCreator::AddCompilationUnit(
-    const ::kythe::proto::IndexedCompilation &unit) {
+    const proto::IndexedCompilation &unit) {
   std::string content;
   if (!unit.SerializeToString(&content)) {
     return absl::InternalError("Failed to serialize the compilation unit");

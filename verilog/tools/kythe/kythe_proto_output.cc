@@ -14,67 +14,64 @@
 
 #include "verilog/tools/kythe/kythe_proto_output.h"
 
-#include "google/protobuf/io/coded_stream.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "third_party/proto/kythe/storage.pb.h"
+#include <iostream>
+
 #include "verilog/tools/kythe/kythe_facts.h"
 #include "verilog/tools/kythe/kythe_facts_extractor.h"
+#include "verilog/tools/kythe/kzip_creator.h"
 
 namespace verilog {
 namespace kythe {
 namespace {
 
-using ::google::protobuf::io::CodedOutputStream;
-using ::google::protobuf::io::FileOutputStream;
-using ::kythe::proto::Entry;
-
 // Returns the VName representation in Kythe's storage proto format.
-::kythe::proto::VName ConvertVnameToProto(const VName &vname) {
-  ::kythe::proto::VName proto_vname;
-  *proto_vname.mutable_signature() = vname.signature.ToString();
-  *proto_vname.mutable_corpus() = std::string{vname.corpus};
-  *proto_vname.mutable_root() = std::string{vname.root};
-  *proto_vname.mutable_path() = std::string{vname.path};
-  *proto_vname.mutable_language() = std::string{vname.language};
+kythe::proto::VName ConvertVnameToProto(const VName &vname) {
+  proto::VName proto_vname;
+  proto_vname.signature = vname.signature.ToString();
+  proto_vname.corpus = std::string{vname.corpus};
+  proto_vname.root = std::string{vname.root};
+  proto_vname.path = std::string{vname.path};
+  proto_vname.language = std::string{vname.language};
   return proto_vname;
 }
 
 // Returns the Fact representation in Kythe's storage proto format.
-Entry ConvertEdgeToEntry(const Edge &edge) {
-  Entry entry;
-  entry.set_fact_name("/");
-  *entry.mutable_edge_kind() = std::string{edge.edge_name};
-  *entry.mutable_source() = ConvertVnameToProto(edge.source_node);
-  *entry.mutable_target() = ConvertVnameToProto(edge.target_node);
+proto::Entry ConvertEdgeToEntry(const Edge &edge) {
+  proto::Entry entry;
+  entry.fact_name = "/";
+  entry.edge_kind = std::string{edge.edge_name};
+  entry.source = ConvertVnameToProto(edge.source_node);
+  entry.target = ConvertVnameToProto(edge.target_node);
   return entry;
 }
 
 // Returns the Fact representation in Kythe's storage proto format.
-Entry ConvertFactToEntry(const Fact &fact) {
-  Entry entry;
-  *entry.mutable_fact_name() = std::string{fact.fact_name};
-  *entry.mutable_fact_value() = fact.fact_value;
-  *entry.mutable_source() = ConvertVnameToProto(fact.node_vname);
+proto::Entry ConvertFactToEntry(const Fact &fact) {
+  proto::Entry entry;
+  entry.fact_name = std::string{fact.fact_name};
+  entry.fact_value = fact.fact_value;
+  entry.source = ConvertVnameToProto(fact.node_vname);
   return entry;
 }
 
 // Output entry to the stream.
-void OutputProto(const Entry &entry, FileOutputStream *stream) {
-  CodedOutputStream coded_stream(stream);
-  coded_stream.WriteVarint32(entry.ByteSizeLong());
-  entry.SerializeToCodedStream(&coded_stream);
+void OutputProto(const proto::Entry &entry /*,some stream*/) {
+  // coded_stream.WriteVarint32(entry.ByteSizeLong());
+  // entry.SerializeToCodedStream(&coded_stream);
 }
 
 }  // namespace
 
-KytheProtoOutput::KytheProtoOutput(int fd) : out_(fd) {}
-KytheProtoOutput::~KytheProtoOutput() { out_.Close(); }
+KytheProtoOutput::KytheProtoOutput(int fd) { /* wrap with whatever encoder */
+}
+KytheProtoOutput::~KytheProtoOutput() { /*fd.close()*/
+}
 
 void KytheProtoOutput::Emit(const Fact &fact) {
-  OutputProto(ConvertFactToEntry(fact), &out_);
+  OutputProto(ConvertFactToEntry(fact));
 }
 void KytheProtoOutput::Emit(const Edge &edge) {
-  OutputProto(ConvertEdgeToEntry(edge), &out_);
+  OutputProto(ConvertEdgeToEntry(edge));
 }
 
 }  // namespace kythe

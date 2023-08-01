@@ -22,10 +22,56 @@
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "common/util/simple_zip.h"
-#include "third_party/proto/kythe/analysis.pb.h"
 
 namespace verilog {
 namespace kythe {
+
+namespace proto {
+struct FileInfo {
+  std::string path;    // 1
+  std::string digest;  // 2
+};
+struct VName {
+  std::string signature;  // = 1
+  std::string corpus;     // = 2
+  std::string root;       // = 3
+  std::string language;   // = 5
+  std::string path;       // = 4
+  bool SerializeToString(std::string *) const { return true; }
+};
+
+struct FileInput {
+  VName v_name;
+  FileInfo info;
+};
+
+struct CompilationUnit {
+  VName v_name;                           // = 1
+  std::vector<FileInput> required_input;  // = 3
+  std::vector<std::string> argument;      // = 5
+  bool SerializeToString(std::string *) const { return true; }
+};
+
+struct IndexedCompilation {
+  struct Index {
+    std::vector<std::string> revisions;
+    bool SerializeToString(std::string *) const { return true; }
+  };
+
+  CompilationUnit unit;
+  Index index;
+  bool SerializeToString(std::string *) const { return true; }
+};
+
+struct Entry {
+  VName source;            // = 1
+  std::string edge_kind;   // = 2
+  VName target;            // 3;
+  std::string fact_name;   // = 4
+  std::string fact_value;  // = 5
+  bool SerializeToString(std::string *) const { return true; }
+};
+}  // namespace proto
 
 // Creator of Kythe Kzip archives based on the compilation unit
 // (https://kythe.io/docs/kythe-kzip.html).
@@ -38,8 +84,7 @@ class KzipCreator final {
   std::string AddSourceFile(absl::string_view path, absl::string_view content);
 
   // Adds compilation unit to the Kzip.
-  absl::Status AddCompilationUnit(
-      const ::kythe::proto::IndexedCompilation &unit);
+  absl::Status AddCompilationUnit(const proto::IndexedCompilation &unit);
 
  private:
   std::unique_ptr<FILE, decltype(&fclose)> zip_file_;

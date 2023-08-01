@@ -212,8 +212,7 @@ cc_library(
     deps = [
         ":kythe-facts",
         ":kythe-facts-extractor",
-        "//third_party/proto/kythe:storage_cc_proto",
-        "@com_google_protobuf//src/google/protobuf/io",
+        ":kzip-creator",
     ],
 )
 
@@ -276,7 +275,6 @@ cc_library(
     deps = [
         "//common/util:file-util",
         "//common/util:simple-zip",
-        "//third_party/proto/kythe:analysis_cc_proto",
         "@com_google_absl//absl/hash",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -295,7 +293,6 @@ cc_binary(
         "//common/util:file-util",
         "//common/util:init-command-line",
         "//common/util:logging",
-        "//third_party/proto/kythe:analysis_cc_proto",
         "//verilog/analysis:verilog-filelist",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/strings",

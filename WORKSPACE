@@ -139,34 +139,6 @@ load("@rules_bison//bison:bison.bzl", "bison_register_toolchains")
 bison_register_toolchains()
 
 http_archive(
-    name = "com_google_protobuf",
-    sha256 = "a700a49470d301f1190a487a923b5095bf60f08f4ae4cac9f5f7c36883d17971",
-    strip_prefix = "protobuf-23.4",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protobuf-23.4.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
-http_archive(
-    name = "rules_proto",
-    sha256 = "e017528fd1c91c5a33f15493e3a398181a9e821a804eb7ff5acdd1d2d6c2b18d",
-    strip_prefix = "rules_proto-4.0.0-3.20.0",
-    urls = [
-        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0-3.20.0.tar.gz",
-    ],
-)
-
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
-
-rules_proto_dependencies()
-
-rules_proto_toolchains()
-
-http_archive(
     name = "rules_python",
     sha256 = "778197e26c5fbeb07ac2a2c5ae405b30f6cb7ad1f5510ea6fdac03bded96cc6f",
     urls = [
@@ -217,12 +189,9 @@ load("@com_grail_bazel_compdb//:deps.bzl", "bazel_compdb_deps")
 
 bazel_compdb_deps()
 
-# zlib is imported through protobuf. Make the dependency explicit considering
-# it's used outside protobuf.
-maybe(
-    http_archive,
+http_archive(
     name = "zlib",
-    build_file = "@com_google_protobuf//:third_party/zlib.BUILD",
+    build_file = "//bazel:zlib.BUILD",
     sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
     strip_prefix = "zlib-1.2.13",
     urls = [

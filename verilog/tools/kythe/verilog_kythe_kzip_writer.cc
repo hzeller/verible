@@ -23,7 +23,6 @@
 #include "common/util/file_util.h"
 #include "common/util/init_command_line.h"
 #include "common/util/logging.h"
-#include "third_party/proto/kythe/analysis.pb.h"
 #include "verilog/analysis/verilog_filelist.h"
 #include "verilog/tools/kythe/kzip_creator.h"
 
@@ -89,16 +88,16 @@ Output: Produces Kythe KZip (https://kythe.io/docs/kythe-kzip.html).
     include = verible::file::JoinPath(filelist_root, include);
   }
 
-  kythe::proto::IndexedCompilation compilation;
+  verilog::kythe::proto::IndexedCompilation compilation;
   const std::string code_revision = absl::GetFlag(FLAGS_code_revision);
   if (!code_revision.empty()) {
-    compilation.mutable_index()->add_revisions(code_revision);
+    compilation.index.revisions.push_back(code_revision);
   }
 
-  auto *unit = compilation.mutable_unit();
-  *unit->mutable_v_name()->mutable_corpus() = absl::GetFlag(FLAGS_corpus);
-  *unit->mutable_v_name()->mutable_language() = "verilog";
-  *unit->add_argument() = "--f=filelist";
+  auto &unit = compilation.unit;
+  compilation.unit.v_name.corpus = absl::GetFlag(FLAGS_corpus);
+  compilation.unit.v_name.corpus = "verilog";
+  compilation.unit.argument.push_back("--f=filelist");
 
   // Construct Verible project
   const std::vector<std::string> &file_paths(filelist.file_paths);
@@ -106,9 +105,9 @@ Output: Produces Kythe KZip (https://kythe.io/docs/kythe-kzip.html).
   verilog::kythe::KzipCreator kzip(output_path);
   const std::string filelist_digest =
       kzip.AddSourceFile("filelist", filelist.ToString());
-  auto *filelist_input = unit->add_required_input();
-  *filelist_input->mutable_info()->mutable_path() = "filelist";
-  *filelist_input->mutable_info()->mutable_digest() = filelist_digest;
+  auto &filelist_input = unit.required_input.emplace_back();
+  filelist_input.info.path = "filelist";
+  filelist_input.info.digest = filelist_digest;
   for (const std::string &file_path : file_paths) {
     auto content_or = verible::file::GetContentAsString(file_path);
     if (!content_or.ok()) {
@@ -117,10 +116,10 @@ Output: Produces Kythe KZip (https://kythe.io/docs/kythe-kzip.html).
       continue;
     }
     const std::string digest = kzip.AddSourceFile(file_path, *content_or);
-    auto *file_input = unit->add_required_input();
-    *file_input->mutable_info()->mutable_path() = file_path;
-    *file_input->mutable_info()->mutable_digest() = digest;
-    *file_input->mutable_v_name()->mutable_path() = file_path;
+    auto &file_input = unit.required_input.emplace_back();
+    file_input.info.path = file_path;
+    file_input.info.digest = digest;
+    file_input.v_name.path = file_path;
   }
   CHECK(kzip.AddCompilationUnit(compilation).ok());
 
