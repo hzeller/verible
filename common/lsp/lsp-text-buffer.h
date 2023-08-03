@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERIBLE_COMMON_LSP_LSP_TEXT_BUFFER_H
-#define VERIBLE_COMMON_LSP_LSP_TEXT_BUFFER_H
+#ifndef VERIBLE_COMMON_LSP_LSP_TEXT_BUFFER_H_
+#define VERIBLE_COMMON_LSP_LSP_TEXT_BUFFER_H_
 
 #include <functional>
 #include <memory>
@@ -133,4 +133,4 @@ class BufferCollection {
 }  // namespace lsp
 }  // namespace verible
 
-#endif  // VERIBLE_COMMON_LSP_LSP_TEXT_BUFFER_H
+#endif  // VERIBLE_COMMON_LSP_LSP_TEXT_BUFFER_H_

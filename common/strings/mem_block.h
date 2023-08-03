@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COMMON_STRINGS_MEM_BLOCK_H
-#define COMMON_STRINGS_MEM_BLOCK_H
+#ifndef VERIBLE_COMMON_STRINGS_MEM_BLOCK_H_
+#define VERIBLE_COMMON_STRINGS_MEM_BLOCK_H_
 
 #include <string>
 
@@ -60,4 +60,4 @@ class StringMemBlock final : public MemBlock {
 // FYI common/util:file_util provides a memory mapping implementation.
 
 }  // namespace verible
-#endif  // COMMON_STRINGS_MEM_BLOCK_H
+#endif  // VERIBLE_COMMON_STRINGS_MEM_BLOCK_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERIBLE_VERILOG_TOOLS_EXTRACTOR_VERILOG_EXTRACTOR_TYPES_H
-#define VERIBLE_VERILOG_TOOLS_EXTRACTOR_VERILOG_EXTRACTOR_TYPES_H
+#ifndef VERIBLE_VERILOG_TOOLS_EXTRACTOR_VERILOG_EXTRACTOR_TYPES_H_
+#define VERIBLE_VERILOG_TOOLS_EXTRACTOR_VERILOG_EXTRACTOR_TYPES_H_
 
 #include <iosfwd>
 #include <string>
@@ -64,4 +64,4 @@ std::ostream &operator<<(std::ostream &stream, const IndexingFactType &e);
 
 }  // namespace verilog
 
-#endif  // VERIBLE_VERILOG_TOOLS_EXTRACTOR_VERILOG_EXTRACTOR_TYPES_H
+#endif  // VERIBLE_VERILOG_TOOLS_EXTRACTOR_VERILOG_EXTRACTOR_TYPES_H_

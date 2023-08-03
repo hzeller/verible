@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERIBLE_COMMON_UTIL_THREAD_POOL_H
-#define VERIBLE_COMMON_UTIL_THREAD_POOL_H
+#ifndef VERIBLE_COMMON_UTIL_THREAD_POOL_H_
+#define VERIBLE_COMMON_UTIL_THREAD_POOL_H_
 
 #include <deque>
 #include <functional>
@@ -72,4 +72,4 @@ class ThreadPool {
 };
 
 }  // namespace verible
-#endif  // VERIBLE_COMMON_UTIL_THREAD_POOL_H
+#endif  // VERIBLE_COMMON_UTIL_THREAD_POOL_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERIBLE_VERILOG_ANALYSIS_CHECKERS_NUMERIC_FORMAT_STRING_STYLE_RULE_H
-#define VERIBLE_VERILOG_ANALYSIS_CHECKERS_NUMERIC_FORMAT_STRING_STYLE_RULE_H
+#ifndef VERIBLE_VERILOG_ANALYSIS_CHECKERS_NUMERIC_FORMAT_STRING_STYLE_RULE_H_
+#define VERIBLE_VERILOG_ANALYSIS_CHECKERS_NUMERIC_FORMAT_STRING_STYLE_RULE_H_
 
 #include <set>
 #include <string>
@@ -51,4 +51,4 @@ class NumericFormatStringStyleRule : public verible::TokenStreamLintRule {
 }  // namespace analysis
 }  // namespace verilog
 
-#endif  // VERIBLE_VERILOG_ANALYSIS_CHECKERS_NUMERIC_FORMAT_STRING_STYLE_RULE_H
+#endif  // VERIBLE_VERILOG_ANALYSIS_CHECKERS_NUMERIC_FORMAT_STRING_STYLE_RULE_H_

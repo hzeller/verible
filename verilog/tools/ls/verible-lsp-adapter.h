@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef VERILOG_TOOLS_LS_VERIBLE_LSP_ADAPTER_H
-#define VERILOG_TOOLS_LS_VERIBLE_LSP_ADAPTER_H
+#ifndef VERIBLE_VERILOG_TOOLS_LS_VERIBLE_LSP_ADAPTER_H_
+#define VERIBLE_VERILOG_TOOLS_LS_VERIBLE_LSP_ADAPTER_H_
 
 #include <vector>
 
@@ -68,4 +68,4 @@ std::vector<verible::lsp::TextEdit> FormatRange(
     const verible::lsp::DocumentFormattingParams &p);
 
 }  // namespace verilog
-#endif  // VERILOG_TOOLS_LS_VERIBLE_LSP_ADAPTER_H
+#endif  // VERIBLE_VERILOG_TOOLS_LS_VERIBLE_LSP_ADAPTER_H_

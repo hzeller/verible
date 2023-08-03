@@ -14,8 +14,8 @@
 
 // Implementation details of layout_optimizer.cc exported for tests.
 
-#ifndef VERIBLE_VERILOG_FORMATTING_LAYOUT_OPTIMIZER_INTERNAL_H_
-#define VERIBLE_VERILOG_FORMATTING_LAYOUT_OPTIMIZER_INTERNAL_H_
+#ifndef VERIBLE_COMMON_FORMATTING_LAYOUT_OPTIMIZER_INTERNAL_H_
+#define VERIBLE_COMMON_FORMATTING_LAYOUT_OPTIMIZER_INTERNAL_H_
 
 #include <algorithm>
 #include <iterator>
@@ -764,4 +764,4 @@ class TreeReconstructor {
 
 }  // namespace verible
 
-#endif  // VERIBLE_VERILOG_FORMATTING_LAYOUT_OPTIMIZER_INTERNAL_H_
+#endif  // VERIBLE_COMMON_FORMATTING_LAYOUT_OPTIMIZER_INTERNAL_H_

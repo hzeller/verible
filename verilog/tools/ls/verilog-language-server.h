@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERILOG_TOOLS_LS_LS_WRAPPER_H
-#define VERILOG_TOOLS_LS_LS_WRAPPER_H
+#ifndef VERIBLE_VERILOG_TOOLS_LS_LS_WRAPPER_H_
+#define VERIBLE_VERILOG_TOOLS_LS_LS_WRAPPER_H_
 
 #include "absl/status/status.h"
 #include "common/lsp/json-rpc-dispatcher.h"
@@ -95,4 +95,4 @@ class VerilogLanguageServer {
 };
 
 };      // namespace verilog
-#endif  // VERILOG_TOOLS_LS_LS_WRAPPER_H
+#endif  // VERIBLE_VERILOG_TOOLS_LS_LS_WRAPPER_H

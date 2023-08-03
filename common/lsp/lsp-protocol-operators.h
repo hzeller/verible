@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERIBLE_COMMON_LSP_LSP_PROTOCOL_OPERATORS_H
-#define VERIBLE_COMMON_LSP_LSP_PROTOCOL_OPERATORS_H
+#ifndef VERIBLE_COMMON_LSP_LSP_PROTOCOL_OPERATORS_H_
+#define VERIBLE_COMMON_LSP_LSP_PROTOCOL_OPERATORS_H_
 
 // Some operators defined for the generated structs in lsp-protocol
 
@@ -45,4 +45,4 @@ inline constexpr bool rangeOverlap(const Range &a, const Range &b) {
 }  // namespace lsp
 }  // namespace verible
 
-#endif  // VERIBLE_COMMON_LSP_LSP_PROTOCOL_OPERATORS_H
+#endif  // VERIBLE_COMMON_LSP_LSP_PROTOCOL_OPERATORS_H_

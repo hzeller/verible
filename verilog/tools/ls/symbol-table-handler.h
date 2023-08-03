@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef VERILOG_TOOLS_LS_SYMBOL_TABLE_HANDLER_H
-#define VERILOG_TOOLS_LS_SYMBOL_TABLE_HANDLER_H
+#ifndef VERIBLE_VERILOG_TOOLS_LS_SYMBOL_TABLE_HANDLER_H_
+#define VERIBLE_VERILOG_TOOLS_LS_SYMBOL_TABLE_HANDLER_H_
 
 #include <filesystem>
 #include <memory>
@@ -137,4 +137,4 @@ class SymbolTableHandler {
 
 };  // namespace verilog
 
-#endif  // VERILOG_TOOLS_LS_SYMBOL_TABLE_HANDLER_H
+#endif  // VERIBLE_VERILOG_TOOLS_LS_SYMBOL_TABLE_HANDLER_H_

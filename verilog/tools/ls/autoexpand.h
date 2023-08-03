@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef VERILOG_TOOLS_LS_AUTOEXPAND_H
-#define VERILOG_TOOLS_LS_AUTOEXPAND_H
+#ifndef VERIBLE_VERILOG_TOOLS_LS_AUTOEXPAND_H_
+#define VERIBLE_VERILOG_TOOLS_LS_AUTOEXPAND_H_
 
 #include <vector>
 
@@ -32,4 +32,4 @@ std::vector<verible::lsp::CodeAction> GenerateAutoExpandCodeActions(
     const verible::lsp::CodeActionParams &p);
 
 }  // namespace verilog
-#endif  // VERILOG_TOOLS_LS_AUTOEXPAND_H
+#endif  // VERIBLE_VERILOG_TOOLS_LS_AUTOEXPAND_H_

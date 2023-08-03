@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef VERIBLE_COMMON_LSP_LSP_FILE_UTILS_H
-#define VERIBLE_COMMON_LSP_LSP_FILE_UTILS_H
+#ifndef VERIBLE_COMMON_LSP_LSP_FILE_UTILS_H_
+#define VERIBLE_COMMON_LSP_LSP_FILE_UTILS_H_
 
 #include "absl/strings/string_view.h"
 
@@ -29,4 +29,4 @@ std::string LSPUriToPath(absl::string_view uri);
 std::string PathToLSPUri(absl::string_view path);
 }  // namespace verible::lsp
 
-#endif  // VERIBLE_COMMON_LSP_LSP_FILE_UTILS_H
+#endif  // VERIBLE_COMMON_LSP_LSP_FILE_UTILS_H_

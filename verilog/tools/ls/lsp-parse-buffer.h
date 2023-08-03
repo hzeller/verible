@@ -13,8 +13,8 @@
 // limitations under the License.
 //
 
-#ifndef VERILOG_TOOLS_LS_LSP_PARSE_BUFFER_H
-#define VERILOG_TOOLS_LS_LSP_PARSE_BUFFER_H
+#ifndef VERIBLE_VERILOG_TOOLS_LS_LSP_PARSE_BUFFER_H_
+#define VERIBLE_VERILOG_TOOLS_LS_LSP_PARSE_BUFFER_H_
 
 #include <cstdint>
 
@@ -144,4 +144,4 @@ class BufferTrackerContainer {
   std::unordered_map<std::string, std::unique_ptr<BufferTracker>> buffers_;
 };
 }  // namespace verilog
-#endif  // VERILOG_TOOLS_LS_LSP_PARSE_BUFFER_H
+#endif  // VERIBLE_VERILOG_TOOLS_LS_LSP_PARSE_BUFFER_H_

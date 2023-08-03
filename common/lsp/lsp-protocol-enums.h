@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COMMON_LSP_LSP_PROTOCOL_ENUMS_H
-#define COMMON_LSP_LSP_PROTOCOL_ENUMS_H
+#ifndef VERIBLE_COMMON_LSP_LSP_PROTOCOL_ENUMS_H_
+#define VERIBLE_COMMON_LSP_LSP_PROTOCOL_ENUMS_H_
 
 // Enums are currently not handled yet by jcxxgen, so enumeration are
 // done separately here.
@@ -65,4 +65,4 @@ enum SymbolKind {
 };
 }  // namespace lsp
 }  // namespace verible
-#endif  // COMMON_LSP_LSP_PROTOCOL_ENUMS_H
+#endif  // VERIBLE_COMMON_LSP_LSP_PROTOCOL_ENUMS_H_

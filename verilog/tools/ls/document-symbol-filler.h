@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VERILOG_TOOLS_LS_DOCUMENT_SYMBOL_FILLER_H
-#define VERILOG_TOOLS_LS_DOCUMENT_SYMBOL_FILLER_H
+#ifndef VERIBLE_VERILOG_TOOLS_LS_DOCUMENT_SYMBOL_FILLER_H_
+#define VERIBLE_VERILOG_TOOLS_LS_DOCUMENT_SYMBOL_FILLER_H_
 
 #include "common/lsp/lsp-protocol.h"
 #include "common/text/text_structure.h"
@@ -45,4 +45,4 @@ class DocumentSymbolFiller : public verible::SymbolVisitor {
   verible::lsp::DocumentSymbol *current_symbol_;
 };
 }  // namespace verilog
-#endif  // VERILOG_TOOLS_LS_DOCUMENT_SYMBOL_FILLER_H
+#endif  // VERIBLE_VERILOG_TOOLS_LS_DOCUMENT_SYMBOL_FILLER_H
