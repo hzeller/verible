@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
   ClangTidyProcessFiles(content_dir, clang_tidy_invocation, &work_queue);
 
   // Assemble the separate outputs into a single file. Tally up per-check stats.
-  const std::regex check_re("(\\[[a-zA-Z.-]+\\])\n");
+  const std::regex check_re("(\\[[a-zA-Z][a-zA-Z0-9.-]+\\])\n");
   std::map<std::string, int> checks_seen;
   std::ofstream tidy_collect(tidy_outfile);
   for (const filepath_contenthash_t &f : files_of_interest) {
