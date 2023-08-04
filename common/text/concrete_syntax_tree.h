@@ -48,6 +48,7 @@
 #include "common/text/visitors.h"
 #include "common/util/casts.h"
 #include "common/util/logging.h"
+#include "common/util/iterator_range.h"
 
 namespace verible {
 
@@ -70,14 +71,15 @@ struct ForwardChildren {
 // used by various language front-ends.
 class SyntaxTreeNode final : public Symbol {
  public:
-  explicit SyntaxTreeNode(const int tag = kUntagged) : tag_(tag) {}
+  // This container needs to provide a random access [] operator and
+  // rbegin(), rend() iterators.
+  using ChildContainer = std::vector<SymbolPtr>;
 
-  const std::vector<SymbolPtr> &children() const { return children_; }
-  std::vector<SymbolPtr> &mutable_children() { return children_; }
+  explicit SyntaxTreeNode(const int tag = kUntagged) : tag_(tag) {}
 
   // Transfer ownership of argument to this object.
   // Call MakeNode or ExtendNode instead of calling this directly.
-  void AppendChild(SymbolPtr child) { children_.push_back(std::move(child)); }
+  void AppendChild(SymbolPtr child) { children_.emplace_back(std::move(child)); }
 
   // Transfer ownership of argument's children to this object.
   // Call MakeNode or ExtendNode instead of calling this directly.
@@ -85,14 +87,14 @@ class SyntaxTreeNode final : public Symbol {
   void AppendChild(ForwardChildren forwarded_children) {
     if (forwarded_children.node == nullptr) return;
     if (forwarded_children.node->Kind() != SymbolKind::kNode) {
-      children_.push_back(std::move(forwarded_children.node));
+      children_.emplace_back(std::move(forwarded_children.node));
       return;
     }
     auto *node = down_cast<SyntaxTreeNode *>(forwarded_children.node.get());
     const auto new_size = children_.size() + node->children_.size();
     children_.reserve(new_size);
     for (auto &child : node->children_) {
-      children_.push_back(std::move(child));
+      children_.emplace_back(std::move(child));
     }
     // Remove all the vacated children slots left in the parent.
     node->children_.clear();
@@ -114,6 +116,17 @@ class SyntaxTreeNode final : public Symbol {
 
   // Children accessor (const).
   const SymbolPtr &operator[](size_t i) const;
+
+  const SymbolPtr& front() const { return children_.front(); }
+  SymbolPtr& front() { return children_.front(); }
+  const SymbolPtr& back() const { return children_.back(); }
+  SymbolPtr& back() { return children_.back(); }
+  size_t size() const { return children_.size(); }
+  bool empty() const { return children_.empty(); }
+
+  // TODO(hzeller): return ranges for these. Only used in range-loops.
+  const ChildContainer &children() const { return children_; }
+  ChildContainer &mutable_children() { return children_; }
 
   // Compares this node to an arbitrary symbol using the compare_tokens
   // function.
@@ -178,7 +191,7 @@ class SyntaxTreeNode final : public Symbol {
   int tag_;
 
   // Sequence of pointers to subtrees and nodes.
-  std::vector<SymbolPtr> children_;
+  ChildContainer children_;
 };
 
 // The following functions are intended for use in semantic action blocks

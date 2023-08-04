@@ -42,7 +42,7 @@ verible::iterator_range<
     std::reverse_iterator<typename auto_iterator_selector<T>::type>>
 reversed_view(T &t) {
   // equivalent to:
-  // return make_range(t.rbegin(), t.rend());
+  //return make_range(t.rbegin(), t.rend());
   // but does not require the rbegin/rend methods.
   return make_range(verible::make_reverse_iterator(t.end()),
                     verible::make_reverse_iterator(t.begin()));
