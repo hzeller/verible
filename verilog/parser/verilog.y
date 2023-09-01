@@ -778,6 +778,8 @@ KeywordIdentifier
     { $$ = std::move($1); }
   | TK_infinite
     { $$ = std::move($1); }
+  | TK_inf
+    { $$ = std::move($1); }
   | TK_continuous
     { $$ = std::move($1); }
   ;
@@ -6269,10 +6271,12 @@ parameter_value_range
   ;
 value_range_expression
   : expression
-  /* Verilog-AMS supports +/- inf in ranges. */
+  /* Verilog-AMS supports +/- inf in ranges.
+     Automatically handled as unary expr as Tk_inf is a KeywordIdentifier
   | TK_inf
   | '+' TK_inf
   | '-' TK_inf
+  */
   ;
 from_exclude
   : TK_from
