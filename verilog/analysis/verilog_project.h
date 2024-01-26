@@ -224,11 +224,13 @@ class ParsedVerilogSourceFile final : public VerilogSourceFile {
   // Return TextStructureView provided previously in constructor
   const verible::TextStructureView *GetTextStructure() const final;
 
+  // Return string-view content range of text structure.
   absl::string_view GetContent() const final {
     return text_structure_->Contents();
   }
 
  private:
+  // Not owned.
   const verible::TextStructureView *const text_structure_;
 };
 
@@ -348,6 +350,9 @@ class VerilogProject {
   absl::optional<absl::StatusOr<VerilogSourceFile *>> FindOpenedFile(
       absl::string_view filename) const;
 
+  void UnregisterContent(absl::string_view content);
+  void RegisterContent(absl::string_view content, VerilogSourceFile *file);
+
   // The path from which top-level translation units are referenced relatively
   // (often from a file list).  This path can be relative or absolute.
   // Default: the working directory of the invoking process.
@@ -377,7 +382,7 @@ class VerilogProject {
   // Maps start of text buffer to its corresponding analyzer object.
   // key: the starting address of a string buffer belonging to an opened file.
   //   This can come from the .begin() of any entry in string_view_map_.
-  std::map<absl::string_view::const_iterator, file_set_type::const_iterator>
+  std::map<absl::string_view::const_iterator, VerilogSourceFile *>
       buffer_to_analyzer_map_;
 };
 

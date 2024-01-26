@@ -74,9 +74,19 @@ verible::lsp::BufferCollection::UriBufferCallback
 BufferTrackerContainer::GetSubscriptionCallback() {
   return
       [this](const std::string &uri, const verible::lsp::EditTextBuffer *txt) {
+        // The update might discard old parsed buffers.
+        // However, the change listeners we're about to inform might
+        // expect them to be still alive while the update takes place.
+        // So hold on to them here until all updates are performed.
+        // (this copy is cheap as it is just reference counted pointers).
+        BufferTracker remember_previous;
+        if (const BufferTracker *tracker = FindBufferTrackerOrNull(uri)) {
+          remember_previous = *tracker;
+        }
+
         if (txt) {
           const BufferTracker *tracker = Update(uri, *txt);
-          // Now inform our listeners.
+          // Updated current() and last_good(); Now inform our listeners.
           for (const auto &change_listener : change_listeners_) {
             change_listener(uri, tracker);
           }

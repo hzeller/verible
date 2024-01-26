@@ -625,6 +625,9 @@ class DisjointIntervalSet : private internal::IntervalSetImpl {
     return p;
   }
 
+  // Erase given interval.
+  void erase(const_iterator pos) { intervals_.erase(pos); }
+
   // Same as emplace(), but fails fatally if emplacement fails,
   // and only returns the iterator to the new map entry (which should have
   // consumed 'value').

@@ -139,6 +139,24 @@ const verible::TextStructureView* ParsedVerilogSourceFile::GetTextStructure()
   return text_structure_;
 }
 
+void VerilogProject::UnregisterContent(absl::string_view content) {
+  if (!populate_string_maps_) return;
+  auto range_found = string_view_map_.find(content);
+  if (range_found != string_view_map_.end()) {
+    string_view_map_.erase(range_found);
+  }
+  buffer_to_analyzer_map_.erase(content.begin());
+}
+
+void VerilogProject::RegisterContent(absl::string_view content,
+                                     VerilogSourceFile *file) {
+  if (!populate_string_maps_) return;
+  string_view_map_.must_emplace(content);  // allow finding content by range
+  const auto map_inserted =
+    buffer_to_analyzer_map_.emplace(content.begin(), file);
+  CHECK(map_inserted.second);
+}
+
 absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenFile(
     absl::string_view referenced_filename, absl::string_view resolved_filename,
     absl::string_view corpus) {
@@ -154,20 +172,7 @@ absl::StatusOr<VerilogSourceFile*> VerilogProject::OpenFile(
     return status;
   }
 
-  // NOTE: string view maps don't support removal operation. The following block
-  // is valid only if files won't be removed from the project.
-  if (populate_string_maps_) {
-    const absl::string_view contents(file.GetContent());
-
-    // Register the file's contents range in string_view_map_.
-    string_view_map_.must_emplace(contents);
-
-    // Map the start of the file's contents to its corresponding owner
-    // VerilogSourceFile.
-    const auto map_inserted =
-        buffer_to_analyzer_map_.emplace(contents.begin(), file_iter);
-    CHECK(map_inserted.second);
-  }
+  RegisterContent(file.GetContent(), &file);
 
   return &file;
 }
@@ -205,23 +210,27 @@ std::string VerilogProject::GetRelativePathToSource(
 
 void VerilogProject::UpdateFileContents(
     absl::string_view path, const verible::TextStructureView* updatedtext) {
-  std::string projectpath = GetRelativePathToSource(path);
+  constexpr absl::string_view kCorpus = "";
+  const std::string projectpath = GetRelativePathToSource(path);
 
   // If we get a non-null parsed file, use that, otherwise fall back to
   // file based loading.
-  std::unique_ptr<VerilogSourceFile> contents = nullptr;
+  std::unique_ptr<VerilogSourceFile> source_file;
   if (updatedtext) {
-    contents = std::make_unique<ParsedVerilogSourceFile>(
-        projectpath, path, updatedtext, /*corpus=*/"");
+    source_file.reset(new ParsedVerilogSourceFile(projectpath, path,
+                                                  updatedtext, kCorpus));
   } else {
-    contents = std::make_unique<VerilogSourceFile>(projectpath, path, "");
+    source_file.reset(new VerilogSourceFile(projectpath, path, kCorpus));
   }
 
-  auto fileptr = files_.find(projectpath);
-  if (fileptr == files_.end()) {
-    files_.emplace(projectpath, std::move(contents));
+  auto found_existing = files_.find(projectpath);
+  if (found_existing == files_.end()) {
+    files_.emplace(projectpath, std::move(source_file));
   } else {
-    fileptr->second = std::move(contents);
+    absl::string_view previous_content = found_existing->second->GetContent();
+    UnregisterContent(previous_content);
+    RegisterContent(source_file->GetContent(), source_file.get());
+    found_existing->second = std::move(source_file);
   }
 }
 
@@ -363,8 +372,7 @@ const VerilogSourceFile* VerilogProject::LookupFileOrigin(
   const auto found_file = buffer_to_analyzer_map_.find(buffer_start);
   if (found_file == buffer_to_analyzer_map_.end()) return nullptr;
 
-  const VerilogSourceFile* file = found_file->second->second.get();
-  return file;
+  return found_file->second;
 }
 
 }  // namespace verilog
