@@ -38,10 +38,11 @@ using verible::SymbolPtr;
 using verible::SyntaxTreeNode;
 using verible::container::FindWithDefault;
 
-SymbolPtr RepackReturnTypeId(SymbolPtr type_id_tuple) {
+SymbolPtr RepackReturnTypeId(verible::NodeFactory *factory,
+                             SymbolPtr type_id_tuple) {
   auto &node = CheckSymbolAsNode(*type_id_tuple,
                                  NodeEnum::kDataTypeImplicitBasicIdDimensions);
-  return verible::MakeNode(std::move(node[0]) /* type */,
+  return factory->MakeNode(std::move(node[0]) /* type */,
                            std::move(node[1]) /* id */);
   // Discard unpacked dimensions node[2], should be nullptr, and not
   // syntactically valid.

@@ -206,38 +206,26 @@ class SyntaxTreeNode final : public Symbol {
   ChildContainer children_;
 };
 
-// The following functions are intended for use in semantic action blocks
-// in yacc/bison grammar files (.yc).
-
-// Construct a syntax tree node with a tag.
-// Ownership of all args is transferred, and consumed by the new node.
-// Sample usage: $$ = MakeNode(TAG, $1, $2, $3);
-template <typename... Args>
-SymbolPtr MakeNode(Args &&...args) {
-  auto *const node_pointer = new SyntaxTreeNode();
-  node_pointer->Append(std::forward<Args>(args)...);
-  return SymbolPtr(node_pointer);
-}
-
-// Construct a syntax tree node with a tag.
-// Ownership of all args is transferred, and consumed by the new node.
-// Sample usage:
-//   $$ = MakeTaggedNode(TAG);  // empty, no children
-//   $$ = MakeTaggedNode(TAG, $1, $2, $3);
-template <typename Enum, typename... Args>
-SymbolPtr MakeTaggedNode(const Enum tag, Args &&...args) {
-  auto *const node_pointer = new SyntaxTreeNode(static_cast<int>(tag));
-  node_pointer->Append(std::forward<Args>(args)...);
-  return SymbolPtr(node_pointer);
-}
-
 class NodeFactory {
-public:
+ public:
+  explicit NodeFactory(absl::string_view factory_name = "")
+      : factory_name_(factory_name) {}
+  ~NodeFactory() {
+    if (!factory_name_.empty()) {  // Given factory name indicates stat interest
+      VLOG(1) << "NodeFactory " << factory_name_ << ": leafs:" << leaf_count_
+              << "; nodes: " << node_count_;
+    }
+  }
+
+  // The following functions are intended for use in semantic action blocks
+  // in yacc/bison grammar files (.yc).
+
   // Construct a syntax tree node with a tag.
   // Ownership of all args is transferred, and consumed by the new node.
   // Sample usage: $$ = MakeNode(TAG, $1, $2, $3);
   template <typename... Args>
   SymbolPtr MakeNode(Args &&...args) {
+    ++leaf_count_;
     auto *const node_pointer = new SyntaxTreeNode();
     node_pointer->Append(std::forward<Args>(args)...);
     return SymbolPtr(node_pointer);
@@ -250,10 +238,16 @@ public:
   //   $$ = MakeTaggedNode(TAG, $1, $2, $3);
   template <typename Enum, typename... Args>
   SymbolPtr MakeTaggedNode(const Enum tag, Args &&...args) {
+    ++node_count_;
     auto *const node_pointer = new SyntaxTreeNode(static_cast<int>(tag));
     node_pointer->Append(std::forward<Args>(args)...);
     return SymbolPtr(node_pointer);
   }
+
+ private:
+  std::string factory_name_;
+  size_t leaf_count_ = 0;
+  size_t node_count_ = 0;
 };
 
 // Extend the children of an existing node.

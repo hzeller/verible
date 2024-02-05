@@ -54,33 +54,36 @@ std::string EmbedInClassMethod(absl::string_view text);
 void ExpectString(const verible::SymbolPtr &symbol, absl::string_view expected);
 
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeParenGroup(T1 &&left_paren, T2 &&contents,
+verible::SymbolPtr MakeParenGroup(verible::NodeFactory *node_factory,
+                                  T1 &&left_paren, T2 &&contents,
                                   T3 &&right_paren) {
   ExpectString(left_paren, "(");
   if (contents != nullptr) {
     ExpectString(right_paren, ")");
   }  // else right_paren might be dropped due to error-recovery
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kParenGroup, std::forward<T1>(left_paren),
       std::forward<T2>(contents), std::forward<T3>(right_paren));
 }
 
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeBracketGroup(T1 &&left_brace, T2 &&contents,
+verible::SymbolPtr MakeBracketGroup(verible::NodeFactory *node_factory,
+                                    T1 &&left_brace, T2 &&contents,
                                     T3 &&right_brace) {
   ExpectString(left_brace, "[");
   ExpectString(right_brace, "]");
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kBracketGroup, std::forward<T1>(left_brace),
       std::forward<T2>(contents), std::forward<T3>(right_brace));
 }
 
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeBraceGroup(T1 &&left_brace, T2 &&contents,
+verible::SymbolPtr MakeBraceGroup(verible::NodeFactory *node_factory,
+                                  T1 &&left_brace, T2 &&contents,
                                   T3 &&right_brace) {
   ExpectString(left_brace, "{");
   ExpectString(right_brace, "}");
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kBraceGroup, std::forward<T1>(left_brace),
       std::forward<T2>(contents), std::forward<T3>(right_brace));
 }

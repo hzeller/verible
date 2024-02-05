@@ -33,7 +33,8 @@ namespace verilog {
 
 // Example usage: $$ = MakeBinaryExpression($1, $2, $3);
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeBinaryExpression(T1 &&lhs, T2 &&op, T3 &&rhs) {
+verible::SymbolPtr MakeBinaryExpression(verible::NodeFactory *factory, T1 &&lhs,
+                                        T2 &&op, T3 &&rhs) {
   const verible::SyntaxTreeLeaf &this_op(SymbolCastToLeaf(*op));
   const auto this_tag = verilog_tokentype(this_op.Tag().tag);
   // If parent (lhs) operator is associative and matches this one,
@@ -53,7 +54,7 @@ verible::SymbolPtr MakeBinaryExpression(T1 &&lhs, T2 &&op, T3 &&rhs) {
       }
     }
   }
-  return verible::MakeTaggedNode(NodeEnum::kBinaryExpression,
+  return factory->MakeTaggedNode(NodeEnum::kBinaryExpression,
                                  std::forward<T1>(lhs), std::forward<T2>(op),
                                  std::forward<T3>(rhs));
 }

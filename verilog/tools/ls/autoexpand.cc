@@ -1622,7 +1622,8 @@ std::vector<TextEdit> ConvertAutoExpansionsToFormattedTextEdits(
   // TextEdits.
   std::string text = ApplyExpansions(text_structure, expansions);
 
-  VerilogAnalyzer analyzer(text, "<autoexpand-reformat>");
+  VerilogAnalyzer analyzer(text, "<autoexpand-reformat>",
+                           VerilogPreprocess::Config());
   const absl::Status analyze_status = analyzer.Analyze();
   if (!analyze_status.ok()) {
     LOG(ERROR) << "AUTO expansion produced invalid syntax. Aborting.";

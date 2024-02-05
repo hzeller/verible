@@ -147,9 +147,9 @@ class InitializedSyntaxTreeContext : public verible::SyntaxTreeContext {
     parents.reserve(ancestors.size());
     for (const auto ancestor : verible::reversed_view(ancestors)) {
       if (root_ == nullptr) {
-        root_ = verible::MakeTaggedNode(ancestor);
+        root_ = factory_.MakeTaggedNode(ancestor);
       } else {
-        root_ = verible::MakeTaggedNode(ancestor, root_);
+        root_ = factory_.MakeTaggedNode(ancestor, root_);
       }
       parents.push_back(ABSL_DIE_IF_NULL(
           verible::down_cast<verible::SyntaxTreeNode *>(root_.get())));
@@ -160,6 +160,7 @@ class InitializedSyntaxTreeContext : public verible::SyntaxTreeContext {
   }
 
  private:
+  verible::NodeFactory factory_;
   // Syntax tree synthesized from sequence of node enums.
   verible::SymbolPtr root_;
 };

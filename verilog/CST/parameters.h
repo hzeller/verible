@@ -39,13 +39,14 @@ namespace verilog {
 // From "parameter type [dim] id [dim] = value;",
 // this node spans "type [dim] id [dim]."
 template <typename T0, typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeParamTypeDeclaration(T0 &&type_info,
+verible::SymbolPtr MakeParamTypeDeclaration(verible::NodeFactory *node_factory,
+                                            T0 &&type_info,
                                             T1 &&packed_dimensions,
                                             T2 &&identifier,
                                             T3 &&unpacked_dimensions) {
   CHECK(verible::SymbolCastToNode(*ABSL_DIE_IF_NULL(type_info))
             .MatchesTag(NodeEnum::kTypeInfo));
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kParamType, std::forward<T0>(type_info),
       std::forward<T1>(packed_dimensions), std::forward<T2>(identifier),
       std::forward<T3>(unpacked_dimensions));
@@ -53,9 +54,10 @@ verible::SymbolPtr MakeParamTypeDeclaration(T0 &&type_info,
 
 // Creates a node tagged kTypeInfo, which holds the parameter type information.
 template <typename T0, typename T1, typename T2>
-verible::SymbolPtr MakeTypeInfoNode(T0 &&primitive_type, T1 &&signed_unsigned,
+verible::SymbolPtr MakeTypeInfoNode(verible::NodeFactory *node_factory,
+                                    T0 &&primitive_type, T1 &&signed_unsigned,
                                     T2 &&user_defined_type) {
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kTypeInfo, std::forward<T0>(primitive_type),
       std::forward<T1>(signed_unsigned), std::forward<T2>(user_defined_type));
 }

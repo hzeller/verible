@@ -30,12 +30,13 @@
 namespace verilog {
 
 template <typename T1, typename T2, typename T3, typename T4>
-verible::SymbolPtr MakeDataType(T1 &&qualifiers, T2 &&type,
+verible::SymbolPtr MakeDataType(verible::NodeFactory *node_factory,
+                                T1 &&qualifiers, T2 &&type,
                                 T3 &&delay_or_drive_strength,
                                 T4 &&packed_dimensions) {
   verible::CheckOptionalSymbolAsNode(packed_dimensions,
                                      NodeEnum::kPackedDimensions);
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kDataType, std::forward<T1>(qualifiers), std::forward<T2>(type),
       std::forward<T3>(delay_or_drive_strength),
       std::forward<T4>(packed_dimensions));
@@ -43,44 +44,50 @@ verible::SymbolPtr MakeDataType(T1 &&qualifiers, T2 &&type,
 
 // 3-argument form assumes no delay/drive-strength modifiers
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeDataType(T1 &&qualifiers, T2 &&type,
-                                T3 &&packed_dimensions) {
-  return MakeDataType(std::forward<T1>(qualifiers), std::forward<T2>(type),
-                      nullptr, std::forward<T3>(packed_dimensions));
+verible::SymbolPtr MakeDataType(verible::NodeFactory *factory, T1 &&qualifiers,
+                                T2 &&type, T3 &&packed_dimensions) {
+  return MakeDataType(factory, std::forward<T1>(qualifiers),
+                      std::forward<T2>(type), nullptr,
+                      std::forward<T3>(packed_dimensions));
 }
 
 // 2-argument form assumes null qualifiers
 template <typename T1, typename T2>
-verible::SymbolPtr MakeDataType(T1 &&type, T2 &&packed_dimensions) {
-  return MakeDataType(nullptr, std::forward<T1>(type),
+verible::SymbolPtr MakeDataType(verible::NodeFactory *node_factory, T1 &&type,
+                                T2 &&packed_dimensions) {
+  return MakeDataType(node_factory, nullptr, std::forward<T1>(type),
                       std::forward<T2>(packed_dimensions));
 }
 
 // 1-argument form assumes no packed dimensions, no qualifiers
 template <typename T1>
-verible::SymbolPtr MakeDataType(T1 &&type) {
-  return MakeDataType(std::forward<T1>(type), nullptr);
+verible::SymbolPtr MakeDataType(verible::NodeFactory *node_factory, T1 &&type) {
+  return MakeDataType(node_factory, std::forward<T1>(type), nullptr);
 }
 
 template <typename T1, typename T2, typename T3, typename T4, typename T5>
-verible::SymbolPtr MakeTypeDeclaration(T1 &&keyword, T2 &&referenced_type,
+verible::SymbolPtr MakeTypeDeclaration(verible::NodeFactory *node_factory,
+                                       T1 &&keyword, T2 &&referenced_type,
                                        T3 &&id, T4 &&dimensions, T5 &&semi) {
   verible::CheckSymbolAsLeaf(*ABSL_DIE_IF_NULL(keyword), TK_typedef);
   /* id should be one of several identifier types, usually SymbolIdentifier */
   verible::CheckSymbolAsLeaf(*ABSL_DIE_IF_NULL(semi), ';');
-  return MakeTaggedNode(NodeEnum::kTypeDeclaration,                           //
-                        std::forward<T1>(keyword),                            //
-                        std::forward<T2>(ABSL_DIE_IF_NULL(referenced_type)),  //
-                        std::forward<T3>(ABSL_DIE_IF_NULL(id)),               //
-                        std::forward<T4>(dimensions),                         //
-                        std::forward<T5>(semi));
+  return node_factory->MakeTaggedNode(
+      NodeEnum::kTypeDeclaration,                           //
+      std::forward<T1>(keyword),                            //
+      std::forward<T2>(ABSL_DIE_IF_NULL(referenced_type)),  //
+      std::forward<T3>(ABSL_DIE_IF_NULL(id)),               //
+      std::forward<T4>(dimensions),                         //
+      std::forward<T5>(semi));
 }
 
 // 4-argument form assumes null dimensions
 template <typename T1, typename T2, typename T3, typename T4>
-verible::SymbolPtr MakeTypeDeclaration(T1 &&keyword, T2 &&referenced_type,
+verible::SymbolPtr MakeTypeDeclaration(verible::NodeFactory *node_factory,
+                                       T1 &&keyword, T2 &&referenced_type,
                                        T3 &&id, T4 &&semi) {
-  return MakeTypeDeclaration(keyword, referenced_type, id, nullptr, semi);
+  return MakeTypeDeclaration(node_factory, keyword, referenced_type, id,
+                             nullptr, semi);
 }
 
 // From a type like "foo::bar_t[3:0]", returns the node spanning "foo::bar_t",
@@ -94,7 +101,7 @@ const verible::Symbol *GetBaseTypeFromDataType(
 // grammar conflicts.
 // The original reference_call_base pointer is consumed in the process.
 verible::SymbolPtr ReinterpretReferenceAsDataTypePackedDimensions(
-    verible::SymbolPtr &reference_call_base);  // NOLINT
+    verible::NodeFactory *factory, verible::SymbolPtr &reference_call_base);
 
 // Finds all node kDataType declarations. Used for testing the functions below.
 std::vector<verible::TreeSearchMatch> FindAllDataTypeDeclarations(

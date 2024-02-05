@@ -36,6 +36,22 @@ using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::SizeIs;
 
+class NodeFactoryTestBase : public testing::Test {
+ protected:
+  template <typename... Args>
+  SymbolPtr MakeNode(Args &&...args) {
+    return factory_.MakeNode(std::forward<Args>(args)...);
+  }
+
+  template <typename Enum, typename... Args>
+  SymbolPtr MakeTaggedNode(const Enum tag, Args &&...args) {
+    return factory_.MakeTaggedNode(tag, std::forward<Args>(args)...);
+  }
+
+ private:
+  NodeFactory factory_;
+};
+
 static void SinkValue(SymbolPtr) {
   // Do nothing, just consume and expire the pointer.
 }
@@ -45,42 +61,45 @@ static SyntaxTreeNode *CheckTree(const SymbolPtr &ptr) {
   return down_cast<SyntaxTreeNode *>(ptr.get());
 }
 
+class SyntaxTreeNodeMatchesTest : public NodeFactoryTestBase {};
+
 // Test that MatchesTag matches correctly.
-TEST(SyntaxTreeNodeMatchesTag, Matches) {
+TEST_F(SyntaxTreeNodeMatchesTest, MatchesTag) {
   auto node = MakeTaggedNode(3);
   EXPECT_TRUE(CheckTree(node)->MatchesTag(3));
 }
 
 // Test that MatchesTag does not match.
-TEST(SyntaxTreeNodeMatchesTag, NotMatches) {
+TEST_F(SyntaxTreeNodeMatchesTest, NotMatches) {
   auto node = MakeTaggedNode(4);
   EXPECT_FALSE(CheckTree(node)->MatchesTag(3));
 }
 
 // Test that MatchesTagAnyOf matches correctly.
-TEST(SyntaxTreeNodeMatchesTagAnyOf, Matches) {
+TEST_F(SyntaxTreeNodeMatchesTest, MatchesTagAnyOf) {
   auto node = MakeTaggedNode(3);
   EXPECT_TRUE(CheckTree(node)->MatchesTagAnyOf({2, 3}));
   EXPECT_TRUE(CheckTree(node)->MatchesTagAnyOf({3, 4}));
   EXPECT_FALSE(CheckTree(node)->MatchesTagAnyOf({2, 4}));
 }
 
-TEST(SyntaxTreeNodeAppend, AppendVoid) {
+class SyntaxTreeNodeAppend : public NodeFactoryTestBase {};
+
+TEST_F(SyntaxTreeNodeAppend, AppendVoid) {
   SyntaxTreeNode node;
   node.Append();
   EXPECT_THAT(node, IsEmpty());
 }
 
 // Test that std::move is automated.
-TEST(SyntaxTreeNodeAppend, AppendChildReference) {
+TEST_F(SyntaxTreeNodeAppend, AppendChildReference) {
   SyntaxTreeNode node;
   SymbolPtr child;
   node.Append(child);
   EXPECT_THAT(node, SizeIs(1));
 }
-
 // Test that redundant move is accepted.
-TEST(SyntaxTreeNodeAppend, AppendChildMoved) {
+TEST_F(SyntaxTreeNodeAppend, AppendChildMoved) {
   SyntaxTreeNode node;
   SymbolPtr child;
   node.Append(std::move(child));
@@ -88,21 +107,23 @@ TEST(SyntaxTreeNodeAppend, AppendChildMoved) {
 }
 
 // Test that temporary value is properly forwarded.
-TEST(SyntaxTreeNodeAppend, AppendChildTemporary) {
+TEST_F(SyntaxTreeNodeAppend, AppendChildTemporary) {
   SyntaxTreeNode node;
   node.Append(SymbolPtr());
   EXPECT_THAT(node, SizeIs(1));
 }
 
 // Test that nullptrs can be appended.
-TEST(SyntaxTreeNodeAppend, AppendChildNullPtr) {
+TEST_F(SyntaxTreeNodeAppend, AppendChildNullPtr) {
   SyntaxTreeNode node;
   node.Append(nullptr);
   EXPECT_THAT(node, SizeIs(1));
 }
 
+class MakeNodeTest : public NodeFactoryTestBase {};
+
 // Test that ownership is transferred to sink functions.
-TEST(MakeNodeTest, EmptyConstructor) {
+TEST_F(MakeNodeTest, EmptyConstructor) {
   auto node = MakeNode();
   EXPECT_THAT(node, NotNull());
   SinkValue(std::move(node));
@@ -110,21 +131,21 @@ TEST(MakeNodeTest, EmptyConstructor) {
 }
 
 // Test that out-of-bounds is caught.
-TEST(MakeNodeTest, ChildrenOutOfBounds) {
+TEST_F(MakeNodeTest, ChildrenOutOfBounds) {
   SyntaxTreeNode node;
   EXPECT_DEATH(node[0], "");
 }
 
 // Test that out-of-bounds is caught (const).
-TEST(MakeNodeTest, ChildrenOutOfBoundsConst) {
+TEST_F(MakeNodeTest, ChildrenOutOfBoundsConst) {
   const SyntaxTreeNode node;
   EXPECT_DEATH(node[0], "");
 }
 
-TEST(MakeNodeTest, SinkTemporary) { SinkValue(MakeNode()); }
+TEST_F(MakeNodeTest, SinkTemporary) { SinkValue(MakeNode()); }
 
 // Test construction of tagged node.
-TEST(MakeNodeTest, TaggedEmptyConstructor) {
+TEST_F(MakeNodeTest, TaggedEmptyConstructor) {
   const int tag = 10;
   auto node = MakeTaggedNode(tag);
   ASSERT_THAT(node, NotNull());
@@ -132,14 +153,14 @@ TEST(MakeNodeTest, TaggedEmptyConstructor) {
 }
 
 // Test construction of tagged node.
-TEST(MakeNodeTest, ImmediateTaggedEmptyConstructor) {
+TEST_F(MakeNodeTest, ImmediateTaggedEmptyConstructor) {
   auto node = MakeTaggedNode(20);
   ASSERT_THAT(node, NotNull());
   EXPECT_THAT(*CheckTree(node), IsEmpty());
 }
 
 // Test construction of untagged node with one child.
-TEST(MakeNodeTest, SingleChild) {
+TEST_F(MakeNodeTest, SingleChild) {
   auto child = MakeNode();
   EXPECT_THAT(child, NotNull());
   auto parent = MakeNode(child);
@@ -149,14 +170,14 @@ TEST(MakeNodeTest, SingleChild) {
 }
 
 // Test construction of untagged node with one (temporary) child.
-TEST(MakeNodeTest, SingleChildTemporary) {
+TEST_F(MakeNodeTest, SingleChildTemporary) {
   auto parent = MakeNode(MakeNode());
   EXPECT_THAT(parent, NotNull());
   EXPECT_THAT(*CheckTree(parent), SizeIs(1));
 }
 
 // Test construction of untagged node with multiple children.
-TEST(MakeNodeTest, MultiChild) {
+TEST_F(MakeNodeTest, MultiChild) {
   auto child1 = MakeNode();
   auto child2 = MakeNode();
   auto child3 = MakeNode();
@@ -171,8 +192,10 @@ TEST(MakeNodeTest, MultiChild) {
   EXPECT_THAT(*CheckTree(parent), SizeIs(3));
 }
 
+class ExtendNodeTest : public MakeNodeTest {};
+
 // Test ExtendNode with nothing to extend (base case).
-TEST(ExtendNodeTest, ExtendNone) {
+TEST_F(ExtendNodeTest, ExtendNone) {
   auto seq = MakeNode();
   EXPECT_THAT(seq, NotNull());
   auto seq2 = ExtendNode(seq);
@@ -182,7 +205,7 @@ TEST(ExtendNodeTest, ExtendNone) {
 }
 
 // Test extending node with one child.
-TEST(ExtendNodeTest, ExtendOne) {
+TEST_F(ExtendNodeTest, ExtendOne) {
   auto seq = MakeNode();
   auto item = MakeNode();
   EXPECT_THAT(seq, NotNull());
@@ -195,7 +218,7 @@ TEST(ExtendNodeTest, ExtendOne) {
 }
 
 // Test extending node with multiple children.
-TEST(ExtendNodeTest, ExtendMulti) {
+TEST_F(ExtendNodeTest, ExtendMulti) {
   auto seq = MakeNode();
   auto item1 = MakeNode();
   auto item2 = MakeNode();
@@ -214,7 +237,7 @@ TEST(ExtendNodeTest, ExtendMulti) {
 }
 
 // Test extending node with multiple (temporary) children.
-TEST(ExtendNodeTest, ExtendMultiTemporary) {
+TEST_F(ExtendNodeTest, ExtendMultiTemporary) {
   auto seq = MakeNode();
   EXPECT_THAT(seq, NotNull());
   auto seq2 = ExtendNode(seq, MakeNode(), MakeNode());
@@ -224,21 +247,21 @@ TEST(ExtendNodeTest, ExtendMultiTemporary) {
 }
 
 // Test extending node with temporary parent.
-TEST(ExtendNodeTest, ExtendTemporaryNodeNoChildren) {
+TEST_F(ExtendNodeTest, ExtendTemporaryNodeNoChildren) {
   auto seq = ExtendNode(MakeNode());
   ASSERT_THAT(seq, NotNull());
   EXPECT_THAT(*CheckTree(seq), IsEmpty());
 }
 
 // Test extending node with temporary parent with temporary children.
-TEST(ExtendNodeTest, ExtendTemporaryNode) {
+TEST_F(ExtendNodeTest, ExtendTemporaryNode) {
   auto seq = ExtendNode(MakeNode(), MakeNode(), MakeNode());
   ASSERT_THAT(seq, NotNull());
   EXPECT_THAT(*CheckTree(seq), SizeIs(2));
 }
 
 // Test forwarding empty set of children to new node.
-TEST(SyntaxTreeNodeAppend, AdoptChildrenNone) {
+TEST_F(SyntaxTreeNodeAppend, AdoptChildrenNone) {
   auto seq = MakeNode();
   auto parent = MakeNode(ForwardChildren(seq));
   EXPECT_THAT(seq, IsNull());
@@ -246,7 +269,8 @@ TEST(SyntaxTreeNodeAppend, AdoptChildrenNone) {
 }
 
 // Test forwarding empty set of children to new node.
-TEST(SyntaxTreeNodeAppend, AdoptLeaf) {
+TEST_F(SyntaxTreeNodeAppend, AdoptLeaf) {
+  // TODO(hzeller): make sure to prevent cross-arena moves
   SymbolPtr leaf(new SyntaxTreeLeaf(0, "abc"));
   auto parent = MakeNode(ForwardChildren(leaf));
   EXPECT_THAT(leaf, IsNull());
@@ -254,7 +278,7 @@ TEST(SyntaxTreeNodeAppend, AdoptLeaf) {
 }
 
 // Test forwarding set of children to new node, transferring ownership.
-TEST(SyntaxTreeNodeAppend, AdoptChildren) {
+TEST_F(SyntaxTreeNodeAppend, AdoptChildren) {
   auto seq = MakeNode(MakeNode(), MakeNode(), MakeNode());
   auto parent = MakeNode(ForwardChildren(seq));
   EXPECT_THAT(seq, IsNull());
@@ -266,7 +290,7 @@ TEST(SyntaxTreeNodeAppend, AdoptChildren) {
 }
 
 // Test forwarding set of null children to new node.
-TEST(SyntaxTreeNodeAppend, AdoptNullChildren) {
+TEST_F(SyntaxTreeNodeAppend, AdoptNullChildren) {
   auto seq = MakeNode(nullptr, nullptr);
   auto parent = MakeNode(ForwardChildren(seq));
   EXPECT_THAT(seq, IsNull());
@@ -279,7 +303,7 @@ TEST(SyntaxTreeNodeAppend, AdoptNullChildren) {
 
 /*
 // Test forwarding of children of null parent
-TEST(SyntaxTreeNodeAppend, AdoptChildrenNullParent) {
+TEST_F(SyntaxTreeNodeAppend, AdoptChildrenNullParent) {
   auto seq = nullptr;
   auto parent = MakeNode(ForwardChildren(seq));
   auto parentnode = CheckTree(parent);
@@ -288,7 +312,7 @@ TEST(SyntaxTreeNodeAppend, AdoptChildrenNullParent) {
 }
 
 // Test forwarding of children of null parent
-TEST(SyntaxTreeNodeAppend, AdoptChildrenNullParentDirect) {
+TEST_F(SyntaxTreeNodeAppend, AdoptChildrenNullParentDirect) {
   auto parent = MakeNode(ForwardChildren(nullptr));
   auto parentnode = CheckTree(parent);
   ASSERT_THAT(parentnode, NotNull());
@@ -297,7 +321,7 @@ TEST(SyntaxTreeNodeAppend, AdoptChildrenNullParentDirect) {
 */
 
 // Test mix of forwarded and non-forwarded children.
-TEST(SyntaxTreeNodeAppend, AdoptChildrenMixed) {
+TEST_F(SyntaxTreeNodeAppend, AdoptChildrenMixed) {
   auto seq = MakeNode(MakeNode(), MakeNode(), MakeNode());
   auto parent = MakeNode(MakeNode(), ForwardChildren(seq), MakeNode());
   EXPECT_THAT(seq, IsNull());
@@ -310,7 +334,7 @@ TEST(SyntaxTreeNodeAppend, AdoptChildrenMixed) {
 }
 
 // Test multiple of forwarded sets of children.
-TEST(SyntaxTreeNodeAppend, AdoptChildrenMultiple) {
+TEST_F(SyntaxTreeNodeAppend, AdoptChildrenMultiple) {
   auto seq = MakeNode(MakeNode(), MakeNode(), MakeNode());
   auto seq2 = MakeNode(MakeNode(), MakeNode(), MakeNode(), MakeNode());
   auto parent = MakeNode(ForwardChildren(seq), ForwardChildren(seq2));
@@ -325,7 +349,7 @@ TEST(SyntaxTreeNodeAppend, AdoptChildrenMultiple) {
 }
 
 // Test extending one set with forwarded children.
-TEST(ExtendNodeTest, AdoptChildren) {
+TEST_F(ExtendNodeTest, AdoptChildren) {
   auto seq = ExtendNode(MakeNode(), MakeNode(), MakeNode());
   auto parent = MakeNode(ForwardChildren(seq));
   EXPECT_THAT(seq, IsNull());
@@ -337,7 +361,7 @@ TEST(ExtendNodeTest, AdoptChildren) {
 }
 
 // Test extending temporary parent with forwarded children.
-TEST(ExtendNodeTest, AdoptChildrenMixed) {
+TEST_F(ExtendNodeTest, AdoptChildrenMixed) {
   auto seq = MakeNode(MakeNode(), MakeNode(), MakeNode());
   auto parent = ExtendNode(MakeNode(), ForwardChildren(seq), MakeNode());
   EXPECT_THAT(seq, IsNull());
@@ -349,7 +373,7 @@ TEST(ExtendNodeTest, AdoptChildrenMixed) {
 }
 
 // Tests setting a placeholder to a single leaf
-TEST(ExtendNodeTest, SetChild0Size1) {
+TEST_F(ExtendNodeTest, SetChild0Size1) {
   auto expected = Node(Leaf(4, "z"));
 
   auto node1 = Node(nullptr);
@@ -362,7 +386,7 @@ TEST(ExtendNodeTest, SetChild0Size1) {
 }
 
 // Tests setting a placeholder to a more complex tree
-TEST(ExtendNodeTest, SetChild1Size2) {
+TEST_F(ExtendNodeTest, SetChild1Size2) {
   auto expected = Node(Leaf(1, "a"), Node(Leaf(4, "b")));
 
   auto node1 = Node(Leaf(1, "a"), nullptr);

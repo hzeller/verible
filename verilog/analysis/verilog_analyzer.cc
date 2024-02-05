@@ -313,6 +313,8 @@ using verible::TextStructureView;
 using verible::TokenInfo;
 
 // Helper class to replace macro call argument nodes with expression trees.
+// TODO(hzeller): since this is a sub-analyis, might need to get the node
+// factory from parent.
 class MacroCallArgExpander : public MutableTreeVisitorRecursive {
  public:
   MacroCallArgExpander(absl::string_view outer_filename, absl::string_view text,

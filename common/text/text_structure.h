@@ -164,7 +164,8 @@ class TextStructureView {
   // text were parsed as a particular construct of the larger grammar.
   // The contents will be pared down to a substring, and irrelevant tokens will
   // be pruned from the token sequence and syntax tree.
-  void FocusOnSubtreeSpanningSubstring(int left_offset, int length);
+  void FocusOnSubtreeSpanningSubstring(verible::NodeFactory* node_factory,
+                                       int left_offset, int length);
 
   // ExpandSubtrees performs bulk substitution of syntax tree leaves to
   // subtrees that result from other analyses.  Memory ownership of the

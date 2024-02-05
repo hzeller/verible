@@ -46,8 +46,7 @@ class ParserParam {
   // concrete syntax tree.
   // The "filename" is merely to have better error messages, it is purely
   // FYI, does not change processing.
-  ParserParam(TokenGenerator *token_stream,
-              NodeFactory *symbol_factory,
+  ParserParam(TokenGenerator *token_stream, NodeFactory *node_factory,
               absl::string_view filename);
 
   ~ParserParam();

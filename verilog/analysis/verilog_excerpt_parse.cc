@@ -70,8 +70,8 @@ static std::unique_ptr<VerilogAnalyzer> AnalyzeVerilogConstruct(
 
   // Trim off prolog and epilog from internal text structure to make it look
   // as if only text were analyzed.
-  analyzer_ptr->MutableData().FocusOnSubtreeSpanningSubstring(prolog.length(),
-                                                              text.length());
+  analyzer_ptr->MutableData().FocusOnSubtreeSpanningSubstring(
+      analyzer_ptr->node_factory(), prolog.length(), text.length());
   // TODO(b/129905498): Strengthen check on the resulting syntax tree root,
   // by qualifying it against an expected nonterminal node type(s).
   VLOG(2) << "end of " << __FUNCTION__;

@@ -32,13 +32,14 @@ namespace verilog {
 
 // Interface for consistently building a type-id-dimensions tuple.
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeTypeIdDimensionsTuple(T1 &&type, T2 &&id,
+verible::SymbolPtr MakeTypeIdDimensionsTuple(verible::NodeFactory *factory,
+                                             T1 &&type, T2 &&id,
                                              T3 &&unpacked_dimensions) {
   verible::CheckSymbolAsNode(*type.get(), NodeEnum::kDataType);
   // id can be qualified or unqualified
   verible::CheckOptionalSymbolAsNode(unpacked_dimensions,
                                      NodeEnum::kUnpackedDimensions);
-  return verible::MakeTaggedNode(NodeEnum::kDataTypeImplicitBasicIdDimensions,
+  return factory->MakeTaggedNode(NodeEnum::kDataTypeImplicitBasicIdDimensions,
                                  std::forward<T1>(type), std::forward<T2>(id),
                                  std::forward<T3>(unpacked_dimensions));
 }
@@ -47,32 +48,36 @@ verible::SymbolPtr MakeTypeIdDimensionsTuple(T1 &&type, T2 &&id,
 // TODO(fangism): combine this with MakeTypeIdDimensionsTuple above?
 //   That would be one fewer auxiliary CST node type.
 template <typename T1, typename T2>
-verible::SymbolPtr MakeTypeIdTuple(T1 &&type, T2 &&id) {
+verible::SymbolPtr MakeTypeIdTuple(verible::NodeFactory *factory, T1 &&type,
+                                   T2 &&id) {
   verible::CheckSymbolAsNode(*type.get(), NodeEnum::kDataType);
   verible::CheckSymbolAsNode(*id.get(), NodeEnum::kUnqualifiedId);
-  return verible::MakeTaggedNode(NodeEnum::kTypeIdentifierId,
+  return factory->MakeTaggedNode(NodeEnum::kTypeIdentifierId,
                                  std::forward<T1>(type), std::forward<T2>(id));
 }
 
 // Repacks output of MakeTypeIdDimensionsTuple into a type-id pair.
-verible::SymbolPtr RepackReturnTypeId(verible::SymbolPtr type_id_tuple);
+verible::SymbolPtr RepackReturnTypeId(verible::NodeFactory *factory,
+                                      verible::SymbolPtr type_id_tuple);
 
 // Maps lexical token enum to corresponding syntax tree node.
 // Useful for syntax tree construction.
 NodeEnum DeclarationKeywordToNodeEnum(const verible::Symbol &);
 
 template <typename T1, typename T2>
-verible::SymbolPtr MakeInstantiationBase(T1 &&type, T2 &&decl_list) {
+verible::SymbolPtr MakeInstantiationBase(verible::NodeFactory *factory,
+                                         T1 &&type, T2 &&decl_list) {
   verible::CheckSymbolAsNode(*type.get(), NodeEnum::kInstantiationType);
   // decl_list could contain either instantiations or variable declarations
-  return verible::MakeTaggedNode(NodeEnum::kInstantiationBase,
+  return factory->MakeTaggedNode(NodeEnum::kInstantiationBase,
                                  std::forward<T1>(type),
                                  std::forward<T2>(decl_list));
 }
 
 // Interface for consistently building a data declaration.
 template <typename T1, typename T2, typename T3>
-verible::SymbolPtr MakeDataDeclaration(T1 &&qualifiers, T2 &&inst_base,
+verible::SymbolPtr MakeDataDeclaration(verible::NodeFactory *node_factory,
+                                       T1 &&qualifiers, T2 &&inst_base,
                                        T3 &&semicolon) {
   verible::CheckOptionalSymbolAsNode(qualifiers, NodeEnum::kQualifierList);
   if (inst_base.get()->Tag().tag == (int)NodeEnum::kFunctionCall) {
@@ -81,7 +86,7 @@ verible::SymbolPtr MakeDataDeclaration(T1 &&qualifiers, T2 &&inst_base,
   }
   verible::CheckSymbolAsNode(*inst_base.get(), NodeEnum::kInstantiationBase);
   verible::CheckSymbolAsLeaf(*semicolon.get(), ';');
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kDataDeclaration, std::forward<T1>(qualifiers),
       std::forward<T2>(inst_base), std::forward<T3>(semicolon));
 }

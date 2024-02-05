@@ -43,9 +43,8 @@ class BisonParserAdapter final : public Parser {
  public:
   // Filename purely FYI.
   BisonParserAdapter(TokenGenerator *token_generator,
-                     NodeFactory *symbol_factory,
-                     absl::string_view filename)
-    : Parser(), param_(token_generator, symbol_factory, filename) {}
+                     NodeFactory *symbol_factory, absl::string_view filename)
+      : Parser(), param_(token_generator, symbol_factory, filename) {}
 
   absl::Status Parse() final {
     int result = ParseFunc(&param_);

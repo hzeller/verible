@@ -33,13 +33,14 @@ namespace verilog {
 
 // Construct a function header CST node, without the trailing ';'.
 template <typename T0, typename T1, typename T2, typename T3, typename T4>
-verible::SymbolPtr MakeFunctionHeader(T0 &&qualifiers, T1 &&function_start,
+verible::SymbolPtr MakeFunctionHeader(verible::NodeFactory *factory,
+                                      T0 &&qualifiers, T1 &&function_start,
                                       T2 &&lifetime, T3 &&return_type_id,
                                       T4 &&ports) {
   verible::CheckOptionalSymbolAsNode(qualifiers, NodeEnum::kQualifierList);
   ExpectString(function_start, "function");
   verible::CheckOptionalSymbolAsNode(ports, NodeEnum::kParenGroup);
-  return verible::MakeTaggedNode(
+  return factory->MakeTaggedNode(
       NodeEnum::kFunctionHeader, std::forward<T0>(qualifiers),
       std::forward<T1>(function_start), std::forward<T2>(lifetime),
       std::forward<T3>(
@@ -50,12 +51,14 @@ verible::SymbolPtr MakeFunctionHeader(T0 &&qualifiers, T1 &&function_start,
 // Construct a function header CST node, with the trailing ';'.
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5>
-verible::SymbolPtr MakeFunctionHeader(T0 &&qualifiers, T1 &&function_start,
+verible::SymbolPtr MakeFunctionHeader(verible::NodeFactory *node_factory,
+                                      T0 &&qualifiers, T1 &&function_start,
                                       T2 &&lifetime, T3 &&return_type_id,
                                       T4 &&ports, T5 &&semicolon) {
   ExpectString(semicolon, ";");
   return ExtendNode(
       MakeFunctionHeader(
+          node_factory,  //
           std::forward<T0>(qualifiers), std::forward<T1>(function_start),
           std::forward<T2>(lifetime),
           std::forward<T3>(
@@ -66,17 +69,18 @@ verible::SymbolPtr MakeFunctionHeader(T0 &&qualifiers, T1 &&function_start,
 
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename T7, typename T8, typename T9>
-verible::SymbolPtr MakeFunctionDeclaration(T0 &&qualifiers, T1 &&function_start,
+verible::SymbolPtr MakeFunctionDeclaration(verible::NodeFactory *node_factory,
+                                           T0 &&qualifiers, T1 &&function_start,
                                            T2 &&lifetime, T3 &&return_type_id,
                                            T4 &&ports, T5 &&semicolon,
                                            T6 &&function_items, T7 &&body,
                                            T8 &&function_end, T9 &&label) {
   ExpectString(function_end, "endfunction");
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kFunctionDeclaration,
       MakeFunctionHeader(
-          std::forward<T0>(qualifiers), std::forward<T1>(function_start),
-          std::forward<T2>(lifetime),
+          node_factory, std::forward<T0>(qualifiers),
+          std::forward<T1>(function_start), std::forward<T2>(lifetime),
           std::forward<T3>(
               return_type_id) /* flattens to separate type and id nodes */,
           std::forward<T4>(ports), std::forward<T5>(semicolon)),

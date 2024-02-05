@@ -90,12 +90,9 @@ std::ostream &operator<<(std::ostream &, const RejectedToken &);
 class FileAnalyzer {
  public:
   FileAnalyzer(std::shared_ptr<MemBlock> contents, absl::string_view filename)
-      : text_structure_(new TextStructure(std::move(contents))),
+      : node_factory_(filename),
+        text_structure_(new TextStructure(std::move(contents))),
         filename_(filename) {}
-
-  // Legacy constructor.
-  FileAnalyzer(absl::string_view contents, absl::string_view filename)
-      : text_structure_(new TextStructure(contents)), filename_(filename) {}
 
   virtual ~FileAnalyzer() = default;
 
@@ -170,7 +167,20 @@ class FileAnalyzer {
     return std::move(text_structure_);
   }
 
+  // Return the node factory used.
+  verible::NodeFactory *node_factory() { return &node_factory_; }
+
  protected:
+  // Legacy constructor.
+  FileAnalyzer(absl::string_view contents, absl::string_view filename)
+    : node_factory_(filename),
+      text_structure_(new TextStructure(contents)),
+      filename_(filename) {}
+
+  // Node factory potentially owns all node data, must come first to
+  // construct first and destruct last.
+  verible::NodeFactory node_factory_;
+
   std::unique_ptr<TextStructure> text_structure_;
 
   // Name of file being analyzed (optional).

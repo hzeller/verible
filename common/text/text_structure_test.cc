@@ -440,7 +440,8 @@ TEST_F(TextStructureViewInternalsTest, TrimContents) {
 TEST_F(TextStructureViewPublicTest, FocusOnSubtreeSpanningSubstringWholeTree) {
   const auto expect_tree =
       Node(Leaf(tokens_[0]), Leaf(tokens_[1]), Leaf(tokens_[3]));
-  FocusOnSubtreeSpanningSubstring(0, contents_.length());
+  FocusOnSubtreeSpanningSubstring(&sGlobalTestNodeFactory, 0,
+                                  contents_.length());
   EXPECT_THAT(tokens_, SizeIs(5));
   EXPECT_THAT(tokens_view_, SizeIs(3));
   EXPECT_TRUE(EqualTrees(syntax_tree_.get(), expect_tree.get()));
@@ -450,7 +451,8 @@ TEST_F(TextStructureViewPublicTest, FocusOnSubtreeSpanningSubstringWholeTree) {
 // Test that a substring range yields a subtree.
 TEST_F(TextStructureViewPublicTest, FocusOnSubtreeSpanningSubstringFirstLeaf) {
   const auto expect_tree = Leaf(tokens_[0]);
-  FocusOnSubtreeSpanningSubstring(0, tokens_[0].text().length());
+  FocusOnSubtreeSpanningSubstring(&sGlobalTestNodeFactory, 0,
+                                  tokens_[0].text().length());
   EXPECT_THAT(tokens_, SizeIs(2));
   EXPECT_THAT(tokens_view_, SizeIs(1));
   EXPECT_TRUE(EqualTrees(syntax_tree_.get(), expect_tree.get()));

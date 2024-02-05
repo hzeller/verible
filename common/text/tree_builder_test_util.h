@@ -25,13 +25,17 @@
 
 namespace verible {
 
+// Nasty hack for testing to reduce some typing.
+// TODO(hzeller): fix. Don't put a global static factory here.
+static inline verible::NodeFactory sGlobalTestNodeFactory("testing");
+
 template <typename... Args>
 SymbolPtr Node(Args... args) {
-  return MakeNode(args...);
+  return sGlobalTestNodeFactory.MakeNode(args...);
 }
 template <typename... Args, typename Enum>
 SymbolPtr TNode(Enum e, Args... args) {
-  return MakeTaggedNode(e, args...);
+  return sGlobalTestNodeFactory.MakeTaggedNode(e, args...);
 }
 
 template <typename... Args>

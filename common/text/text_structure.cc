@@ -192,8 +192,8 @@ static void TerminateTokenStream(TokenSequence* tokens) {
   tokens->push_back(TokenInfo::EOFToken(tokens->back().text()));
 }
 
-void TextStructureView::FocusOnSubtreeSpanningSubstring(int left_offset,
-                                                        int length) {
+void TextStructureView::FocusOnSubtreeSpanningSubstring(
+    verible::NodeFactory* node_factory, int left_offset, int length) {
   VLOG(2) << __FUNCTION__ << " at " << left_offset << " +" << length;
   const int right_offset = left_offset + length;
   TrimSyntaxTree(left_offset, right_offset);
@@ -202,7 +202,7 @@ void TextStructureView::FocusOnSubtreeSpanningSubstring(int left_offset,
   // Always return a tree with one node.
   // This can happen when TrimSyntaxTree() yields a nullptr syntax tree
   if (syntax_tree_ == nullptr) {
-    syntax_tree_ = MakeNode();
+    syntax_tree_ = node_factory->MakeNode();
   }
   TrimTokensToSubstring(left_offset, right_offset);
   TrimContents(left_offset, length);

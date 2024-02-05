@@ -25,34 +25,45 @@ namespace {
 using verible::Leaf;
 
 TEST(MakeParenGroupTest, Normal) {
+  verible::NodeFactory factory;
   const auto node =
-      MakeParenGroup(Leaf('(', "("), Leaf(1, "1"), Leaf(')', ")"));
+      MakeParenGroup(&factory, Leaf('(', "("), Leaf(1, "1"), Leaf(')', ")"));
   EXPECT_EQ(verible::SymbolCastToNode(*node).size(), 3);
 }
 
 TEST(MakeParenGroupTest, ErrorRecovered) {
-  const auto node1 = MakeParenGroup(Leaf('(', "("), nullptr, Leaf(')', ")"));
+  verible::NodeFactory factory;
+  const auto node1 =
+      MakeParenGroup(&factory, Leaf('(', "("), nullptr, Leaf(')', ")"));
   EXPECT_EQ(verible::SymbolCastToNode(*node1).size(), 3);
-  const auto node2 = MakeParenGroup(Leaf('(', "("), nullptr, nullptr);
+  const auto node2 = MakeParenGroup(&factory, Leaf('(', "("), nullptr, nullptr);
   EXPECT_EQ(verible::SymbolCastToNode(*node2).size(), 3);
 }
 
 TEST(MakeParenGroupTest, MissingOpenParen) {
-  EXPECT_DEATH(MakeParenGroup(nullptr, Leaf(1, "1"), Leaf(')', ")")), "");
+  verible::NodeFactory factory;
+  EXPECT_DEATH(MakeParenGroup(&factory, nullptr, Leaf(1, "1"), Leaf(')', ")")),
+               "");
 }
 
 TEST(MakeParenGroupTest, MissingCloseParen) {
-  EXPECT_DEATH(MakeParenGroup(Leaf('(', "("), Leaf(1, "1"), nullptr), "");
+  verible::NodeFactory factory;
+  EXPECT_DEATH(MakeParenGroup(&factory, Leaf('(', "("), Leaf(1, "1"), nullptr),
+               "");
 }
 
 TEST(MakeParenGroupTest, WrongOpen) {
-  EXPECT_DEATH(MakeParenGroup(Leaf('[', "["), Leaf(1, "1"), Leaf(')', ")")),
-               "\\[");
+  verible::NodeFactory factory;
+  EXPECT_DEATH(
+      MakeParenGroup(&factory, Leaf('[', "["), Leaf(1, "1"), Leaf(')', ")")),
+      "\\[");
 }
 
 TEST(MakeParenGroupTest, WrongClose) {
-  EXPECT_DEATH(MakeParenGroup(Leaf('(', "("), Leaf(1, "1"), Leaf('}', "}")),
-               "\\}");
+  verible::NodeFactory factory;
+  EXPECT_DEATH(
+      MakeParenGroup(&factory, Leaf('(', "("), Leaf(1, "1"), Leaf('}', "}")),
+      "\\}");
 }
 
 }  // namespace

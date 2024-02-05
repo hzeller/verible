@@ -77,11 +77,12 @@ std::vector<verible::TreeSearchMatch> FindAllTaskFunctionPortDeclarations(
 
 // Syntax tree node builder for tp_port_item nonterminal.
 template <typename T0, typename T1, typename T2>
-verible::SymbolPtr MakeTaskFunctionPortItem(T0 &&direction,
+verible::SymbolPtr MakeTaskFunctionPortItem(verible::NodeFactory *node_factory,
+                                            T0 &&direction,
                                             T1 &&type_id_dimensions,
                                             T2 &&default_value) {
   // TODO(fangism): check assumptions about arguments' node/symbol types
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kPortItem, std::forward<T0>(direction),
       std::forward<T1>(type_id_dimensions), std::forward<T2>(default_value));
 }

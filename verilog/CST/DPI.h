@@ -37,7 +37,8 @@ namespace verilog {
 
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5>
-verible::SymbolPtr MakeDPIImport(T0 &&keyword, T1 &&spec, T2 &&property,
+verible::SymbolPtr MakeDPIImport(verible::NodeFactory *node_factory,
+                                 T0 &&keyword, T1 &&spec, T2 &&property,
                                  T3 &&id, T4 &&equals, T5 &&proto) {
   verible::CheckSymbolAsLeaf(*keyword, verilog_tokentype::TK_import);
   verible::CheckSymbolAsLeaf(*spec, verilog_tokentype::TK_StringLiteral);
@@ -48,7 +49,7 @@ verible::SymbolPtr MakeDPIImport(T0 &&keyword, T1 &&spec, T2 &&property,
   verible::CheckOptionalSymbolAsLeaf(equals, '=');
   CHECK(verible::SymbolCastToNode(*proto).MatchesTagAnyOf(
       {NodeEnum::kFunctionPrototype, NodeEnum::kTaskPrototype}));
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kDPIImportItem, std::forward<T0>(keyword),
       std::forward<T1>(spec), std::forward<T2>(property), std::forward<T3>(id),
       std::forward<T4>(equals), std::forward<T5>(proto));
@@ -58,14 +59,15 @@ verible::SymbolPtr MakeDPIImport(T0 &&keyword, T1 &&spec, T2 &&property,
 // in positions 3 and 4 (optional symbols).  Compiler is not guaranteed
 // to deduce to that some paths are not reachble/applicable.
 template <typename T0, typename T1, typename T2, typename T3, typename T4>
-verible::SymbolPtr MakeDPIImport(T0 &&keyword, T1 &&spec, T2 &&property,
+verible::SymbolPtr MakeDPIImport(verible::NodeFactory *node_factory,
+                                 T0 &&keyword, T1 &&spec, T2 &&property,
                                  std::nullptr_t id, std::nullptr_t equals,
                                  T3 &&proto, T4 &&semi) {
   verible::CheckSymbolAsLeaf(*keyword, verilog_tokentype::TK_import);
   verible::CheckSymbolAsLeaf(*spec, verilog_tokentype::TK_StringLiteral);
   CHECK(verible::SymbolCastToNode(*proto).MatchesTagAnyOf(
       {NodeEnum::kFunctionPrototype, NodeEnum::kTaskPrototype}));
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kDPIImportItem, std::forward<T0>(keyword),
       std::forward<T1>(spec), std::forward<T2>(property), id, equals,
       std::forward<T3>(proto), std::forward<T4>(semi));

@@ -32,7 +32,8 @@ namespace verilog {
 
 template <typename T0, typename T1, typename T2, typename T3, typename T4,
           typename T5, typename T6, typename T7>
-verible::SymbolPtr MakeModuleHeader(T0 &&keyword, T1 &&lifetime, T2 &&id,
+verible::SymbolPtr MakeModuleHeader(verible::NodeFactory *node_factory,
+                                    T0 &&keyword, T1 &&lifetime, T2 &&id,
                                     T3 &&imports, T4 &&parameters, T5 &&ports,
                                     T6 &&attribute, T7 &&semi) {
   verible::SymbolCastToLeaf(*keyword);
@@ -45,7 +46,7 @@ verible::SymbolPtr MakeModuleHeader(T0 &&keyword, T1 &&lifetime, T2 &&id,
   verible::CheckOptionalSymbolAsNode(attribute,
                                      NodeEnum::kModuleAttributeForeign);
   ExpectString(semi, ";");
-  return verible::MakeTaggedNode(
+  return node_factory->MakeTaggedNode(
       NodeEnum::kModuleHeader, std::forward<T0>(keyword),
       std::forward<T1>(lifetime), std::forward<T2>(id),
       std::forward<T3>(imports), std::forward<T4>(parameters),

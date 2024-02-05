@@ -41,7 +41,7 @@ static SymbolPtr ReinterpretLocalRootAsType(Symbol &local_root) {  // NOLINT
 }
 
 SymbolPtr ReinterpretReferenceAsDataTypePackedDimensions(
-    SymbolPtr &reference_call_base) {
+    verible::NodeFactory *factory, SymbolPtr &reference_call_base) {
   if (reference_call_base->Tag().tag ==
       static_cast<int>(NodeEnum::kMacroCall)) {
     return std::move(reference_call_base);
@@ -60,12 +60,12 @@ SymbolPtr ReinterpretReferenceAsDataTypePackedDimensions(
   }
 
   SymbolPtr packed_dimensions(
-      verible::MakeTaggedNode(NodeEnum::kPackedDimensions));
+      factory->MakeTaggedNode(NodeEnum::kPackedDimensions));
   verible::SyntaxTreeNode &pdim_node(
       verible::SymbolCastToNode(*packed_dimensions));
 
   SymbolPtr local_root_with_extension(
-      verible::MakeTaggedNode(NodeEnum::kLocalRoot));
+      factory->MakeTaggedNode(NodeEnum::kLocalRoot));
 
   verible::SyntaxTreeNode &local_root_with_extension_node(
       verible::SymbolCastToNode(*local_root_with_extension));
@@ -106,7 +106,7 @@ SymbolPtr ReinterpretReferenceAsDataTypePackedDimensions(
     // TODO(fangism): instead of ignoring, retain non-tag-matched nodes as
     // syntax error nodes.
   }
-  return MakeDataType(local_root_with_extension, packed_dimensions);
+  return MakeDataType(factory, local_root_with_extension, packed_dimensions);
 }
 
 std::vector<verible::TreeSearchMatch> FindAllDataTypeDeclarations(
