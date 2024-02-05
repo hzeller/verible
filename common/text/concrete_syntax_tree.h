@@ -231,6 +231,31 @@ SymbolPtr MakeTaggedNode(const Enum tag, Args &&...args) {
   return SymbolPtr(node_pointer);
 }
 
+class NodeFactory {
+public:
+  // Construct a syntax tree node with a tag.
+  // Ownership of all args is transferred, and consumed by the new node.
+  // Sample usage: $$ = MakeNode(TAG, $1, $2, $3);
+  template <typename... Args>
+  SymbolPtr MakeNode(Args &&...args) {
+    auto *const node_pointer = new SyntaxTreeNode();
+    node_pointer->Append(std::forward<Args>(args)...);
+    return SymbolPtr(node_pointer);
+  }
+
+  // Construct a syntax tree node with a tag.
+  // Ownership of all args is transferred, and consumed by the new node.
+  // Sample usage:
+  //   $$ = MakeTaggedNode(TAG);  // empty, no children
+  //   $$ = MakeTaggedNode(TAG, $1, $2, $3);
+  template <typename Enum, typename... Args>
+  SymbolPtr MakeTaggedNode(const Enum tag, Args &&...args) {
+    auto *const node_pointer = new SyntaxTreeNode(static_cast<int>(tag));
+    node_pointer->Append(std::forward<Args>(args)...);
+    return SymbolPtr(node_pointer);
+  }
+};
+
 // Extend the children of an existing node.
 // Equivalent to: $$ = std::move(ExtendNode($1, $2, $3));
 // Ownership of all args is transferred, and consumed by the existing node.

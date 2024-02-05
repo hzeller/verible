@@ -116,6 +116,8 @@ class VerilogAnalyzer : public verible::FileAnalyzer {
   // syntax tree.  If parsing fails, leave the MacroArg token unexpanded.
   void ExpandMacroCallArgExpressions();
 
+  verible::NodeFactory node_factory_;
+
   // Information about parser internals.
 
   // True if input text has already been lexed.

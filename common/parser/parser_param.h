@@ -42,9 +42,13 @@ class ParserParam {
   using ValueStack = std::vector<SymbolPtr>;
 
  public:
+  // Read from "token stream", parse and use "symbol_factory" to create a
+  // concrete syntax tree.
   // The "filename" is merely to have better error messages, it is purely
   // FYI, does not change processing.
-  ParserParam(TokenGenerator *token_stream, absl::string_view filename);
+  ParserParam(TokenGenerator *token_stream,
+              NodeFactory *symbol_factory,
+              absl::string_view filename);
 
   ~ParserParam();
 
@@ -89,6 +93,8 @@ class ParserParam {
   // Takes ownership of syntax tree.
   void SetRoot(ConcreteSyntaxTree r) { root_ = std::move(r); }
 
+  NodeFactory *node_factory() { return node_factory_; }
+
  private:
   void ResizeStacksInternal(bison_state_int_type **state_stack,
                             SymbolPtr **value_stack, int64_t *size);
@@ -99,6 +105,7 @@ class ParserParam {
   std::vector<TokenInfo> recovered_syntax_errors_;
 
   TokenGenerator *const token_stream_;
+  NodeFactory *const node_factory_;
   const std::string filename_;
 
   TokenInfo last_token_;

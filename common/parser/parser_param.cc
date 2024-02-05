@@ -30,8 +30,10 @@
 namespace verible {
 
 ParserParam::ParserParam(TokenGenerator *token_stream,
+                         NodeFactory *node_factory,
                          absl::string_view filename)
     : token_stream_(token_stream),
+      node_factory_(node_factory),
       filename_(filename),
       last_token_(TokenInfo::EOFToken()),
       max_used_stack_size_(0) {}

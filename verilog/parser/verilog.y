@@ -65,8 +65,6 @@ Functionality that relies directly on this structure should be isolated under
 namespace verilog {
 
 using verible::ParserParam;
-using verible::MakeNode;
-using verible::MakeTaggedNode;
 using verible::ExtendNode;
 using verible::ForwardChildren;
 using verible::SetChild;
@@ -79,6 +77,8 @@ using N = NodeEnum;
 
 constexpr std::nullptr_t qualifier_placeholder = nullptr;
 constexpr std::nullptr_t expression_placeholder = nullptr;
+
+#define FACTORY() (param->node_factory())
 
 static std::nullptr_t Recover() {
   // TODO(fangism): return a useful ErrorNode or ErrorToken, using the
@@ -125,12 +125,14 @@ static SymbolPtr ExtendLastSublistWithSeparator(
 // (Below): These helper forwarding functions help ensure consistent structure,
 // and check that the correct number of arguments are passed:
 
-static SymbolPtr MakePackedDimensionsNode(SymbolPtr& arg) {
-  return MakeTaggedNode(N::kPackedDimensions, arg);
+ static SymbolPtr MakePackedDimensionsNode(::verible::ParserParam* param,
+                                           SymbolPtr& arg) {
+   return param->node_factory()->MakeTaggedNode(N::kPackedDimensions, arg);
 }
 
-static SymbolPtr MakeUnpackedDimensionsNode(SymbolPtr& arg) {
-  return MakeTaggedNode(N::kUnpackedDimensions, arg);
+ static SymbolPtr MakeUnpackedDimensionsNode(::verible::ParserParam* param,
+                                             SymbolPtr& arg) {
+  return param->node_factory()->MakeTaggedNode(N::kUnpackedDimensions, arg);
 }
 
 %}
@@ -740,7 +742,7 @@ source_text
   : description_list
     { param->SetRoot(std::move($1)); }
   | /* empty */
-    { param->SetRoot(MakeNode()); }
+    { param->SetRoot(FACTORY()->MakeNode()); }
   ;
 GenericIdentifier
   // TODO(fangism): re-tag these to look like GenericIdentifier
@@ -794,17 +796,17 @@ preprocessor_directive
 
 preprocessor_if_header
   : PP_ifdef PP_Identifier
-    { $$ = MakeTaggedNode(N::kPreprocessorIfdefClause, $1, $2); }
+  { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorIfdefClause, $1, $2); }
     /* consumer of $$ is expected to ExtendNode */
   | PP_ifndef PP_Identifier
-    { $$ = MakeTaggedNode(N::kPreprocessorIfndefClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorIfndefClause, $1, $2); }
     /* consumer of $$ is expected to ExtendNode */
   /* | PP_if expression '\n' */  /* doesn't exist for Verilog */
   ;
 
 preprocessor_elsif_header
   : PP_elsif PP_Identifier
-    { $$ = MakeTaggedNode(N::kPreprocessorElsifClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElsifClause, $1, $2); }
     /* consumer of $$ is expected to ExtendNode */
     /* `elsif is interpreted as else-if-macro-is-defined,
      * not the traditional expression predicate that follows else-if.
@@ -827,18 +829,18 @@ preprocessor_control_flow
 
 preprocessor_action
   : PP_undef PP_Identifier
-    { $$ = MakeTaggedNode(N::kPreprocessorUndef, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorUndef, $1, $2); }
   | PP_include preprocess_include_argument
-    { $$ = MakeTaggedNode(N::kPreprocessorInclude, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorInclude, $1, $2); }
   /* The body of a `define macro can be any unstructured sequence of tokens,
    * which this parser just accumulates in an un-lexer manner.
    * Verilog preprocessing even supports `defines in the bodies of `defines!
    */
   | PP_define PP_Identifier PP_define_body
-    { $$ = MakeTaggedNode(N::kPreprocessorDefine, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorDefine, $1, $2, $3); }
     /* $3 is unlexed text, and may even be empty. */
   | PP_define PP_Identifier '(' macro_formals_list_opt ')' PP_define_body
-    { $$ = MakeTaggedNode(N::kPreprocessorDefine, $1, $2, MakeParenGroup($3, $4, $5), $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorDefine, $1, $2, MakeParenGroup($3, $4, $5), $6); }
     /* $6 is unlexed text, and may even be empty. */
   ;
 
@@ -852,13 +854,13 @@ macro_formals_list
   : macro_formals_list ',' macro_formal_parameter
     { $$ = ExtendNode($1, $2, $3); }
   | macro_formal_parameter
-    { $$ = MakeTaggedNode(N::kMacroFormalParameterList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroFormalParameterList, $1); }
   ;
 macro_formal_parameter
   : PP_Identifier
-    { $$ = MakeTaggedNode(N::kMacroFormalArg, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroFormalArg, $1); }
   | PP_Identifier '=' PP_default_text
-    { $$ = MakeTaggedNode(N::kMacroFormalArg, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroFormalArg, $1, $2, $3); }
     /* $3 is unlexed text */
   ;
 
@@ -879,23 +881,23 @@ MacroGenericItem
   : MacroCallItem
     { $$ = std::move($1); }
   | MacroIdItem
-    { $$ = MakeTaggedNode(N::kMacroGenericItem, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroGenericItem, $1); }
   ;
 MacroCallItem
   /* suitable for use as list items */
   : MacroCallId '(' macro_args_opt MacroCallCloseToEndLine
-    { $$ = MakeTaggedNode(N::kMacroCall, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroCall, $1, MakeParenGroup($2, $3, $4)); }
   ;
 MacroCall
   /* suitable for use in expressions */
   : MacroCallId '(' macro_args_opt ')'
-    { $$ = MakeTaggedNode(N::kMacroCall, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroCall, $1, MakeParenGroup($2, $3, $4)); }
   ;
 macro_args_opt
   : macro_args_opt ',' macro_arg_opt
     { $$ = ExtendNode($1, $2, $3); }
   | macro_arg_opt
-    { $$ = MakeTaggedNode(N::kMacroArgList, $1);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroArgList, $1);}
   ;
 macro_arg_opt
   : MacroArg
@@ -923,34 +925,34 @@ assertion_item
   ;
 assignment_pattern
   : TK_LP expression_list_proper '}'
-    { $$ = MakeTaggedNode(N::kAssignmentPattern, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPattern, $1, $2, $3); }
   | TK_LP structure_or_array_pattern_expression_list '}'
-    { $$ = MakeTaggedNode(N::kAssignmentPattern, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPattern, $1, $2, $3); }
   | TK_LP expression '{' expression_list_proper '}' '}'
-    { $$ = MakeTaggedNode(N::kAssignmentPattern, $1, $2, MakeBraceGroup($3, $4, $5), $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPattern, $1, $2, MakeBraceGroup($3, $4, $5), $6); }
     /* replication construct: $2 must be a constant expression */
   | TK_LP '}'
-    { $$ = MakeTaggedNode(N::kAssignmentPattern, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPattern, $1, $2); }
   ;
 assignment_pattern_expression
   : assignment_pattern
     { $$ = std::move($1); }
   | data_type_base assignment_pattern
-    { $$ = MakeTaggedNode(N::kAssignmentPatternExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPatternExpression, $1, $2); }
   | reference assignment_pattern
-    { $$ = MakeTaggedNode(N::kAssignmentPatternExpression, ReinterpretReferenceAsDataTypePackedDimensions($1), $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPatternExpression, ReinterpretReferenceAsDataTypePackedDimensions($1), $2); }
   | reference call_base assignment_pattern
-    { $$ = MakeTaggedNode(N::kAssignmentPatternExpression, ReinterpretReferenceAsDataTypePackedDimensions($1), $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentPatternExpression, ReinterpretReferenceAsDataTypePackedDimensions($1), $2, $3); }
   ;
 structure_or_array_pattern_expression_list
   : structure_or_array_pattern_expression_list ',' structure_or_array_pattern_expression
     { $$ = ExtendNode($1, $2, $3); }
   | structure_or_array_pattern_expression
-    { $$ = MakeNode($1); }
+    { $$ = FACTORY()->MakeNode($1); }
   ;
 structure_or_array_pattern_expression
   : structure_or_array_pattern_key ':' expression
-    { $$ = MakeTaggedNode(N::kPatternExpression, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPatternExpression, $1, $2, $3); }
   ;
 structure_or_array_pattern_key
   /* structure_pattern_key : member_identifier | assignment_pattern_key
@@ -977,7 +979,7 @@ simple_type
 
 block_identifier_opt
   : unqualified_id ':'
-    { $$ = MakeTaggedNode(N::kBlockIdentifier, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockIdentifier, $1, $2); }
     /* $1 should be a GenericIdentifier, no parameter_value */
   | /* empty */
     { $$ = nullptr; }
@@ -989,7 +991,7 @@ interface_class_declaration
     declaration_extends_list_opt ';'  /* multiple base interfaces allowed */
     interface_class_item_list_opt
     TK_endclass label_opt
-    { $$ = MakeTaggedNode(N::kInterfaceClassDeclaration, $1, $2, $3, $4, $5, $6, $7, $8, $9); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInterfaceClassDeclaration, $1, $2, $3, $4, $5, $6, $7, $8, $9); }
   ;
 declaration_extends_list_opt
   : declaration_extends_list
@@ -999,7 +1001,7 @@ declaration_extends_list_opt
   ;
 declaration_extends_list
   : TK_extends class_id
-    { $$ = MakeTaggedNode(N::kDeclarationExtendsList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDeclarationExtendsList, $1, $2); }
   | declaration_extends_list ',' class_id
     { $$ = ExtendNode($1, $2, $3); }
   ;
@@ -1013,7 +1015,7 @@ implements_interface_list
   : implements_interface_list ',' class_id
     { $$ = ExtendNode($1, $2, $3); }
   | TK_implements class_id
-    { $$ = MakeTaggedNode(N::kImplementsList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kImplementsList, $1, $2); }
   ;
 
 interface_class_item_list_opt
@@ -1025,7 +1027,7 @@ interface_class_item_list
   : interface_class_item_list interface_class_item
     { $$ = ExtendNode($1, $2); }
   | interface_class_item
-    { $$ = MakeTaggedNode(N::kInterfaceClassItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInterfaceClassItemList, $1); }
   ;
 interface_class_item
   : type_declaration
@@ -1039,7 +1041,7 @@ interface_class_item
   ;
 interface_class_method
   : TK_pure TK_virtual method_prototype ';'
-    { $$ = MakeTaggedNode(N::kInterfaceClassMethod, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInterfaceClassMethod, $1, $2, $3, $4); }
   ;
 
 method_prototype
@@ -1056,8 +1058,8 @@ class_declaration
     implements_interface_list_opt ';'
     class_items_opt TK_endclass
     label_opt
-    { $$ = MakeTaggedNode(N::kClassDeclaration,
-                          MakeTaggedNode(N::kClassHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassDeclaration,
+                          FACTORY()->MakeTaggedNode(N::kClassHeader,
                                          $1, $2, $3, $4, $5, $6, $7, $8),
                           $9, $10, $11); }
   ;
@@ -1069,14 +1071,14 @@ class_constraint
   ;
 class_declaration_extends_opt
   : TK_extends class_id
-    { $$ = MakeTaggedNode(N::kExtendsList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExtendsList, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
 
 unqualified_id
   : GenericIdentifier parameter_value_opt
-    { $$ = MakeTaggedNode(N::kUnqualifiedId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $1, $2); }
   /* If the root identifier is a package, it should not have parameters. */
   /* TODO(fangism): parameter_value_opt is too permissive here,
      should only allow parenthesized parameter lists following '#'. */
@@ -1097,14 +1099,14 @@ qualified_id
   : qualified_id TK_SCOPE_RES unqualified_id
     { $$ = ExtendNode($1, $2, $3); }
   | unqualified_id TK_SCOPE_RES unqualified_id
-    { $$ = MakeTaggedNode(N::kQualifiedId, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifiedId, $1, $2, $3); }
   | TK_Sunit TK_SCOPE_RES unqualified_id
     /* $unit refers to a package scope, but can never appear alone. */
-    { $$ = MakeTaggedNode(N::kQualifiedId, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifiedId, $1, $2, $3); }
   | qualified_id TK_SCOPE_RES TK_new
     { $$ = ExtendNode($1, $2, $3); }
   | unqualified_id TK_SCOPE_RES TK_new
-    { $$ = MakeTaggedNode(N::kQualifiedId, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifiedId, $1, $2, $3); }
     /* Allow class_name::new to refer to out-of-line constructor. */
   ;
 class_id
@@ -1117,18 +1119,18 @@ class_items_opt
   : class_items
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kClassItems);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassItems);}
   ;
 class_items
   : class_items class_item
     { $$ = ExtendNode($1, $2); }
   | class_item
-    { $$ = MakeTaggedNode(N::kClassItems, $1);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassItems, $1);}
   ;
 
 class_constructor_prototype
   : TK_function TK_new tf_port_list_paren_opt
-    { $$ = MakeTaggedNode(N::kClassConstructorPrototype, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassConstructorPrototype, $1, $2, $3); }
   /* users of this rule may append a trailing ';' to this node
    * TODO(fangism): move the ';' into this rule
    */
@@ -1139,7 +1141,7 @@ class_constructor
     /* merged: function_item_list_opt statement_or_null_list_opt */
     tf_item_or_statement_or_null_list_opt
     TK_endfunction endnew_opt
-    { $$ = MakeTaggedNode(N::kClassConstructor, qualifier_placeholder,
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassConstructor, qualifier_placeholder,
                           ExtendNode($1, $2), $3, $4, $5); }
     /* TODO(fangism) Probably want to include the qualifier_placeholder
      * in the prototype/header as well.  Reshape this.  */
@@ -1162,7 +1164,7 @@ class_item
   | class_constructor
     { $$ = std::move($1); }
   | TK_virtual method_qualifier_list_opt class_constructor
-    { SetChild($3, 0, MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)));
+    { SetChild($3, 0, FACTORY()->MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)));
       $$ = std::move($3); }
 
   /* originally: property_qualifier_list_opt data_type list_of_variable_decl_assignments ';' */
@@ -1172,21 +1174,21 @@ class_item
     { $$ = MakeDataDeclaration(
                           ExtendNode($1, $2, $3),
                           MakeInstantiationBase(
-                              MakeTaggedNode(N::kInstantiationType, $4),
+                              FACTORY()->MakeTaggedNode(N::kInstantiationType, $4),
                               $5),
                           $6); }
   | data_type list_of_variable_decl_assignments ';'
     { $$ = MakeDataDeclaration(
                           qualifier_placeholder,
                           MakeInstantiationBase(
-                              MakeTaggedNode(N::kInstantiationType, $1),
+                              FACTORY()->MakeTaggedNode(N::kInstantiationType, $1),
                               $2),
                           $3); }
   | TK_const class_item_qualifier_list_opt data_type list_of_variable_decl_assignments ';'
     { $$ = MakeDataDeclaration(
-                          MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)),
+                          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)),
                           MakeInstantiationBase(
-                              MakeTaggedNode(N::kInstantiationType, $3),
+                              FACTORY()->MakeTaggedNode(N::kInstantiationType, $3),
                               $4),
                           $5); }
   | interface_data_declaration
@@ -1210,7 +1212,7 @@ class_item
     { $$ = std::move($1); }
   | TK_virtual method_qualifier_list_opt task_declaration
     { SetChild(SymbolCastToNode(*$3)[0] /* kTaskHeader */, 0,
-          MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)));
+          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)));
       $$ = std::move($3); }
   /* TODO(fangism): Method qualifiers should be grouped together into one list,
    * rather than being split between virtual and method_qualifier list.
@@ -1222,21 +1224,21 @@ class_item
     { $$ = std::move($1); }
   | TK_virtual method_qualifier_list_opt function_declaration
     { SetChild(SymbolCastToNode(*$3)[0] /* kFunctionHeader */, 0,
-          MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)));
+          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)));
       $$ = std::move($3); }
   /* pure virtual method prototypes: */
   | TK_pure TK_virtual class_item_qualifier_list_opt method_prototype ';'
-   { $$ = MakeTaggedNode(N::kForwardDeclaration,
-                        MakeTaggedNode(N::kQualifierList, $1, $2, ForwardChildren($3)),
+   { $$ = FACTORY()->MakeTaggedNode(N::kForwardDeclaration,
+                        FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2, ForwardChildren($3)),
                         ExtendLastSublist($4, $5) /* kTaskHeader or kFunctionHeader */ ); }
   /* forward declarations (excludes definition body): */
   | TK_extern method_qualifier_list_opt method_prototype ';'
-     { $$ = MakeTaggedNode(N::kForwardDeclaration,
-                        MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)),
+     { $$ = FACTORY()->MakeTaggedNode(N::kForwardDeclaration,
+                        FACTORY()->MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)),
                         ExtendLastSublist($3, $4) /* kTaskHeader or kFunctionHeader */ ); }
   | TK_extern method_qualifier_list_opt class_constructor_prototype ';'
-     { $$ = MakeTaggedNode(N::kForwardDeclaration,
-                        MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)),
+     { $$ = FACTORY()->MakeTaggedNode(N::kForwardDeclaration,
+                        FACTORY()->MakeTaggedNode(N::kQualifierList, $1, ForwardChildren($2)),
                         ExtendNode($3, $4)); }
   | class_declaration
     { $$ = std::move($1); }
@@ -1251,7 +1253,7 @@ class_item
   | covergroup_declaration
     { $$ = std::move($1); }
   | ';'
-    { $$ = MakeTaggedNode(N::kNullDeclaration, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNullDeclaration, $1); }
   | macro_call_or_item
     { $$ = std::move($1); }
   | preprocessor_balanced_class_items
@@ -1274,7 +1276,7 @@ interface_data_declaration
     { $$ = MakeDataDeclaration(
                qualifier_placeholder,
                MakeInstantiationBase(
-                   MakeTaggedNode(N::kInstantiationType, $1),
+                   FACTORY()->MakeTaggedNode(N::kInstantiationType, $1),
                    $2),
                $3); }
     /* interface instantiation: virtual type_if inst_if */
@@ -1285,7 +1287,7 @@ preprocessor_balanced_class_items
     preprocessor_elsif_class_items_opt
     preprocessor_else_class_item_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedClassItems,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedClassItems,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -1299,7 +1301,7 @@ preprocessor_elsif_class_items
   : preprocessor_elsif_class_items preprocessor_elsif_class_item
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_class_item
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_class_item
   : preprocessor_elsif_header class_items_opt
@@ -1313,7 +1315,7 @@ preprocessor_else_class_item_opt
   ;
 preprocessor_else_class_item
   : PP_else class_items_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 macro_call_or_item
@@ -1342,16 +1344,16 @@ class_item_qualifier_list
   : class_item_qualifier_list class_item_qualifier
     { $$ = ExtendNode($1, $2); }
   | class_item_qualifier
-    { $$ = MakeTaggedNode(N::kQualifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifierList, $1); }
   ;
 class_new
   : TK_new call_base
-    { $$ = MakeTaggedNode(N::kClassNew, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassNew, $1, $2); }
   | TK_new reference
-    { $$ = MakeTaggedNode(N::kClassNew, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassNew, $1, $2); }
     /* The LRM actually permits any expression at $2. */
   | TK_new
-    { $$ = MakeTaggedNode(N::kClassNew, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClassNew, $1); }
   /* TODO(fangism):
   | class_id TK_SCOPE_RES TK_new '(' argument_list_opt ')'
    */
@@ -1367,10 +1369,10 @@ class_new
 action_block
   : statement_or_null
     %prec less_than_TK_else
-    { $$ = MakeTaggedNode(N::kActionBlock, $1, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActionBlock, $1, nullptr); }
   | statement_or_null TK_else statement_or_null
-    { $$ = MakeTaggedNode(N::kActionBlock, $1,
-                          MakeTaggedNode(N::kElseClause, $2, MakeTaggedNode(N::kElseBody, $3))); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActionBlock, $1,
+                          FACTORY()->MakeTaggedNode(N::kElseClause, $2, FACTORY()->MakeTaggedNode(N::kElseBody, $3))); }
 
     /* original grammar rule:
      *   statement TK_else statement_or_null
@@ -1378,12 +1380,12 @@ action_block
      * can resolve the S/R conflict.
      */
   | TK_else statement_or_null
-    { $$ = MakeTaggedNode(N::kActionBlock, nullptr,
-                          MakeTaggedNode(N::kElseClause, $1, MakeTaggedNode(N::kElseBody, $2))); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActionBlock, nullptr,
+                          FACTORY()->MakeTaggedNode(N::kElseClause, $1, FACTORY()->MakeTaggedNode(N::kElseBody, $2))); }
   ;
 concurrent_assertion_item
   : block_identifier_opt concurrent_assertion_statement
-    { $$ = MakeTaggedNode(N::kAssertionItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssertionItem, $1, $2); }
   /* TODO(fangism):
    | checker_instantiation
    */
@@ -1404,71 +1406,71 @@ concurrent_assertion_statement
 assert_property_statement
   : TK_assert TK_property '(' property_spec ')' action_block
     { auto& node = SymbolCastToNode(*$6);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kAssertPropertyStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kAssertPropertyClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kAssertPropertyHeader,
                        $1, $2, MakeParenGroup($3, $4, $5)),
-                   MakeTaggedNode(N::kAssertPropertyBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kAssertPropertyBody, node[0])),
                node[1] /* else-clause */);
     }
   ;
 assume_property_statement
   : TK_assume TK_property '(' property_spec ')' action_block
     { auto& node = SymbolCastToNode(*$6);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kAssumePropertyStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kAssumePropertyClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kAssumePropertyHeader,
                        $1, $2, MakeParenGroup($3, $4, $5)),
-                   MakeTaggedNode(N::kAssumePropertyBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kAssumePropertyBody, node[0])),
                node[1] /* else-clause */);
     }
   ;
 cover_property_statement
   : TK_cover TK_property '(' property_spec ')' statement_or_null
     /* shaped like kIfClause */
-    { $$ = MakeTaggedNode(N::kCoverPropertyStatement,
-                          MakeTaggedNode(N::kCoverPropertyHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverPropertyStatement,
+                          FACTORY()->MakeTaggedNode(N::kCoverPropertyHeader,
                                          $1, $2, MakeParenGroup($3, $4, $5)),
-                          MakeTaggedNode(N::kCoverPropertyBody, $6)); }
+                          FACTORY()->MakeTaggedNode(N::kCoverPropertyBody, $6)); }
   ;
 expect_property_statement
   : TK_expect '(' property_spec ')' action_block
     { auto& node = SymbolCastToNode(*$5);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kExpectPropertyStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kExpectPropertyClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kExpectPropertyHeader,
                        $1, MakeParenGroup($2, $3, $4)),
-                   MakeTaggedNode(N::kExpectPropertyBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kExpectPropertyBody, node[0])),
                node[1] /* else-clause */);
     }
   ;
 cover_sequence_statement
   : TK_cover TK_sequence '(' sequence_spec ')' statement_or_null
     /* shaped like kIfClause */
-    { $$ = MakeTaggedNode(N::kCoverSequenceStatement,
-                          MakeTaggedNode(N::kCoverSequenceHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverSequenceStatement,
+                          FACTORY()->MakeTaggedNode(N::kCoverSequenceHeader,
                                          $1, $2, MakeParenGroup($3, $4, $5)),
-                          MakeTaggedNode(N::kCoverSequenceBody, $6)); }
+                          FACTORY()->MakeTaggedNode(N::kCoverSequenceBody, $6)); }
 
   ;
 restrict_property_statement
   : TK_restrict TK_property '(' property_spec ')' ';'
-    { $$ = MakeTaggedNode(N::kRestrictPropertyStatement,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRestrictPropertyStatement,
                           $1, $2, MakeParenGroup($3, $4, $5), $6); }
   ;
 
 deferred_immediate_assertion_item
   : block_identifier_opt deferred_immediate_assertion_statement
-    { $$ = MakeTaggedNode(N::kAssertionItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssertionItem, $1, $2); }
   ;
 immediate_assertion_statement
   : simple_immediate_assertion_statement
@@ -1480,77 +1482,77 @@ simple_immediate_assertion_statement
   : TK_assert '(' expression ')' action_block
   /* shaped similarly to kConditionalStatement */
     { auto& node = SymbolCastToNode(*$5);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kAssertionStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kAssertionClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kAssertionHeader,
                        $1, nullptr, MakeParenGroup($2, $3, $4)),
-                   MakeTaggedNode(N::kAssertionBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kAssertionBody, node[0])),
                node[1] /* else-clause */);
     }
   | TK_assume '(' expression ')' action_block
   /* shaped similarly to kConditionalStatement */
     { auto& node = SymbolCastToNode(*$5);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kAssumeStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kAssumeClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kAssumeHeader,
                        $1, nullptr, MakeParenGroup($2, $3, $4)),
-                   MakeTaggedNode(N::kAssumeBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kAssumeBody, node[0])),
                node[1] /* else-clause */);
     }
   | TK_cover '(' expression ')' statement_or_null
   /* shaped similarly to kIfClause, doesn't have an else-clause */
-    { $$ = MakeTaggedNode(N::kCoverStatement,
-                          MakeTaggedNode(N::kCoverHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverStatement,
+                          FACTORY()->MakeTaggedNode(N::kCoverHeader,
                                          $1, nullptr,
                                          MakeParenGroup($2, $3, $4)),
-                          MakeTaggedNode(N::kCoverBody, $5)); }
+                          FACTORY()->MakeTaggedNode(N::kCoverBody, $5)); }
   ;
 deferred_immediate_assertion_statement
   : TK_assert final_or_zero '(' expression ')' action_block
   /* shaped similarly to kConditionalStatement */
     { auto& node = SymbolCastToNode(*$6);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kAssertionStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kAssertionClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kAssertionHeader,
                        $1, $2, MakeParenGroup($3, $4, $5)),
-                   MakeTaggedNode(N::kAssertionBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kAssertionBody, node[0])),
                node[1] /* else-clause */);
     }
   | TK_assume final_or_zero '(' expression ')' action_block
   /* shaped similarly to kConditionalStatement */
     { auto& node = SymbolCastToNode(*$6);
-      $$ = MakeTaggedNode(
+      $$ = FACTORY()->MakeTaggedNode(
                N::kAssumeStatement,
-               MakeTaggedNode(  /* like an if-clause */
+               FACTORY()->MakeTaggedNode(  /* like an if-clause */
                    N::kAssumeClause,
-                   MakeTaggedNode(  /* like an if-header */
+                   FACTORY()->MakeTaggedNode(  /* like an if-header */
                        N::kAssumeHeader,
                        $1, $2, MakeParenGroup($3, $4, $5)),
-                   MakeTaggedNode(N::kAssumeBody, node[0])),
+                   FACTORY()->MakeTaggedNode(N::kAssumeBody, node[0])),
                node[1] /* else-clause */);
     }
   | TK_cover final_or_zero '(' expression ')' statement_or_null
   /* shaped similarly to kIfClause, doesn't have an else-clause */
-    { $$ = MakeTaggedNode(N::kCoverStatement,
-                          MakeTaggedNode(N::kCoverHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverStatement,
+                          FACTORY()->MakeTaggedNode(N::kCoverHeader,
                                          $1, $2,
                                          MakeParenGroup($3, $4, $5)),
-                          MakeTaggedNode(N::kCoverBody, $6)); }
+                          FACTORY()->MakeTaggedNode(N::kCoverBody, $6)); }
   ;
 final_or_zero
   : TK_final
     { $$ = std::move($1); }
   | '#' TK_DecNumber
-    { $$ = MakeTaggedNode(N::kPoundZero, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPoundZero, $1, $2); }
     /* $2 must be 0 */
   ;
 
@@ -1572,27 +1574,27 @@ constraint_primary_list
   : constraint_primary_list ',' constraint_primary
     { $$ = ExtendNode($1, $2, $3); }
   | constraint_primary
-    { $$ = MakeTaggedNode(N::kConstraintPrimaryList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintPrimaryList, $1); }
   ;
 constraint_block_item_list
   : constraint_block_item_list constraint_block_item
     { $$ = ExtendNode($1, $2); }
   | constraint_block_item
-    { $$ = MakeTaggedNode(N::kConstraintBlockItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintBlockItemList, $1); }
   ;
 constraint_block_item_list_opt
   : constraint_block_item_list
     { $$ = std::move($1); }
   | /* empty */
     /* create empty list */
-    { $$ = MakeTaggedNode(N::kConstraintBlockItemList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintBlockItemList); }
   ;
 preprocessor_balanced_constraint_block_item
   : preprocessor_if_header constraint_block_item_list_opt
     preprocessor_elsif_constraint_block_items_opt
     preprocessor_else_constraint_block_item_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedConstraintBlockItem,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedConstraintBlockItem,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -1606,7 +1608,7 @@ preprocessor_elsif_constraint_block_items
   : preprocessor_elsif_constraint_block_items preprocessor_elsif_constraint_block_item
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_constraint_block_item
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_constraint_block_item
   : preprocessor_elsif_header constraint_block_item_list_opt
@@ -1620,7 +1622,7 @@ preprocessor_else_constraint_block_item_opt
   ;
 preprocessor_else_constraint_block_item
   : PP_else constraint_block_item_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 constraint_declaration_package_item
@@ -1628,39 +1630,39 @@ constraint_declaration_package_item
    * and allows the declared identifier to be scope-qualified.
    */
   : TK_constraint class_id constraint_block
-    { $$ = MakeTaggedNode(N::kConstraintDeclaration, nullptr, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintDeclaration, nullptr, $1, $2, $3); }
 
     /* $2 is allowed to be scope-qualified for out-of-line definitions */
   ;
 constraint_declaration
   : TK_static_opt TK_constraint GenericIdentifier constraint_block
-    { $$ = MakeTaggedNode(N::kConstraintDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintDeclaration, $1, $2, $3, $4); }
   ;
 constraint_expression_no_preprocessor
   /* Ends with ';' or '}' */
   : TK_soft expression_or_dist ';'
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, $2, $3);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, $2, $3);}
   | expression_or_dist ';'
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, $2);}
   | expression TK_CONSTRAINT_IMPLIES constraint_set
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, $2, $3);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, $2, $3);}
   | TK_if '(' expression ')' constraint_set
     %prec less_than_TK_else
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, MakeParenGroup($2, $3, $4), $5);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, MakeParenGroup($2, $3, $4), $5);}
   | TK_if '(' expression ')' constraint_set TK_else constraint_set
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, MakeParenGroup($2, $3, $4), $5, $6, $7);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, MakeParenGroup($2, $3, $4), $5, $6, $7);}
   | TK_foreach '(' reference ')' constraint_set
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, MakeParenGroup($2, $3, $4), $5);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, MakeParenGroup($2, $3, $4), $5);}
     /* TODO(fangism): $3 must end with the form: '[' loop_variables ']'
      * where loop_variables is a list of loop variable identifiers.
      * See note in variable_dimension nonterminal.
      */
   | uniqueness_constraint ';'
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, $2);}
   | TK_disable TK_soft constraint_primary ';'
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, $2, $3, $4);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, $2, $3, $4);}
   | TK_solve constraint_primary_list TK_before constraint_primary_list ';'
-    { $$ = MakeTaggedNode(N::kConstraintExpression, $1, $2, $3, $4, $5);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpression, $1, $2, $3, $4, $5);}
     /* solve within as a constraint_set items is an extension to the LRM
      * to allow solve statements inside foreach.
      */
@@ -1689,13 +1691,13 @@ constraint_primary
   ;
 uniqueness_constraint
   : TK_unique '{' open_range_list '}'
-    { $$ = MakeTaggedNode(N::kUniquenessConstraint, $1, MakeBraceGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUniquenessConstraint, $1, MakeBraceGroup($2, $3, $4)); }
   ;
 constraint_expression_list
   : constraint_expression_list constraint_expression
     { $$ = ExtendNode($1, $2); }
   | constraint_expression
-    { $$ = MakeTaggedNode(N::kConstraintExpressionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintExpressionList, $1); }
   ;
 constraint_expression_list_opt
   : constraint_expression_list
@@ -1709,7 +1711,7 @@ preprocessor_balanced_constraint_expressions
     preprocessor_elsif_constraint_expressions_opt
     preprocessor_else_constraint_expression_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedConstraintExpressions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedConstraintExpressions,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -1723,7 +1725,7 @@ preprocessor_elsif_constraint_expressions
   : preprocessor_elsif_constraint_expressions preprocessor_elsif_constraint_expression
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_constraint_expression
-    { $$ = MakeNode($1); }
+    { $$ = FACTORY()->MakeNode($1); }
   ;
 preprocessor_elsif_constraint_expression
   : preprocessor_elsif_header constraint_expression_list_opt
@@ -1737,12 +1739,12 @@ preprocessor_else_constraint_expression_opt
   ;
 preprocessor_else_constraint_expression
   : PP_else constraint_expression_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 constraint_prototype
   : TK_static_opt TK_constraint GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kConstraintPrototype, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstraintPrototype, $1, $2, $3, $4); }
   ;
 constraint_set
   : constraint_expression
@@ -1771,12 +1773,12 @@ data_declaration_base
     trailing_decl_assignment_opt ',' list_of_variable_decl_assignments ';'
     { /* re-shape subtree to pass onto MakeDataDeclaration */
       auto& node = SymbolCastToNode(*$1);
-      $$ = MakeNode(
+      $$ = FACTORY()->MakeNode(
                MakeInstantiationBase(
-                    MakeTaggedNode(N::kInstantiationType, node[0]),  /* data type */
+                    FACTORY()->MakeTaggedNode(N::kInstantiationType, node[0]),  /* data type */
             /* declaration assignment list is similar to instantiation list */
-                    MakeTaggedNode(N::kVariableDeclarationAssignmentList,
-                                   MakeTaggedNode(
+                    FACTORY()->MakeTaggedNode(N::kVariableDeclarationAssignmentList,
+                                   FACTORY()->MakeTaggedNode(
                                        N::kVariableDeclarationAssignment,
                                        node[1],  /* id */
                                        node[2],  /* unpacked dimensions */
@@ -1789,12 +1791,12 @@ data_declaration_base
     trailing_decl_assignment_opt ';'
     { /* re-shape subtree to pass onto MakeDataDeclaration */
       auto& node = SymbolCastToNode(*$1);
-      $$ = MakeNode(
+      $$ = FACTORY()->MakeNode(
                MakeInstantiationBase(
-                    MakeTaggedNode(N::kInstantiationType, node[0]),  /* data type */
+                    FACTORY()->MakeTaggedNode(N::kInstantiationType, node[0]),  /* data type */
             /* declaration assignment list is similar to instantiation list */
-                    MakeTaggedNode(N::kVariableDeclarationAssignmentList,
-                                   MakeTaggedNode(
+                    FACTORY()->MakeTaggedNode(N::kVariableDeclarationAssignmentList,
+                                   FACTORY()->MakeTaggedNode(
                                        N::kVariableDeclarationAssignment,
                                        node[1],  /* id */
                                        node[2],  /* unpacked dimensions */
@@ -1804,7 +1806,7 @@ data_declaration_base
   ;
 data_declaration_modifiers_opt
   : const_opt var_opt lifetime_opt
-    { $$ = MakeTaggedNode(N::kQualifierList, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2, $3); }
   ;
 data_declaration
   : data_declaration_modifiers_opt data_declaration_base
@@ -1822,25 +1824,25 @@ data_declaration
 data_type_primitive
   : data_type_primitive_scalar decl_dimensions_opt
     /* $2 is packed dimensions */
-    { $$ = MakeDataType($1, MakePackedDimensionsNode($2)); }
+    { $$ = MakeDataType($1, MakePackedDimensionsNode(param, $2)); }
   ;
 data_type_primitive_scalar
   : integer_vector_type signed_unsigned_opt
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1, $2); }
   | non_integer_type
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1); }
   | struct_data_type
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1); }
   | enum_data_type
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1); }
   | integer_atom_type signed_unsigned_opt
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1, $2); }
   | TK_chandle
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1); }
   | TK_string
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1); }
   | TK_event
-    { $$ = MakeTaggedNode(N::kDataTypePrimitive, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $1); }
   ;
 
   /* trailing optional decl_dimensions moved to rule: data_type */
@@ -1867,7 +1869,7 @@ data_type_base
 
 type_reference
   : TK_type '(' expression ')'
-    { $$ = MakeTaggedNode(N::kTypeReference, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTypeReference, $1, MakeParenGroup($2, $3, $4)); }
   /* TODO(fangism): some data types are not covered
    | TK_type '(' data_type ')'
    */
@@ -1883,11 +1885,11 @@ data_type
 
 interface_type
   : TK_virtual interface_opt GenericIdentifier parameter_value_opt
-    { $$ = MakeTaggedNode(N::kInterfaceType, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInterfaceType, $1, $2, $3, $4); }
     /* $3 is the interface_identifier */
   | TK_virtual interface_opt GenericIdentifier parameter_value_opt
     '.' member_name
-    { $$ = MakeTaggedNode(N::kInterfaceType, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInterfaceType, $1, $2, $3, $4, $5, $6); }
 
     /* $5 is the modport_identifier (optional) */
   ;
@@ -1929,55 +1931,55 @@ type_identifier_or_implicit_followed_by_id_and_dimensions_opt
   // : GenericIdentifier delay3_or_drive_opt GenericIdentifier { $$ = std::move($3); }
   : GenericIdentifier delay3 decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
-                          MakeDataType(nullptr, MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$1)), $2,
-                                       MakePackedDimensionsNode($3)),
-                          $4, MakeUnpackedDimensionsNode($5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+                          MakeDataType(nullptr, FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$1)), $2,
+                                       MakePackedDimensionsNode(param, $3)),
+                          $4, MakeUnpackedDimensionsNode(param, $5)); }
   | GenericIdentifier drive_strength decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
-                          MakeDataType(nullptr, MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$1)), $2,
-                                       MakePackedDimensionsNode($3)),
-                          $4, MakeUnpackedDimensionsNode($5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+                          MakeDataType(nullptr, FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$1)), $2,
+                                       MakePackedDimensionsNode(param, $3)),
+                          $4, MakeUnpackedDimensionsNode(param, $5)); }
   | GenericIdentifier decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
-                          MakeDataType(nullptr, MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$1)), nullptr,
-                                       MakePackedDimensionsNode($2)),
-                          $3, MakeUnpackedDimensionsNode($4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+                          MakeDataType(nullptr, FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$1)), nullptr,
+                                       MakePackedDimensionsNode(param, $2)),
+                          $3, MakeUnpackedDimensionsNode(param, $4)); }
   | GenericIdentifier scope_or_if_res GenericIdentifier
     delay3_or_drive_opt decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     /* TODO(fangism): separate scope_or_if_res into different node tags cases,
      * one for TK_SCOPE (qualified_id), one for '.' (interface port).
      */
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(nullptr,
-                                       MakeTaggedNode(N::kInterfacePortHeader,
+                                       FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1, $2, $3),
                                        $4,
-                                       MakePackedDimensionsNode($5)),
-                          $6, MakeUnpackedDimensionsNode($7)); }
+                                       MakePackedDimensionsNode(param, $5)),
+                          $6, MakeUnpackedDimensionsNode(param, $7)); }
   // | delay3_or_drive_opt GenericIdentifier { $$ = std::move($2); }
   | /* implicit type */ /* decl_dimensions_opt */
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(nullptr, nullptr, nullptr,
-                                       MakeTaggedNode(N::kPackedDimensions,
+                                       FACTORY()->MakeTaggedNode(N::kPackedDimensions,
                                                       nullptr)),
-                          $1, MakeUnpackedDimensionsNode($2)); }
+                          $1, MakeUnpackedDimensionsNode(param, $2)); }
   | /* implicit type */ delay3 decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(nullptr, nullptr, $1,
-                                       MakePackedDimensionsNode($2)),
-                          $3, MakeUnpackedDimensionsNode($4)); }
+                                       MakePackedDimensionsNode(param, $2)),
+                          $3, MakeUnpackedDimensionsNode(param, $4)); }
   | /* implicit type */ drive_strength decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(nullptr, nullptr, $1,
-                                         MakePackedDimensionsNode($2)),
-                          $3, MakeUnpackedDimensionsNode($4)); }
+                                         MakePackedDimensionsNode(param, $2)),
+                          $3, MakeUnpackedDimensionsNode(param, $4)); }
   ;
 
 /* with optional decl_dimensions before and after */
@@ -1987,31 +1989,31 @@ type_identifier_or_implicit_followed_by_id_and_dimensions_opt
 type_identifier_followed_by_id
   : unqualified_id decl_dimensions_opt GenericIdentifier
     { $$ = MakeTypeIdTuple(
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot,$1), MakePackedDimensionsNode($2)),
-                          MakeTaggedNode(N::kUnqualifiedId, $3)); }
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot,$1), MakePackedDimensionsNode(param, $2)),
+                          FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $3)); }
     /* $1 is type */
   | qualified_id decl_dimensions_opt GenericIdentifier
     { $$ = MakeTypeIdTuple(
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot,$1), MakePackedDimensionsNode($2)),
-                          MakeTaggedNode(N::kUnqualifiedId, $3)); }
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot,$1), MakePackedDimensionsNode(param, $2)),
+                          FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $3)); }
   /* The following are 'interface_port_header' from the LRM: */
   | unqualified_id '.' member_name decl_dimensions_opt GenericIdentifier
     { $$ = MakeTypeIdTuple(
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1, $2, $3),
-                                       MakePackedDimensionsNode($4)),
-                          MakeTaggedNode(N::kUnqualifiedId, $5)); }
+                                       MakePackedDimensionsNode(param, $4)),
+                          FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $5)); }
     /* $1..$3 is interface modport */
   | TK_interface '.' member_name GenericIdentifier
     { $$ = MakeTypeIdTuple(
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1, $2, $3), nullptr),
-                          MakeTaggedNode(N::kUnqualifiedId, $4)); }
+                          FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $4)); }
   | TK_interface GenericIdentifier
     { $$ = MakeTypeIdTuple(
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1), nullptr),
-                          MakeTaggedNode(N::kUnqualifiedId, $2)); }
+                          FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $2)); }
   ;
 
 
@@ -2020,15 +2022,15 @@ type_identifier_followed_by_id
 type_identifier_or_implicit_basic_followed_by_id
   // TODO(jeremycs): standardize this family of rules
   : unqualified_id GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot,$1)), $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot,$1)), $2); }
     /* $1 is type */
   | qualified_id GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot,$1)), $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot,$1)), $2); }
     /* $1 is type */
   | /* implicit type */ unqualified_id
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
                           MakeDataType(nullptr), $1); }
   /* This rule really wants to be (implicit type):
    *   GenericIdentifier
@@ -2038,19 +2040,19 @@ type_identifier_or_implicit_basic_followed_by_id
    */
   /* The following are 'interface_port_header' from the LRM: */
   | unqualified_id '.' member_name GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1, $2, $3)),
                           $4); }
     /* $1..$3 is interface.modport */
   | TK_interface '.' member_name GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1, $2, $3)),
                           $4); }
   | TK_interface GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1)),
                           $2); }
   ;
@@ -2063,31 +2065,31 @@ type_identifier_or_implicit_basic_followed_by_id_and_dimensions_opt
   : qualified_id decl_dimensions_opt
     class_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot, $1), MakePackedDimensionsNode($2)),
-                          $3, MakeUnpackedDimensionsNode($4)); }
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot, $1), MakePackedDimensionsNode(param, $2)),
+                          $3, MakeUnpackedDimensionsNode(param, $4)); }
     /* $1 is type */
   | unqualified_id decl_dimensions_opt
     class_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot, $1), MakePackedDimensionsNode($2)),
-                          $3, MakeUnpackedDimensionsNode($4)); }
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot, $1), MakePackedDimensionsNode(param, $2)),
+                          $3, MakeUnpackedDimensionsNode(param, $4)); }
   | unqualified_id '.' member_name decl_dimensions_opt
     class_id decl_dimensions_opt
     /* This looks like reference_or_call */
     { $$ = MakeTypeIdDimensionsTuple(
-                          MakeDataType(MakeTaggedNode(N::kInterfacePortHeader,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kInterfacePortHeader,
                                                       $1, $2, $3),
-                                       MakePackedDimensionsNode($4)),
-                          $5, MakeUnpackedDimensionsNode($6)); }
+                                       MakePackedDimensionsNode(param, $4)),
+                          $5, MakeUnpackedDimensionsNode(param, $6)); }
     /* $1..$3 is interface.modport */
   | /* implicit type */ unqualified_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
                           MakeDataType(nullptr),
-                          $1, MakeUnpackedDimensionsNode($2)); }
+                          $1, MakeUnpackedDimensionsNode(param, $2)); }
   | /* implicit type */ qualified_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
                           MakeDataType(nullptr),
-                          $1, MakeUnpackedDimensionsNode($2)); }
+                          $1, MakeUnpackedDimensionsNode(param, $2)); }
   /* This rule really wants to be (implicit type):
    *   GenericIdentifier decl_dimensions_opt
    * However, since (GenericIdentifier decl_dimensions_opt) is
@@ -2102,23 +2104,23 @@ type_identifier_or_implicit_basic_followed_by_id_and_dimensions_opt
 
 data_type_or_implicit
   : decl_dimensions delay3_or_drive_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(nullptr,
-                                       MakePackedDimensionsNode($1)),
+                                       MakePackedDimensionsNode(param, $1)),
                           $2, nullptr, nullptr); }
   | signing decl_dimensions_opt delay3_or_drive_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
-                          MakeDataType($1, MakePackedDimensionsNode($2)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+                          MakeDataType($1, MakePackedDimensionsNode(param, $2)),
                           $3, nullptr, nullptr); }
   | GenericIdentifier decl_dimensions_opt delay3_or_drive_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
-                          MakeDataType(MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$1)), MakePackedDimensionsNode($2)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$1)), MakePackedDimensionsNode(param, $2)),
                           $3, nullptr, nullptr); }
   | GenericIdentifier TK_SCOPE_RES GenericIdentifier decl_dimensions_opt delay3_or_drive_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(
-                              MakeTaggedNode(N::kLocalRoot, MakeTaggedNode(N::kQualifiedId, $1, $2, $3)),
-                              MakePackedDimensionsNode($4)),
+                              FACTORY()->MakeTaggedNode(N::kLocalRoot, FACTORY()->MakeTaggedNode(N::kQualifiedId, $1, $2, $3)),
+                              MakePackedDimensionsNode(param, $4)),
                           $5, nullptr, nullptr); }
   /* want to use just 'class_id' to cover all qualified and unqualified types,
    * including parameterized types, but encounter grammar conflicts
@@ -2128,50 +2130,50 @@ data_type_or_implicit
 /* For declaring net_type or function_declaration return type, followed by declared name */
 data_type_or_implicit_followed_by_id_and_dimensions_opt
   : data_type_primitive GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           $1,
                           nullptr /* delay3_or_drive_opt */,
-                          $2, MakeUnpackedDimensionsNode($3)); }
+                          $2, MakeUnpackedDimensionsNode(param, $3)); }
     /* $1 is type, including optional packed dimensions */
   /* allows optional delay3 or drive_strength: */
   | type_identifier_or_implicit_followed_by_id_and_dimensions_opt
     { $$ = std::move($1); }
   | signing decl_dimensions_opt delay3_or_drive_opt
     GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
-                          MakeDataType($1, MakePackedDimensionsNode($2)),
-                          MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$3)), $4,
-                          MakeUnpackedDimensionsNode($5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+                          MakeDataType($1, MakePackedDimensionsNode(param, $2)),
+                          FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$3)), $4,
+                          MakeUnpackedDimensionsNode(param, $5)); }
   | decl_dimensions delay3_or_drive_opt GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType(nullptr,
-                                       MakePackedDimensionsNode($1)),
-                          $2, MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$3)),
-                          MakeUnpackedDimensionsNode($4)); }
+                                       MakePackedDimensionsNode(param, $1)),
+                          $2, FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$3)),
+                          MakeUnpackedDimensionsNode(param, $4)); }
   | TK_void GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitIdDimensions,
                           MakeDataType($1),
-                          nullptr /* delay3_or_drive_opt */, MakeTaggedNode(N::kLocalRoot,MakeTaggedNode(N::kUnqualifiedId,$2)),
-                          MakeUnpackedDimensionsNode($3)); }
+                          nullptr /* delay3_or_drive_opt */, FACTORY()->MakeTaggedNode(N::kLocalRoot,FACTORY()->MakeTaggedNode(N::kUnqualifiedId,$2)),
+                          MakeUnpackedDimensionsNode(param, $3)); }
   ;
 
 data_type_or_implicit_basic_followed_by_id
   : data_type_primitive GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   /* forbids optional delay3 or drive_strength: */
   | type_identifier_or_implicit_basic_followed_by_id
     { $$ = std::move($1); }
   | signing decl_dimensions_opt GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
-                          MakeDataType($1, MakePackedDimensionsNode($2)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
+                          MakeDataType($1, MakePackedDimensionsNode(param, $2)),
                           $3); }
   | decl_dimensions GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
                           MakeDataType(nullptr,
-                                       MakePackedDimensionsNode($1)),
+                                       MakePackedDimensionsNode(param, $1)),
                           $2); }
   | TK_void GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId,
                           MakeDataType($1), $2); }
   ;
 
@@ -2191,22 +2193,22 @@ data_type_or_implicit_basic_followed_by_id
  **/
 data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
   : data_type_primitive class_id decl_dimensions_opt
-    { $$ = MakeTypeIdDimensionsTuple($1, $2, MakeUnpackedDimensionsNode($3)); }
+    { $$ = MakeTypeIdDimensionsTuple($1, $2, MakeUnpackedDimensionsNode(param, $3)); }
   /* forbids optional delay3 or drive_strength: */
   | type_identifier_or_implicit_basic_followed_by_id_and_dimensions_opt
     { $$ = std::move($1); }
   | signing decl_dimensions_opt class_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
-                          MakeDataType($1, MakePackedDimensionsNode($2)),
-                          $3, MakeUnpackedDimensionsNode($4)); }
+                          MakeDataType($1, MakePackedDimensionsNode(param, $2)),
+                          $3, MakeUnpackedDimensionsNode(param, $4)); }
   | decl_dimensions class_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
-                          MakeDataType(nullptr, MakePackedDimensionsNode($1)),
-                          $2, MakeUnpackedDimensionsNode($3)); }
+                          MakeDataType(nullptr, MakePackedDimensionsNode(param, $1)),
+                          $2, MakeUnpackedDimensionsNode(param, $3)); }
   | TK_void class_id decl_dimensions_opt
     { $$ = MakeTypeIdDimensionsTuple(
                           MakeDataType($1),
-                          $2, MakeUnpackedDimensionsNode($3)); }
+                          $2, MakeUnpackedDimensionsNode(param, $3)); }
   ;
 
 description
@@ -2226,8 +2228,8 @@ description
     { $$ = std::move($1); }
   | TKK_attribute '(' GenericIdentifier ','
     TK_StringLiteral ',' TK_StringLiteral ')'
-    { $$ = MakeTaggedNode(N::kAttribute, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7),
+    { $$ = FACTORY()->MakeTaggedNode(N::kAttribute, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7),
                                          $8)); }
   | bind_directive
     { $$ = std::move($1); }
@@ -2249,14 +2251,14 @@ description_list_opt
   ;
 description_list
   : description
-    { $$ = MakeTaggedNode(N::kDescriptionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDescriptionList, $1); }
   | description_list description
     { $$ = ExtendNode($1, $2); }
   ;
 
 library_source
   : PD_LIBRARY_SYNTAX_BEGIN library_description_list_opt PD_LIBRARY_SYNTAX_END
-    { $$ = MakeNode($1, $2, $3); }
+    { $$ = FACTORY()->MakeNode($1, $2, $3); }
   ;
 library_description_list_opt
   : library_description_list
@@ -2268,7 +2270,7 @@ library_description_list
   : library_description_list library_description
     { $$ = ExtendNode($1, $2); }
   | library_description
-    { $$ = MakeTaggedNode(N::kLibraryDescriptionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLibraryDescriptionList, $1); }
   ;
 library_description
   : library_declaration
@@ -2286,7 +2288,7 @@ preprocessor_balanced_description_items
     preprocessor_elsif_description_items_opt
     preprocessor_else_description_item_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedDescriptionItems,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedDescriptionItems,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -2300,7 +2302,7 @@ preprocessor_elsif_description_items
   : preprocessor_elsif_description_items preprocessor_elsif_description_item
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_description_item
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_description_item
   : preprocessor_elsif_header description_list_opt
@@ -2314,20 +2316,20 @@ preprocessor_else_description_item_opt
   ;
 preprocessor_else_description_item
   : PP_else description_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 endnew_opt
   : ':' TK_new
-    { $$ = MakeTaggedNode(N::kEndNew, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEndNew, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
 dynamic_array_new
   : TK_new '[' expression ']'
-    { $$ = MakeTaggedNode(N::kDynamicArrayNew, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDynamicArrayNew, $1,
                           MakeBracketGroup($2, $3, $4), nullptr); }
   | TK_new '[' expression ']' '(' expression ')'
-    { $$ = MakeTaggedNode(N::kDynamicArrayNew, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDynamicArrayNew, $1,
                           MakeBracketGroup($2, $3, $4),
                           MakeParenGroup($5, $6, $7)); }
 
@@ -2342,7 +2344,7 @@ for_step
   : for_step ',' assignment_statement
     { $$ = ExtendNode($1, $2, $3); }
   | assignment_statement
-    { $$ = MakeTaggedNode(N::kForStepList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForStepList, $1); }
   ;
 /* LRM: this is named for_step_assignment */
 assignment_statement
@@ -2354,7 +2356,7 @@ assignment_statement
   ;
 assignment_statement_no_expr
   : lpvalue '=' expression
-    { $$ = MakeTaggedNode(N::kNetVariableAssignment, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetVariableAssignment, $1, $2, $3); }
   | assign_modify_statement
     { $$ = std::move($1); }
   ;
@@ -2365,7 +2367,7 @@ function_prototype
     /* LRM: data_type_or_implicit_or_void function_identifier */
     function_return_type_and_id
     tf_port_list_paren_opt
-    { $$ = MakeTaggedNode(N::kFunctionPrototype,
+    { $$ = FACTORY()->MakeTaggedNode(N::kFunctionPrototype,
                           MakeFunctionHeader(qualifier_placeholder,
                                              $1, $2, ForwardChildren($3), $4)); }
     /* Without port list, is suitable for export declarations. */
@@ -2412,11 +2414,11 @@ function_declaration
 
 endfunction_label_opt
   : label_opt
-    { $$ = $1 ? MakeTaggedNode(N::kFunctionEndlabel, ForwardChildren($1))
+    { $$ = $1 ? FACTORY()->MakeTaggedNode(N::kFunctionEndlabel, ForwardChildren($1))
               : nullptr; }
   | ':' TK_new
     /* for constructors */
-    { $$ = MakeTaggedNode(N::kFunctionEndlabel, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFunctionEndlabel, $1, $2); }
   ;
 implicit_class_handle
   : TK_this
@@ -2428,13 +2430,13 @@ implicit_class_handle
 /* TODO(jeremycs): Fill this out */
 inc_or_dec_expression
   : TK_INCR lpvalue /* %prec UNARY_PREC */
-    { $$ = MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
   | lpvalue TK_INCR /* %prec UNARY_PREC */
-    { $$ = MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
   | TK_DECR lpvalue /* %prec UNARY_PREC */
-    { $$ = MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
   | lpvalue TK_DECR /* %prec UNARY_PREC */
-    { $$ = MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIncrementDecrementExpression, $1, $2); }
   ;
 integer_atom_type
   : TK_byte
@@ -2468,36 +2470,36 @@ join_keyword
   ;
 jump_statement
   : TK_break ';'
-    { $$ = MakeTaggedNode(N::kJumpStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kJumpStatement, $1, $2); }
   | TK_continue ';'
-    { $$ = MakeTaggedNode(N::kJumpStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kJumpStatement, $1, $2); }
   | TK_return ';'
-    { $$ = MakeTaggedNode(N::kJumpStatement, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kJumpStatement, $1, nullptr, $2); }
   | TK_return expression ';'
-    { $$ = MakeTaggedNode(N::kJumpStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kJumpStatement, $1, $2, $3); }
   ;
 loop_statement
   : TK_for '(' for_initialization_opt ';' expression_opt ';' for_step_opt ')'
     statement_or_null
-      { $$ = MakeTaggedNode(N::kForLoopStatement,
-          MakeTaggedNode(N::kLoopHeader, $1,
+      { $$ = FACTORY()->MakeTaggedNode(N::kForLoopStatement,
+          FACTORY()->MakeTaggedNode(N::kLoopHeader, $1,
               MakeParenGroup($2,
-                  MakeTaggedNode(N::kForSpec,
+                  FACTORY()->MakeTaggedNode(N::kForSpec,
                       $3, $4,
-                      MakeTaggedNode(N::kForCondition, $5),
+                      FACTORY()->MakeTaggedNode(N::kForCondition, $5),
                       $6, $7),
               $8)),
           $9); }
   | TK_forever statement_or_null
-    { $$ = MakeTaggedNode(N::kForeverLoopStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForeverLoopStatement, $1, $2); }
   | repeat_control statement_or_null
-    { $$ = MakeTaggedNode(N::kRepeatLoopStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRepeatLoopStatement, $1, $2); }
   | TK_while '(' expression ')' statement_or_null
-    { $$ = MakeTaggedNode(N::kWhileLoopStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kWhileLoopStatement, $1, $2, $3, $4, $5); }
   | TK_do statement_or_null TK_while '(' expression ')' ';'
-    { $$ = MakeTaggedNode(N::kDoWhileLoopStatement, $1, $2, $3, $4, $5, $6, $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDoWhileLoopStatement, $1, $2, $3, $4, $5, $6, $7); }
   | TK_foreach '(' reference ')' statement_or_null
-    { $$ = MakeTaggedNode(N::kForeachLoopStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForeachLoopStatement, $1, $2, $3, $4, $5); }
     /* TODO(fangism): $3 must end with the form: '[' loop_variables ']' .
      * where loop_variables is a list of loop variable identifiers.
      * See note in variable_dimension nonterminal.
@@ -2513,29 +2515,29 @@ for_initialization
   : for_initialization ',' for_init_decl_or_assign
     { $$ = ExtendNode($1, $2, $3); }
   | for_init_decl_or_assign
-    { $$ = MakeTaggedNode(N::kForInitializationList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForInitializationList, $1); }
   ;
 for_init_decl_or_assign
   : lpvalue '=' expression
-    { $$ = MakeTaggedNode(N::kForInitialization, nullptr, nullptr, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForInitialization, nullptr, nullptr, $1, $2, $3); }
   | data_type GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kForInitialization, nullptr, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForInitialization, nullptr, $1, $2, $3, $4); }
   | TK_var data_type GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kForInitialization, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kForInitialization, $1, $2, $3, $4, $5); }
   ;
 
 /* TODO(fangism): collect list of fields/variables to report. */
 list_of_variable_decl_assignments
   : variable_decl_assignment
-    { $$ = MakeTaggedNode(N::kVariableDeclarationAssignmentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kVariableDeclarationAssignmentList, $1); }
   | list_of_variable_decl_assignments ',' variable_decl_assignment
     { $$ = ExtendNode($1, $2, $3); }
   ;
 variable_decl_assignment
   /* similar to gate_instance_or_register_variable */
   : GenericIdentifier decl_dimensions_opt trailing_decl_assignment_opt
-    { $$ = MakeTaggedNode(N::kVariableDeclarationAssignment, $1,
-                          MakeUnpackedDimensionsNode($2), $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kVariableDeclarationAssignment, $1,
+                          MakeUnpackedDimensionsNode(param, $2), $3); }
     /* TODO(fangism): $2 must start with unsized dimensions '[' ']'
      *   for dynamic_array_new.
      */
@@ -2550,11 +2552,11 @@ trailing_decl_assignment_opt
 trailing_decl_assignment
   /* similar to trailing_assign */
   : '=' dynamic_array_new
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2); }
   | '=' expression
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2); }
   | '=' class_new
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2); }
   /* TODO(fangism): allow [ class_id "::" ] class scope before 'new' */
   ;
 method_qualifier_list_opt
@@ -2567,14 +2569,14 @@ method_qualifier_list
   : method_qualifier_list method_qualifier
     { $$ = ExtendNode($1, $2); }
   | method_qualifier
-    { $$ = MakeTaggedNode(N::kQualifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifierList, $1); }
   ;
 method_property_qualifier_list_not_starting_with_virtual
   : method_property_qualifier_list_not_starting_with_virtual
     method_property_qualifier
     { $$ = ExtendNode($1, $2); }
   | property_qualifier  /* excludes TK_virtual */
-    { $$ = MakeTaggedNode(N::kQualifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifierList, $1); }
   ;
 method_qualifier
   : TK_virtual
@@ -2596,17 +2598,17 @@ method_property_qualifier
 
 modport_declaration
   : TK_modport modport_item_list ';'
-    { $$ = MakeTaggedNode(N::kModportDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModportDeclaration, $1, $2, $3); }
   ;
 modport_item_list
   : modport_item
-    { $$ = MakeTaggedNode(N::kModportItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModportItemList, $1); }
   | modport_item_list ',' modport_item
     { $$ = ExtendNode($1, $2, $3); }
   ;
 modport_item
   : GenericIdentifier '(' modport_ports_list ')'
-    { $$ = MakeTaggedNode(N::kModportItem, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModportItem, $1, MakeParenGroup($2, $3, $4)); }
   ;
 modport_ports_list
   /* This is a list of modport_ports_declaration, whose rule would normally
@@ -2671,9 +2673,9 @@ dpi_export_item
    * TK_export dpi_spec_string { GenericIdentifier '=' }_opt modport_tf_port ';'
    */
   : TK_export dpi_spec_string GenericIdentifier '=' modport_tf_port ';'
-    { $$ = MakeTaggedNode(N::kDPIExportItem, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDPIExportItem, $1, $2, $3, $4, $5, $6); }
   | TK_export dpi_spec_string modport_tf_port ';'
-    { $$ = MakeTaggedNode(N::kDPIExportItem, $1, $2, nullptr, nullptr, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDPIExportItem, $1, $2, nullptr, nullptr, $3, $4); }
   ;
 import_export
   : TK_export
@@ -2705,23 +2707,23 @@ modport_simple_ports_declaration_trailing_comma
   : modport_simple_ports_declaration_last ','
     /* At this point, we don't know whether the comma is followed by
        a keyword or another continued declaration.  Return a 2-tuple.  */
-    { $$ = MakeNode($1, $2); }
+    { $$ = FACTORY()->MakeNode($1, $2); }
   ;
 modport_tf_ports_declaration_trailing_comma
   : modport_tf_ports_declaration_last ','
-    { $$ = MakeNode($1, $2); }  /* Return a 2-tuple. */
+    { $$ = FACTORY()->MakeNode($1, $2); }  /* Return a 2-tuple. */
   ;
 modport_clocking_declaration_trailing_comma
   : modport_clocking_declaration_last ','
-    { $$ = MakeNode($1, $2); }  /* Return a 2-tuple. */
+    { $$ = FACTORY()->MakeNode($1, $2); }  /* Return a 2-tuple. */
   ;
 modport_tf_ports_declaration_begin
   : import_export
-    { $$ = MakeTaggedNode(N::kModportPortList,
-                          MakeTaggedNode(N::kModportTFPortsDeclaration, $1)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModportPortList,
+                          FACTORY()->MakeTaggedNode(N::kModportTFPortsDeclaration, $1)); }
   | modport_ports_declaration_trailing_comma import_export
     { $$ = ExtendFirstSublist(
-          $1, MakeTaggedNode(N::kModportTFPortsDeclaration, $2));
+          $1, FACTORY()->MakeTaggedNode(N::kModportTFPortsDeclaration, $2));
     }
   ;
 modport_tf_ports_declaration_last
@@ -2732,12 +2734,12 @@ modport_tf_ports_declaration_last
   ;
 modport_clocking_declaration_begin
   : TK_clocking
-    { $$ = MakeTaggedNode(
+    { $$ = FACTORY()->MakeTaggedNode(
         N::kModportPortList,
-        MakeTaggedNode(N::kModportClockingPortsDeclaration, $1)); }
+        FACTORY()->MakeTaggedNode(N::kModportClockingPortsDeclaration, $1)); }
   | modport_ports_declaration_trailing_comma TK_clocking
     { $$ = ExtendFirstSublist(
-          $1, MakeTaggedNode(N::kModportClockingPortsDeclaration, $2));
+          $1, FACTORY()->MakeTaggedNode(N::kModportClockingPortsDeclaration, $2));
     }
   ;
 modport_clocking_declaration_last
@@ -2750,12 +2752,12 @@ modport_clocking_declaration_last
   ;
 modport_simple_ports_declaration_begin
   : port_direction
-    { $$ = MakeTaggedNode(
+    { $$ = FACTORY()->MakeTaggedNode(
           N::kModportPortList,
-          MakeTaggedNode(N::kModportSimplePortsDeclaration, $1)); }
+          FACTORY()->MakeTaggedNode(N::kModportSimplePortsDeclaration, $1)); }
   | modport_ports_declaration_trailing_comma port_direction
     { $$ = ExtendFirstSublist(
-          $1, MakeTaggedNode(N::kModportSimplePortsDeclaration, $2));
+          $1, FACTORY()->MakeTaggedNode(N::kModportSimplePortsDeclaration, $2));
     }
   ;
 modport_simple_ports_declaration_last
@@ -2767,11 +2769,11 @@ modport_simple_ports_declaration_last
 
 modport_simple_port
   : '.' member_name '(' expression ')'
-    { $$ = MakeTaggedNode(N::kModportSimplePort, $1, $2,
+    { $$ = FACTORY()->MakeTaggedNode(N::kModportSimplePort, $1, $2,
                           MakeParenGroup($3, $4, $5)); }
     /* TODO(fangism): use distinct enums for these two cases */
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kModportSimplePort, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModportSimplePort, $1); }
   ;
 modport_tf_port
   : task_prototype
@@ -2810,41 +2812,41 @@ based_number
   ;
 dec_based_number
   : TK_DecBase TK_DecDigits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   | TK_DecBase TK_XZDigits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   | TK_DecBase macro_digits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   ;
 bin_based_number
   : TK_BinBase TK_BinDigits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   | TK_BinBase macro_digits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   ;
 oct_based_number
   : TK_OctBase TK_OctDigits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   | TK_OctBase macro_digits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   ;
 hex_based_number
   : TK_HexBase TK_HexDigits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   | TK_HexBase macro_digits
-    { $$ = MakeTaggedNode(N::kBaseDigits, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBaseDigits, $1, $2); }
   ;
 number
   : based_number
-    { $$ = MakeTaggedNode(N::kNumber, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNumber, $1); }
   | TK_DecNumber
-    { $$ = MakeTaggedNode(N::kNumber, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNumber, $1); }
   | constant_dec_number based_number
-    { $$ = MakeTaggedNode(N::kNumber, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNumber, $1, $2); }
   | TK_UnBasedNumber
-    { $$ = MakeTaggedNode(N::kNumber, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNumber, $1); }
   | constant_dec_number TK_UnBasedNumber
-    { $$ = MakeTaggedNode(N::kNumber, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNumber, $1, $2); }
   ;
 /* allow `macro where one might expect a constant number */
 constant_dec_number
@@ -2857,13 +2859,13 @@ open_range_list
   : open_range_list ',' value_range
     { $$ = ExtendNode($1, $2, $3); }
   | value_range
-    { $$ = MakeTaggedNode(N::kOpenRangeList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kOpenRangeList, $1); }
   ;
 package_declaration
   : TK_package lifetime_opt GenericIdentifier ';'
     package_item_list_opt
     TK_endpackage label_opt
-    { $$ = MakeTaggedNode(N::kPackageDeclaration, $1, $2, $3, $4, $5, $6, $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageDeclaration, $1, $2, $3, $4, $5, $6, $7); }
   ;
 module_package_import_list_opt
   : package_import_list
@@ -2873,30 +2875,30 @@ module_package_import_list_opt
   ;
 package_import_list
   : package_import_declaration
-    { $$ = MakeTaggedNode(N::kPackageImportList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageImportList, $1); }
   | package_import_list package_import_declaration
     { $$ = ExtendNode($1, $2); }
   ;
 package_import_declaration
   : TK_import package_import_item_list ';'
-    { $$ = MakeTaggedNode(N::kPackageImportDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageImportDeclaration, $1, $2, $3); }
   ;
 package_export_declaration
   : TK_export '*' TK_SCOPE_RES '*' ';'
-    { $$ = MakeTaggedNode(N::kPackageExportDeclaration, $1,
-                          MakeTaggedNode(N::kPackageImportItem,
-                                         MakeTaggedNode(N::kScopePrefix, $2, $3),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageExportDeclaration, $1,
+                          FACTORY()->MakeTaggedNode(N::kPackageImportItem,
+                                         FACTORY()->MakeTaggedNode(N::kScopePrefix, $2, $3),
                                          $4),
                           $5);
     }
   | TK_export package_import_item_list ';'
-    { $$ = MakeTaggedNode(N::kPackageExportDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageExportDeclaration, $1, $2, $3); }
   ;
 package_import_item
   : scope_prefix GenericIdentifier
-    { $$ = MakeTaggedNode(N::kPackageImportItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageImportItem, $1, $2); }
   | scope_prefix '*'
-    { $$ = MakeTaggedNode(N::kPackageImportItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageImportItem, $1, $2); }
   /**
   : GenericIdentifier TK_SCOPE_RES GenericIdentifier
   | GenericIdentifier TK_SCOPE_RES '*'
@@ -2906,7 +2908,7 @@ package_import_item_list
   : package_import_item_list ',' package_import_item
     { $$ = ExtendNode($1, $2, $3); }
   | package_import_item
-    { $$ = MakeTaggedNode(N::kPackageImportItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageImportItemList, $1); }
   ;
 package_item
   : package_item_no_pp
@@ -2957,14 +2959,14 @@ package_item_no_pp
   | any_param_declaration
     { $$ = std::move($1); }
   | /* attribute_list_opt */ TK_initial statement_item
-    { $$ = MakeTaggedNode(N::kInitialStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInitialStatement, $1, $2); }
   ;
 preprocessor_balanced_package_items
   : preprocessor_if_header package_item_list_opt
     preprocessor_elsif_package_items_opt
     preprocessor_else_package_item_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedPackageItems,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedPackageItems,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -2978,7 +2980,7 @@ preprocessor_elsif_package_items
   : preprocessor_elsif_package_items preprocessor_elsif_package_item
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_package_item
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_package_item
   : preprocessor_elsif_header package_item_list_opt
@@ -2992,13 +2994,13 @@ preprocessor_else_package_item_opt
   ;
 preprocessor_else_package_item
   : PP_else package_item_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 package_item_list
   : package_item_list package_item
     { $$ = ExtendNode($1, $2); }
   | package_item
-    { $$ = MakeTaggedNode(N::kPackageItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackageItemList, $1); }
   ;
 package_item_list_opt
   : package_item_list
@@ -3015,11 +3017,11 @@ misc_directive
   | DR_endcelldefine
     { $$ = std::move($1); }
   | DR_unconnected_drive pull01
-    { $$ = MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
   | DR_nounconnected_drive
     { $$ = std::move($1); }
   | DR_default_nettype net_type_or_none
-    { $$ = MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
   | DR_suppress_faults
     { $$ = std::move($1); }
   | DR_nosuppress_faults
@@ -3037,17 +3039,17 @@ misc_directive
   | DR_delay_mode_zero
     { $$ = std::move($1); }
   | DR_default_decay_time decay_value_simple
-    { $$ = MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
     /* $2 can be real or integer time */
   | DR_default_trireg_strength TK_DecNumber
-    { $$ = MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
     /* $2 is integer in [0,250] */
   | DR_pragma
     { $$ = std::move($1); }
   | DR_uselib
     { $$ = std::move($1); }
   | DR_begin_keywords TK_StringLiteral
-    { $$ = MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTopLevelDirective, $1, $2); }
     /* $2 should name a standard, e.g. "1800-2012" or "1364-2005" */
   | DR_end_keywords
     { $$ = std::move($1); }
@@ -3078,7 +3080,7 @@ tf_port_direction
   : port_direction
     { $$ = std::move($1); }
   | TK_const TK_ref
-    { $$ = MakeTaggedNode(N::kConstRef, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConstRef, $1, $2); }
   ;
 tf_port_direction_opt
   : tf_port_direction
@@ -3094,15 +3096,15 @@ property_qualifier
   ;
 property_spec
   : event_control_opt property_spec_disable_iff_opt property_expr
-    { $$ = MakeTaggedNode(N::kPropertySpec, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertySpec, $1, $2, $3); }
   ;
 sequence_spec
   : event_control_opt property_spec_disable_iff_opt sequence_expr
-    { $$ = MakeTaggedNode(N::kSequenceSpec, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceSpec, $1, $2, $3); }
   ;
 property_spec_disable_iff
   : TK_disable TK_iff '(' expression_or_dist ')'
-    { $$ = MakeTaggedNode(N::kPropertySpecDisableIff,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertySpecDisableIff,
                           $1, $2, MakeParenGroup($3, $4, $5)); }
   ;
 property_spec_disable_iff_opt
@@ -3134,18 +3136,18 @@ statement
   : /* attribute_list_opt */ statement_item
     { $$ = std::move($1); }
   | unqualified_id ':' /* attribute_list_opt */ statement_item
-    { $$ = MakeTaggedNode(N::kLabeledStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLabeledStatement, $1, $2, $3); }
   | reference_or_call ';'
-    { $$ = MakeTaggedNode(N::kStatement, MakeTaggedNode(N::kFunctionCall, $1), $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatement, FACTORY()->MakeTaggedNode(N::kFunctionCall, $1), $2); }
   | unqualified_id ':' reference_or_call ';'
-    { $$ = MakeTaggedNode(N::kLabeledStatement, $1, $2, MakeTaggedNode(N::kFunctionCall, $3, $4 )); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLabeledStatement, $1, $2, FACTORY()->MakeTaggedNode(N::kFunctionCall, $3, $4 )); }
     /* $1 should be a GenericIdentifier, but unqualified_id avoids conflict. */
   ;
 statement_or_null
   : statement
     { $$ = std::move($1); }
   | /* attribute_list_opt */ ';'
-    { $$ = MakeTaggedNode(N::kNullStatement, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNullStatement, $1); }
   ;
 block_item_or_statement_or_null
   : block_item_decl
@@ -3153,28 +3155,28 @@ block_item_or_statement_or_null
   | statement_item
       { $$ = std::move($1); }
   | unqualified_id ':' /* attribute_list_opt */ statement_item
-    { $$ = MakeTaggedNode(N::kLabeledStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLabeledStatement, $1, $2, $3); }
   //TODO(jbylicki): Add as much (edge) cases as the S/R conflicts allow
   | unqualified_id ':' reference call_base
-    { $$ = MakeTaggedNode(N::kLabeledStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLabeledStatement, $1, $2, $3); }
   | /* attribute_list_opt */ ';'
-    { $$ = MakeTaggedNode(N::kNullStatement, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNullStatement, $1); }
   | reference ';'
-    { $$ = MakeTaggedNode(N::kStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatement, $1, $2); }
   | reference '.' builtin_array_method ';'
-    { $$ = MakeTaggedNode(N::kStatement, ExtendNode($1, MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $2, $3, nullptr), $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatement, ExtendNode($1, FACTORY()->MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $2, $3, nullptr), $4)); }
   ;
 block_item_or_statement_or_null_list
   : block_item_or_statement_or_null_list block_item_or_statement_or_null
     { $$ = ExtendNode($1, $2); }
   | block_item_or_statement_or_null
-    { $$ = MakeTaggedNode(N::kBlockItemStatementList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockItemStatementList, $1); }
   ;
 block_item_or_statement_or_null_list_opt
   : block_item_or_statement_or_null_list
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kBlockItemStatementList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockItemStatementList); }
   ;
 stream_expression
   : expression
@@ -3187,7 +3189,7 @@ stream_expression_list
   : stream_expression_list ',' stream_expression
     { $$ = ExtendNode($1, $2, $3); }
   | stream_expression
-    { $$ = MakeTaggedNode(N::kStreamExpressionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStreamExpressionList, $1); }
   ;
 stream_operator
   : TK_LS
@@ -3197,17 +3199,17 @@ stream_operator
   ;
 streaming_concatenation
   : '{' stream_operator slice_size_opt '{' stream_expression_list '}' '}'
-    { $$ = MakeTaggedNode(N::kStreamingConcatenation, $1, $2, $3,
-                          MakeTaggedNode(N::kConcatenationExpression, $4, $5, $6), $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStreamingConcatenation, $1, $2, $3,
+                          FACTORY()->MakeTaggedNode(N::kConcatenationExpression, $4, $5, $6), $7); }
   /* accommodate macro call as operand of stream_operator */
   | '{' stream_operator slice_size MacroCall '}'
-    { $$ = MakeTaggedNode(N::kStreamingConcatenation, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStreamingConcatenation, $1, $2, $3, $4, $5); }
   | '{' stream_operator slice_size MacroIdentifier '}'
-    { $$ = MakeTaggedNode(N::kStreamingConcatenation, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStreamingConcatenation, $1, $2, $3, $4, $5); }
   | '{' stream_operator MacroCall '}'
-    { $$ = MakeTaggedNode(N::kStreamingConcatenation, $1, $2, nullptr, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStreamingConcatenation, $1, $2, nullptr, $3, $4); }
   | '{' stream_operator MacroIdentifier '}'
-    { $$ = MakeTaggedNode(N::kStreamingConcatenation, $1, $2, nullptr, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStreamingConcatenation, $1, $2, nullptr, $3, $4); }
   ;
 slice_size_opt
   : slice_size
@@ -3229,7 +3231,7 @@ slice_size
   | expr_primary_parens
     { $$ = std::move($1); }
   | reference_or_call
-    { $$ = MakeTaggedNode(N::kFunctionCall, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFunctionCall, $1); }
   | data_type_primitive
     { $$ = std::move($1); }
   /* non-primitive data-types already covered by reference_or_call */
@@ -3237,9 +3239,9 @@ slice_size
 task_prototype
   : TK_task lifetime_opt GenericIdentifier tf_port_list_paren_opt
   /* users of this rule may append a trailing ';' */
-    { $$ = MakeTaggedNode(N::kTaskPrototype,
-                          MakeTaggedNode(N::kTaskHeader, qualifier_placeholder,
-                                         $1, $2, MakeTaggedNode(N::kUnqualifiedId, $3), $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTaskPrototype,
+                          FACTORY()->MakeTaggedNode(N::kTaskHeader, qualifier_placeholder,
+                                         $1, $2, FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $3), $4)); }
 
   ;
 task_declaration
@@ -3249,8 +3251,8 @@ task_declaration
     **/
     tf_item_or_statement_or_null_list_opt
     TK_endtask label_opt
-    { $$ = MakeTaggedNode(N::kTaskDeclaration,
-               MakeTaggedNode(N::kTaskHeader, qualifier_placeholder,
+    { $$ = FACTORY()->MakeTaggedNode(N::kTaskDeclaration,
+               FACTORY()->MakeTaggedNode(N::kTaskHeader, qualifier_placeholder,
                    $1, $2, $3, $4, $5),
                $6, $7, $8); }
     /* The declared name, $3, can be scope-qualified,
@@ -3268,11 +3270,11 @@ task_declaration
 task_declaration_id
   /* for out-of-line class task method definitions: */
   : GenericIdentifier scope_or_if_res GenericIdentifier
-    { $$ = MakeTaggedNode(N::kQualifiedId,
-           MakeTaggedNode(N::kUnqualifiedId, $1), $2,
-           MakeTaggedNode(N::kUnqualifiedId, $3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kQualifiedId,
+           FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $1), $2,
+           FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $3)); }
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kUnqualifiedId, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $1); }
   ;
 tf_port_declaration
   /* tf_port_direction signed_unsigned_opt
@@ -3283,48 +3285,48 @@ tf_port_declaration
   : tf_port_direction signed_unsigned_opt
     qualified_id decl_dimensions_opt
     list_of_tf_variable_identifiers ';'
-    { $$ = MakeTaggedNode(N::kTFPortDeclaration, $1,
-                          MakeDataType(MakeTaggedNode(N::kDataTypePrimitive,
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFPortDeclaration, $1,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kDataTypePrimitive,
                                                       $2, $3),
-                                       MakePackedDimensionsNode($4)),
+                                       MakePackedDimensionsNode(param, $4)),
                           $5, $6); }
   | tf_port_direction signed_unsigned_opt
     unqualified_id decl_dimensions_opt
     list_of_tf_variable_identifiers ';'
-    { $$ = MakeTaggedNode(N::kTFPortDeclaration, $1,
-                          MakeDataType(MakeTaggedNode(N::kDataTypePrimitive, $2, $3),
-                                       MakePackedDimensionsNode($4)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFPortDeclaration, $1,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $2, $3),
+                                       MakePackedDimensionsNode(param, $4)),
                           $5, $6); }
   | tf_port_direction signed_unsigned_opt decl_dimensions
     list_of_tf_variable_identifiers ';'
-    { $$ = MakeTaggedNode(N::kTFPortDeclaration, $1,
-                          MakeDataType(MakeTaggedNode(N::kDataTypePrimitive, $2, nullptr),
-                                       MakePackedDimensionsNode($3)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFPortDeclaration, $1,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $2, nullptr),
+                                       MakePackedDimensionsNode(param, $3)),
                           $4, $5); }
   | tf_port_direction signed_unsigned_opt
     list_of_tf_variable_identifiers ';'
-    { $$ = MakeTaggedNode(N::kTFPortDeclaration, $1,
-                          MakeDataType(MakeTaggedNode(N::kDataTypePrimitive, $2)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFPortDeclaration, $1,
+                          MakeDataType(FACTORY()->MakeTaggedNode(N::kDataTypePrimitive, $2)),
                           $3, $4); }
   | tf_port_direction data_type_primitive
     list_of_tf_variable_identifiers ';'
-    { $$ = MakeTaggedNode(N::kTFPortDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFPortDeclaration, $1, $2, $3, $4); }
   ;
 list_of_tf_variable_identifiers
   : list_of_tf_variable_identifiers ',' tf_variable_identifier
     { $$ = ExtendNode($1, $2, $3); }
   | tf_variable_identifier_first
-    { $$ = MakeTaggedNode(N::kTFVariableIdentifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFVariableIdentifierList, $1); }
   ;
 tf_variable_identifier_first
   /* This rule is a workaround to resolve a S/R conflict from implicit types. */
   : unqualified_id decl_dimensions_opt trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kTFVariableIdentifier, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFVariableIdentifier, $1, $2, $3); }
     /* TODO(fangism): Verify that $1 doesn't actually have any parameters. */
   ;
 tf_variable_identifier
   : GenericIdentifier decl_dimensions_opt trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kTFVariableIdentifier, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTFVariableIdentifier, $1, $2, $3); }
   ;
 tf_port_item
   : tf_port_direction_opt data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
@@ -3335,12 +3337,12 @@ tf_port_item
     { $$ = MakeTaskFunctionPortItem($1,
                           MakeTypeIdDimensionsTuple(
                               MakeDataType($2),
-                              $3, MakeUnpackedDimensionsNode($4)),
+                              $3, MakeUnpackedDimensionsNode(param, $4)),
                           $5); }
   ;
 tf_port_item_expr_opt
   : '=' expression
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
@@ -3361,7 +3363,7 @@ tf_port_list_item_last
   | tf_port_list_preprocessor_last tf_port_item
     { $$ = ExtendNode($1, $2); }
   | tf_port_item
-    { $$ = MakeTaggedNode(N::kPortList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortList, $1); }
   ;
 tf_port_list_preprocessor_last
   : tf_port_list preprocessor_directive
@@ -3369,63 +3371,63 @@ tf_port_list_preprocessor_last
   | tf_port_list_trailing_comma preprocessor_directive
     { $$ = ExtendNode($1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kPortList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortList, $1); }
   ;
 
 timescale_directive
   : DR_timescale time_literal '/' time_literal
-    { $$ = MakeTaggedNode(N::kTimescaleDirective, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimescaleDirective, $1, $2, $3, $4); }
   | DR_timescale MacroGenericItem
-    { $$ = MakeTaggedNode(N::kTimescaleDirective, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimescaleDirective, $1, $2); }
   ;
 time_literal
   : TK_TimeLiteral
-    { $$ = MakeTaggedNode(N::kTimeLiteral, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeLiteral, $1); }
   | TK_DecNumber TK_timescale_unit
-    { $$ = MakeTaggedNode(N::kTimeLiteral, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeLiteral, $1, $2); }
   ;
 timeunits_declaration
   : TK_timeunit TK_TimeLiteral ';'
-    { $$ = MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
   | TK_timeunit TK_TimeLiteral '/' TK_TimeLiteral ';'
-    { $$ = MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3, $4, $5); }
   | TK_timeprecision TK_TimeLiteral ';'
-    { $$ = MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
   /* Originated from iverilog parser, but mo mention of them in the LRM: */
   | TK_timeunit_check TK_TimeLiteral ';'
-    { $$ = MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
   | TK_timeunit_check TK_TimeLiteral '/' TK_TimeLiteral ';'
-    { $$ = MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3, $4, $5); }
   | TK_timeprecision_check TK_TimeLiteral ';'
-    { $$ = MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTimeunitsDeclaration, $1, $2, $3); }
   ;
 value_range
   : expression
     { $$ = std::move($1); }
   | '[' expression ':' expression ']'
-    { $$ = MakeTaggedNode(N::kValueRange, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kValueRange, $1, $2, $3, $4, $5); }
   /* half-open ranges are only legal in certain contexts */
   ;
 
 select_variable_dimension
   /* used by references and element selection */
   : '[' expression ':' expression ']'
-    { $$ = MakeTaggedNode(N::kDimensionRange, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionRange, $1, $2, $3, $4, $5); }
   | '[' expression_or_null_list_opt ']'
-    { $$ = MakeTaggedNode(N::kDimensionScalar, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionScalar, $1, $2, $3); }
   /* indexed_range: */
   | '[' expression TK_PO_POS expression ']'
-    { $$ = MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
   | '[' expression TK_PO_NEG expression ']'
-    { $$ = MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
   ;
 
 decl_variable_dimension
   /* used in declaration contexts */
   : '[' expression ':' expression ']'
-    { $$ = MakeTaggedNode(N::kDimensionRange, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionRange, $1, $2, $3, $4, $5); }
   | '[' expression_or_null_list_opt ']'
-    { $$ = MakeTaggedNode(N::kDimensionScalar, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionScalar, $1, $2, $3); }
     /* This covers the common form of: '[' expression ']' .
      * When this is used as '[' loop_variables ']' in the foreach context,
      * each item should be GenericIdentifier, referring to a loop variable,
@@ -3435,16 +3437,16 @@ decl_variable_dimension
      * "+:" and "-:" are slice operators, and $4 should be constant expressions.
      */
   | '[' expression TK_PO_POS expression ']'
-    { $$ = MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
   | '[' expression TK_PO_NEG expression ']'
-    { $$ = MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionSlice, $1, $2, $3, $4, $5); }
   /* queue dimension, covered by above: */
   /* simplification:
    * added the following to look like index_extension (only for hierarchy_identifier)
    */
   /* associative dimension: */
   | '[' data_type_primitive ']'
-    { $$ = MakeTaggedNode(N::kDimensionAssociativeType, $1, $2, $3 ); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionAssociativeType, $1, $2, $3 ); }
     /* non-primitive data_type are covered by expression */
   | lb_star_rb
     { $$ = std::move($1); }
@@ -3453,11 +3455,11 @@ decl_variable_dimension
 lb_star_rb
   /* The following are accepted as '[*]' for associative array declarations: */
   : '[' '*' ']'
-    { $$ = MakeTaggedNode(N::kDimensionAssociativeIntegral, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionAssociativeIntegral, $1, $2, $3); }
   | TK_LBSTARRB
-    { $$ = MakeTaggedNode(N::kDimensionAssociativeIntegral, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionAssociativeIntegral, $1); }
   | TK_LBSTAR ']'
-    { $$ = MakeTaggedNode(N::kDimensionAssociativeIntegral, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDimensionAssociativeIntegral, $1, $2); }
   ;
 
 /** ignore attributes for now, treat them as comments in lexer
@@ -3488,28 +3490,28 @@ any_param_declaration
    */
   : TK_parameter param_type_followed_by_id_and_dimensions_opt
     trailing_assign ',' parameter_assign_list ';'
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4, $5, $6); }
   | TK_parameter param_type_followed_by_id_and_dimensions_opt
     trailing_assign ';'
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
   | TK_localparam param_type_followed_by_id_and_dimensions_opt
     trailing_assign ',' localparam_assign_list ';'
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4, $5, $6); }
   | TK_localparam param_type_followed_by_id_and_dimensions_opt
     trailing_assign ';'
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
   /* The next rules are type parameter declarations: */
   | TK_parameter TK_type type_assignment_list ';'
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
   | TK_localparam TK_type type_assignment_list ';'
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3, $4); }
   ;
 
 instantiation_type
   : data_type
-    { $$ = MakeTaggedNode(N::kInstantiationType, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInstantiationType, $1); }
   | interface_type
-    { $$ = MakeTaggedNode(N::kInstantiationType, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInstantiationType, $1); }
   ;
 
 instantiation_base
@@ -3518,7 +3520,7 @@ instantiation_base
   | reference call_base ',' gate_instance_or_register_variable_list
     {$$ = MakeInstantiationBase(ReinterpretReferenceAsDataTypePackedDimensions($1), ExtendNode($4,$3,$2)); }
   | reference_or_call_base
-    {$$ = MakeTaggedNode(N::kFunctionCall,$1); }
+    {$$ = FACTORY()->MakeTaggedNode(N::kFunctionCall,$1); }
   ;
 
 data_declaration_or_module_instantiation
@@ -3532,17 +3534,17 @@ data_declaration_or_module_instantiation
     { $$ = MakeDataDeclaration(qualifier_placeholder, $1, $2); }
   | lifetime const_opt instantiation_base ';'
     { $$ = MakeDataDeclaration(
-                          MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
+                          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
     /* const_opt was added here to support "static const" (vs. "const static")
      * which is not explicitly permitted by the LRM grammar, but is interpreted
      * by some vendors as intended to be permitted.
      */
   | TK_var lifetime_opt instantiation_base ';'
     { $$ = MakeDataDeclaration(
-                          MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
+                          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
   | TK_const var_opt lifetime_opt instantiation_base ';'
       { $$ = MakeDataDeclaration(
-                            MakeTaggedNode(N::kQualifierList, $1, $2, $3),
+                            FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2, $3),
                             $4, $5); }
   /* Using data_declaration_modifiers_opt causes S/R conflict.  */
   ;
@@ -3552,11 +3554,11 @@ data_declaration_or_module_instantiation
 non_anonymous_gate_instance_or_register_variable
   /* similar to variable_decl_assignment */
   : GenericIdentifier decl_dimensions_opt trailing_decl_assignment_opt
-    { $$ = MakeTaggedNode(N::kRegisterVariable, $1,
-                          MakeUnpackedDimensionsNode($2), $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRegisterVariable, $1,
+                          MakeUnpackedDimensionsNode(param, $2), $3); }
   | GenericIdentifier decl_dimensions_opt '(' any_port_list_opt ')'
-    { $$ = MakeTaggedNode(N::kGateInstance, $1,
-                          MakeUnpackedDimensionsNode($2),
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstance, $1,
+                          MakeUnpackedDimensionsNode(param, $2),
                           MakeParenGroup($3, $4, $5)); }
   | MacroCall
     { $$ = std::move($1); }
@@ -3566,7 +3568,7 @@ non_anonymous_gate_instance_or_register_variable_list
   : non_anonymous_gate_instance_or_register_variable_list ',' gate_instance_or_register_variable
     { $$ = ExtendNode($1, $2, $3); }
   | non_anonymous_gate_instance_or_register_variable
-    { $$ = MakeTaggedNode(N::kGateInstanceRegisterVariableList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstanceRegisterVariableList, $1); }
   ;
 
 
@@ -3579,21 +3581,21 @@ function_item_data_declaration
     { $$ = MakeDataDeclaration(qualifier_placeholder, $1, $2); }
   | lifetime const_opt instantiation_base ';'
     { $$ = MakeDataDeclaration(
-                          MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
+                          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
   | TK_var lifetime_opt instantiation_base ';'
     { $$ = MakeDataDeclaration(
-                          MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
+                          FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2), $3, $4); }
   | TK_const var_opt lifetime_opt instantiation_base ';'
       { $$ = MakeDataDeclaration(
-                            MakeTaggedNode(N::kQualifierList, $1, $2, $3),
+                            FACTORY()->MakeTaggedNode(N::kQualifierList, $1, $2, $3),
                             $4, $5); }
   ;
 
 net_type_declaration
   : TK_nettype data_type unqualified_id ';'
-    { $$ = MakeTaggedNode(N::kNetTypeDeclaration, $1, $2, $3, nullptr, nullptr, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetTypeDeclaration, $1, $2, $3, nullptr, nullptr, $4); }
   | TK_nettype data_type unqualified_id TK_with class_id ';'
-    { $$ = MakeTaggedNode(N::kNetTypeDeclaration, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetTypeDeclaration, $1, $2, $3, $4, $5, $6); }
   ;
 
 block_item_decl
@@ -3627,40 +3629,40 @@ type_declaration
   : TK_typedef data_type GenericIdentifier decl_dimensions_opt ';'
     { $$ = MakeTypeDeclaration($1, $2, $3, $4, $5); }
   | TK_typedef TK_class GenericIdentifier ';'
-    { $$ = MakeTypeDeclaration($1, MakeTaggedNode(N::kForwardTypeDeclaration, $2), $3, $4); }
+    { $$ = MakeTypeDeclaration($1, FACTORY()->MakeTaggedNode(N::kForwardTypeDeclaration, $2), $3, $4); }
   | TK_typedef TK_interface TK_class GenericIdentifier ';'
-    { $$ = MakeTypeDeclaration($1, MakeTaggedNode(N::kForwardTypeDeclaration, $2, $3), $4, $5); }
+    { $$ = MakeTypeDeclaration($1, FACTORY()->MakeTaggedNode(N::kForwardTypeDeclaration, $2, $3), $4, $5); }
   | TK_typedef interface_type GenericIdentifier ';'
     { $$ = MakeTypeDeclaration($1, $2, $3, $4); }
   /* TODO: Figure out how to make the braced members list optional
      to make these more robust */
   | TK_typedef TK_enum GenericIdentifier ';'
     { $$ = MakeTypeDeclaration($1,
-                          MakeTaggedNode(N::kForwardTypeDeclaration,
-                                         MakeTaggedNode(N::kEnumType,
+                          FACTORY()->MakeTaggedNode(N::kForwardTypeDeclaration,
+                                         FACTORY()->MakeTaggedNode(N::kEnumType,
                                                         $2, nullptr, nullptr)),
                           $3, $4); }
   | TK_typedef TK_struct GenericIdentifier ';'
     { $$ = MakeTypeDeclaration($1,
-                          MakeTaggedNode(N::kForwardTypeDeclaration,
-                                         MakeTaggedNode(N::kStructType,
+                          FACTORY()->MakeTaggedNode(N::kForwardTypeDeclaration,
+                                         FACTORY()->MakeTaggedNode(N::kStructType,
                                                         $2, nullptr, nullptr)),
                           $3, $4); }
   | TK_typedef TK_union GenericIdentifier ';'
     { $$ = MakeTypeDeclaration($1,
-                          MakeTaggedNode(N::kForwardTypeDeclaration,
-                                         MakeTaggedNode(N::kUnionType,
+                          FACTORY()->MakeTaggedNode(N::kForwardTypeDeclaration,
+                                         FACTORY()->MakeTaggedNode(N::kUnionType,
                                                         $2, nullptr, nullptr)),
                           $3, $4); }
   | TK_typedef GenericIdentifier ';'
-    { $$ = MakeTypeDeclaration($1, MakeTaggedNode(N::kForwardTypeDeclaration), $2, $3); }
+    { $$ = MakeTypeDeclaration($1, FACTORY()->MakeTaggedNode(N::kForwardTypeDeclaration), $2, $3); }
   ;
 /* enums only become named via typedef */
 enum_data_type
   : TK_enum '{' enum_name_list '}'
-    { $$ = MakeTaggedNode(N::kEnumType, $1, nullptr, MakeBraceGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumType, $1, nullptr, MakeBraceGroup($2, $3, $4)); }
   | TK_enum data_type '{' enum_name_list '}'
-    { $$ = MakeTaggedNode(N::kEnumType, $1, $2, MakeBraceGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumType, $1, $2, MakeBraceGroup($3, $4, $5)); }
   ;
 enum_name_list
   : enum_name_list_preprocessor_last
@@ -3678,7 +3680,7 @@ enum_name_list_preprocessor_last
   | enum_name_list_trailing_comma preprocessor_directive
     { $$ = ExtendNode($1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kEnumNameList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumNameList, $1); }
   ;
 enum_name_list_item_last
   : enum_name_list_trailing_comma enum_name
@@ -3686,42 +3688,42 @@ enum_name_list_item_last
   | enum_name_list_preprocessor_last enum_name
     { $$ = ExtendNode($1, $2); }
   | enum_name
-    { $$ = MakeTaggedNode(N::kEnumNameList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumNameList, $1); }
   ;
 
 pos_neg_number
   : number
     { $$ = std::move($1); }
   | '-' number
-    { $$ = MakeTaggedNode(N::kNumber, $1, ForwardChildren($2)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNumber, $1, ForwardChildren($2)); }
   ;
 enum_name
   : GenericIdentifier
-    { $$ = MakeTaggedNode(N::kEnumName, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumName, $1); }
   | GenericIdentifier '[' pos_neg_number ']'
-    { $$ = MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, $3, $4)); }
   | GenericIdentifier '[' pos_neg_number ':' pos_neg_number ']'
-    { $$ = MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, MakeNode($3, $4, $5), $6)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, FACTORY()->MakeNode($3, $4, $5), $6)); }
   | GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kEnumName, $1, MakeTaggedNode(N::kTrailingAssign, $2, $3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumName, $1, FACTORY()->MakeTaggedNode(N::kTrailingAssign, $2, $3)); }
   | GenericIdentifier '[' pos_neg_number ']' '=' expression
-    { $$ = MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, $3, $4),
-                          MakeTaggedNode(N::kTrailingAssign, $5, $6)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, $3, $4),
+                          FACTORY()->MakeTaggedNode(N::kTrailingAssign, $5, $6)); }
   | GenericIdentifier '[' pos_neg_number ':' pos_neg_number ']' '=' expression
-    { $$ = MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, MakeNode($3, $4, $5), $6),
-                          MakeTaggedNode(N::kTrailingAssign, $7, $8)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnumName, $1, MakeBracketGroup($2, FACTORY()->MakeNode($3, $4, $5), $6),
+                          FACTORY()->MakeTaggedNode(N::kTrailingAssign, $7, $8)); }
   ;
 /* structs only become named via typedef */
 struct_data_type
   : TK_struct packed_signing_opt '{' struct_union_member_list '}'
-    { $$ = MakeTaggedNode(N::kStructType, $1, $2, MakeBraceGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStructType, $1, $2, MakeBraceGroup($3, $4, $5)); }
   | TK_union TK_tagged_opt packed_signing_opt '{' struct_union_member_list '}'
-    { $$ = MakeTaggedNode(N::kUnionType, $1, $2, $3,
+    { $$ = FACTORY()->MakeTaggedNode(N::kUnionType, $1, $2, $3,
                           MakeBraceGroup($4, $5, $6)); }
   ;
 packed_signing_opt
   : TK_packed signed_unsigned_opt
-    { $$ = MakeTaggedNode(N::kPackedSigning, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPackedSigning, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
@@ -3729,18 +3731,18 @@ struct_union_member_list
   : struct_union_member_list struct_union_member
     { $$ = ExtendNode($1, $2); }
   | struct_union_member
-    { $$ = MakeTaggedNode(N::kStructUnionMemberList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStructUnionMemberList, $1); }
   ;
 struct_union_member
   /* very similar to data_declaration */
   : /* attribute_list_opt */
     random_qualifier_opt
     data_type_or_implicit_followed_by_id_and_dimensions_opt trailing_assign_opt ';'
-    { $$ = MakeTaggedNode(N::kStructUnionMember, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStructUnionMember, $1, $2, $3, $4); }
   | random_qualifier_opt
     data_type_or_implicit_followed_by_id_and_dimensions_opt trailing_assign_opt ','
     list_of_variable_decl_assignments ';'
-    { $$ = MakeTaggedNode(N::kStructUnionMember, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStructUnionMember, $1, $2, $3, $4, $5, $6); }
   | preprocessor_directive
     { $$ = std::move($1); }
   // since the semicolon is optional, it is better to have both cases covered
@@ -3749,61 +3751,61 @@ struct_union_member
   | MacroCall
     { $$ = std::move($1);}
   | MacroCallId '(' macro_args_opt MacroCallCloseToEndLine
-    { $$ = MakeTaggedNode(N::kMacroCall, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroCall, $1, MakeParenGroup($2, $3, $4)); }
   ;
 
 case_item
   : expression_list_proper ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kCaseItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseItem, $1, $2, $3); }
   | TK_default ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kDefaultItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultItem, $1, $2, $3); }
   | TK_default     statement_or_null
-    { $$ = MakeTaggedNode(N::kDefaultItem, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultItem, $1, nullptr, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kCaseItem, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseItem, $1); }
 /**
   | error ':' statement_or_null
 **/
   ;
 case_inside_item
   : open_range_list ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kCaseInsideItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseInsideItem, $1, $2, $3); }
   | TK_default ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kCaseInsideItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseInsideItem, $1, $2, $3); }
   | TK_default statement_or_null
-    { $$ = MakeTaggedNode(N::kCaseInsideItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseInsideItem, $1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kCaseInsideItem, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseInsideItem, $1); }
   ;
 case_pattern_item
   : pattern TK_TAND expression ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kCasePatternItem, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCasePatternItem, $1, $2, $3, $4, $5); }
   | pattern ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kCasePatternItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCasePatternItem, $1, $2, $3); }
   | TK_default ':' statement_or_null
-    { $$ = MakeTaggedNode(N::kCasePatternItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCasePatternItem, $1, $2, $3); }
   | TK_default statement_or_null
-    { $$ = MakeTaggedNode(N::kCasePatternItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCasePatternItem, $1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kCasePatternItem, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCasePatternItem, $1); }
   ;
 case_items
   : case_items case_item
     { $$ = ExtendNode($1, $2); }
   | case_item
-    { $$ = MakeTaggedNode(N::kCaseItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseItemList, $1); }
   ;
 case_inside_items
   : case_inside_items case_inside_item
     { $$ = ExtendNode($1, $2); }
   | case_inside_item
-    { $$ = MakeTaggedNode(N::kCaseInsideItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseInsideItemList, $1); }
   ;
 case_pattern_items
   : case_pattern_items case_pattern_item
     { $$ = ExtendNode($1, $2); }
   | case_pattern_item
-    { $$ = MakeTaggedNode(N::kCasePatternItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCasePatternItemList, $1); }
 
   ;
 charge_strength
@@ -3823,34 +3825,34 @@ charge_strength_opt
 
 defparam_assign
   : reference '=' expression
-    { $$ = MakeTaggedNode(N::kDefParamAssignment, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefParamAssignment, $1, $2, $3); }
   ;
 defparam_assign_list
   : defparam_assign
-    { $$ = MakeTaggedNode(N::kDefParamAssignmentList, nullptr, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefParamAssignmentList, nullptr, $1); }
   /* TODO(fangism): The following doesn't seem valid, so remove it. */
   | decl_dimensions defparam_assign
-    { $$ = MakeTaggedNode(N::kDefParamAssignmentList,
-                          MakeUnpackedDimensionsNode($1),
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefParamAssignmentList,
+                          MakeUnpackedDimensionsNode(param, $1),
                           $2); }
   | defparam_assign_list ',' defparam_assign
     { $$ = ExtendNode($1, $2, $3); }
   ;
 delay1
   : '#' delay_value_simple
-    { $$ = MakeTaggedNode(N::kDelay, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelay, $1, $2); }
   | '#' '(' delay_value ')'
-    { $$ = MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, $3, $4)); }
   ;
 delay3
   : '#' delay_value_simple
-    { $$ = MakeTaggedNode(N::kDelay, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelay, $1, $2); }
   | '#' '(' delay_value ')'
-    { $$ = MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, $3, $4)); }
   | '#' '(' delay_value ',' delay_value ')'
-    { $$ = MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, MakeNode($3, $4, $5), $6)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6)); }
   | '#' '(' delay_value ',' delay_value ',' delay_value ')'
-    { $$ = MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7), $8)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelay, $1, MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7), $8)); }
   ;
 delay3_opt
   : delay3
@@ -3860,7 +3862,7 @@ delay3_opt
   ;
 delay_value_list
   : delay_value
-    { $$ = MakeTaggedNode(N::kDelayValueList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelayValueList, $1); }
   | delay_value_list ',' delay_value
     { $$ = ExtendNode($1, $2, $3); }
   ;
@@ -3869,22 +3871,22 @@ delay_value
     { $$ = std::move($1); }
   | expression ':' expression ':' expression
     // TODO(jeremycs): change this structure to reflect mintypmax
-    { $$ = MakeTaggedNode(N::kMinTypMaxList, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMinTypMaxList, $1, $2, $3, $4, $5); }
   ;
 delay_value_simple
   : TK_DecNumber
-    { $$ = MakeTaggedNode(N::kDelayValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelayValue, $1); }
   | TK_RealTime
-    { $$ = MakeTaggedNode(N::kDelayValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelayValue, $1); }
   | delay_identifier
     { $$ = std::move($1); }
     /* $1 is a package-scope identifier in LRM, but some tools
      * also permit a general hierarchical reference.
      */
   | TK_TimeLiteral
-    { $$ = MakeTaggedNode(N::kDelayValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelayValue, $1); }
   | TK_1step
-    { $$ = MakeTaggedNode(N::kDelayValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelayValue, $1); }
   ;
 delay_identifier
   : delay_identifier '.' GenericIdentifier
@@ -3896,7 +3898,7 @@ delay_scope
   : delay_scope TK_SCOPE_RES GenericIdentifier
     { $$ = ExtendNode($1, $2, $3); }
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDelayValue, $1);  }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDelayValue, $1);  }
   ;
 decay_value_simple
   : TK_DecNumber
@@ -3918,7 +3920,7 @@ optional_semicolon
 discipline_declaration
   : TK_discipline GenericIdentifier optional_semicolon
     discipline_items_opt TK_enddiscipline
-    { $$ = MakeTaggedNode(N::kDisciplineDeclaration, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisciplineDeclaration, $1, $2, $3, $4, $5); }
   ;
 discipline_items_opt
   : discipline_items
@@ -3930,19 +3932,19 @@ discipline_items
   : discipline_items discipline_item
     { $$ = ExtendNode($1, $2); }
   | discipline_item
-    { $$ = MakeTaggedNode(N::kDisciplineItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisciplineItemList, $1); }
   ;
 discipline_item
   /* discipline_domain_bindings: */
   : TK_domain TK_discrete ';'
-    { $$ = MakeTaggedNode(N::kDisciplineDomainBinding, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisciplineDomainBinding, $1, $2, $3); }
   | TK_domain TK_continuous ';'
-    { $$ = MakeTaggedNode(N::kDisciplineDomainBinding, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisciplineDomainBinding, $1, $2, $3); }
   /* nature_bindings: potential_or_flow nature_identifier ';' */
   | TK_potential GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kDisciplinePotential, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisciplinePotential, $1, $2, $3); }
   | TK_flow GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kDisciplineFlow, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisciplineFlow, $1, $2, $3); }
   /* TODO(fangism): nature_attribute_override */
   ;
 nature_declaration
@@ -3964,7 +3966,7 @@ nature_item
 
 library_declaration
   : TK_library SymbolIdentifier file_path_spec_list incdir_spec_opt ';'
-    { $$ = MakeTaggedNode(N::kLibraryDeclaration, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLibraryDeclaration, $1, $2, $3, $4, $5); }
   ;
 incdir_spec_opt
   : incdir_spec
@@ -3975,17 +3977,17 @@ incdir_spec_opt
 incdir_spec
   : '-' TK_incdir file_path_spec_list
     /* $1,$2 should really be one "-incdir" token */
-    { $$ = MakeTaggedNode(N::kLibraryIncdirSpec, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLibraryIncdirSpec, $1, $2, $3); }
   ;
 include_statement
   : TK_include file_path_spec ';'
-    { $$ = MakeTaggedNode(N::kLibraryInclude, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLibraryInclude, $1, $2, $3); }
   ;
 file_path_spec_list
   : file_path_spec_list ',' file_path_spec
     { $$ = ExtendNode($1, $2, $3); }
   | file_path_spec
-    { $$ = MakeTaggedNode(N::kFilePathSpecList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFilePathSpecList, $1); }
   ;
 file_path_spec
   : TK_FILEPATH
@@ -3997,11 +3999,11 @@ config_declaration
     design_statement
     list_of_config_rule_statements_opt
     TK_endconfig label_opt
-    { $$ = MakeTaggedNode(N::kConfigDeclaration, $1, $2, $3, $4, $5, $6, $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigDeclaration, $1, $2, $3, $4, $5, $6, $7); }
   ;
 design_statement
   : TK_design lib_cell_identifiers_opt ';'
-    { $$ = MakeTaggedNode(N::kDesignStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDesignStatement, $1, $2, $3); }
   ;
 lib_cell_identifiers_opt
   : lib_cell_identifiers
@@ -4013,7 +4015,7 @@ lib_cell_identifiers
   : lib_cell_identifiers lib_cell_id
     { $$ = ExtendNode($1, $2); }
   | lib_cell_id
-    { $$ = MakeTaggedNode(N::kDesignStatementItems, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDesignStatementItems, $1); }
   ;
 list_of_config_rule_statements_opt
   : list_of_config_rule_statements
@@ -4025,45 +4027,45 @@ list_of_config_rule_statements
   : list_of_config_rule_statements config_rule_statement
     { $$ = ExtendNode($1, $2); }
   | config_rule_statement
-    { $$ = MakeTaggedNode(N::kConfigRuleStatementList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigRuleStatementList, $1); }
   ;
 config_rule_statement
   : TK_default liblist_clause ';'
-    { $$ = MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
   | inst_clause liblist_clause ';'
-    { $$ = MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
   | inst_clause use_clause ';'
-    { $$ = MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
   | cell_clause liblist_clause ';'
-    { $$ = MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
   | cell_clause use_clause ';'
-    { $$ = MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConfigRuleStatement, $1, $2, $3); }
   | preprocessor_balanced_config_rule_statements
     { $$ = std::move($1); }
   ;
 inst_clause
   : TK_instance reference
     /* $2:reference is instance name */
-    { $$ = MakeTaggedNode(N::kInstClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInstClause, $1, $2); }
   ;
 cell_clause
   : TK_cell lib_cell_id
-    { $$ = MakeTaggedNode(N::kCellClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCellClause, $1, $2); }
   ;
 liblist_clause
   : TK_liblist list_of_libraries_opt
-    { $$ = MakeTaggedNode(N::kLiblistClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLiblistClause, $1, $2); }
   ;
 use_clause
   : TK_use lib_cell_id opt_config
-    { $$ = MakeTaggedNode(N::kUseClause, $1, $2, nullptr, ForwardChildren($3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUseClause, $1, $2, nullptr, ForwardChildren($3)); }
 /* TODO(b/124600414): This has a S/R conflict because ('.' ID) is in both parts.
   Why is there no separator between these in the official grammar??
   | TK_use lib_cell_id named_parameter_assignment_list opt_config
-    { $$ = MakeTaggedNode(N::kUseClause, $1, $2, $3, ForwardChildren($3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUseClause, $1, $2, $3, ForwardChildren($3)); }
  */
   | TK_use named_parameter_assignment_list opt_config
-    { $$ = MakeTaggedNode(N::kUseClause, $1, nullptr, $2, ForwardChildren($3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUseClause, $1, nullptr, $2, ForwardChildren($3)); }
   ;
 
 preprocessor_balanced_config_rule_statements
@@ -4071,7 +4073,7 @@ preprocessor_balanced_config_rule_statements
     preprocessor_elsif_config_rule_statements_opt
     preprocessor_else_config_rule_statement_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedConfigRuleStatements,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedConfigRuleStatements,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -4086,7 +4088,7 @@ preprocessor_elsif_config_rule_statements
     preprocessor_elsif_config_rule_statement
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_config_rule_statement
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_config_rule_statement
   : preprocessor_elsif_header list_of_config_rule_statements_opt
@@ -4100,35 +4102,35 @@ preprocessor_else_config_rule_statement_opt
   ;
 preprocessor_else_config_rule_statement
   : PP_else list_of_config_rule_statements_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 named_parameter_assignment_list
   : named_parameter_assignment_list ',' named_parameter_assignment
     { $$ = ExtendNode($1, $2, $3); }
   | named_parameter_assignment
-    { $$ = MakeTaggedNode(N::kActualParameterByNameList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterByNameList, $1); }
   ;
 named_parameter_assignment
   /* subset of: parameter_value_byname */
   : '.' member_name '(' parameter_expr ')'
-    { $$ = MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, $4, $5)); }
   | '.' member_name '(' ')'
-    { $$ = MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, nullptr, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, nullptr, $4)); }
   ;
 opt_config
   : ':' TK_config
-    { $$ = MakeNode($1, $2); }
+    { $$ = FACTORY()->MakeNode($1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
 lib_cell_id
   : GenericIdentifier
     /* cell_id */
-    { $$ = MakeTaggedNode(N::kCellIdentifier, nullptr, nullptr, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCellIdentifier, nullptr, nullptr, $1); }
   | GenericIdentifier '.' GenericIdentifier
     /* library_id . cell_id */
-    { $$ = MakeTaggedNode(N::kCellIdentifier, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCellIdentifier, $1, $2, $3); }
   ;
 list_of_libraries_opt
   : list_of_libraries
@@ -4140,7 +4142,7 @@ list_of_libraries
   : list_of_libraries GenericIdentifier
     { $$ = ExtendNode($1, $2); }
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kIdentifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIdentifierList, $1); }
     /* could also give this own node type like kLibraryList */
   ;
 
@@ -4186,13 +4188,13 @@ pull01
   ;
 event_control
   : '@' hierarchy_event_identifier
-    { $$ = MakeTaggedNode(N::kEventControl, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventControl, $1, $2);}
   | '@' '(' event_expression_list ')'
-    { $$ = MakeTaggedNode(N::kEventControl, $1, MakeParenGroup($2, $3, $4));}
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventControl, $1, MakeParenGroup($2, $3, $4));}
   | '@' '(' '*' ')'
-    { $$ = MakeTaggedNode(N::kEventControl, $1, MakeParenGroup($2, $3, $4));}
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventControl, $1, MakeParenGroup($2, $3, $4));}
   | '@' '*'
-    { $$ = MakeTaggedNode(N::kEventControl, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventControl, $1, $2);}
   ;
 event_control_opt
   : event_control
@@ -4202,7 +4204,7 @@ event_control_opt
   ;
 event_expression_list
   : event_expression
-    { $$ = MakeTaggedNode(N::kEventExpressionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventExpressionList, $1); }
   | event_expression_list TK_or event_expression
     { $$ = ExtendNode($1, $2, $3); }
   | event_expression_list ',' event_expression
@@ -4210,20 +4212,20 @@ event_expression_list
   ;
 event_expression
   : edge_operator expression
-    { $$ = MakeTaggedNode(N::kEventExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventExpression, $1, $2); }
   | expression
-    { $$ = MakeTaggedNode(N::kEventExpression, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventExpression, $1); }
   | edge_operator expression TK_iff expression
-    { $$ = MakeTaggedNode(N::kEventExpression, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventExpression, $1, $2, $3, $4); }
   | expression TK_iff expression
-    { $$ = MakeTaggedNode(N::kEventExpression, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEventExpression, $1, $2, $3); }
   ;
 branch_probe_expression
   : GenericIdentifier '(' GenericIdentifier ',' GenericIdentifier ')'
-    { $$ = MakeTaggedNode(N::kBranchProbeExpression, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5), $6)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBranchProbeExpression, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6)); }
   | GenericIdentifier '(' GenericIdentifier ')'
-    { $$ = MakeTaggedNode(N::kBranchProbeExpression, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kBranchProbeExpression, $1,
                           MakeParenGroup($2, $3, $4)); }
   ;
 
@@ -4235,40 +4237,40 @@ pattern_opt
   ;
 pattern
   : '.' member_name
-    { $$ = MakeTaggedNode(N::kPattern, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPattern, $1, $2); }
   | TK_DOTSTAR
-    { $$ = MakeTaggedNode(N::kPattern, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPattern, $1); }
   | expr_primary_no_groups
-    { $$ = MakeTaggedNode(N::kPattern, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPattern, $1); }
   /* $1 must be a constant expression */
   | TK_tagged GenericIdentifier pattern_opt
     // TODO(jeremycs): consider flattening here
-    { $$ = MakeTaggedNode(N::kPattern, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPattern, $1, $2, $3); }
   | TK_LP pattern_list '}'
-    { $$ = MakeTaggedNode(N::kPattern, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPattern, $1, $2, $3); }
   | TK_LP member_pattern_list '}'
-    { $$ = MakeTaggedNode(N::kPattern, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPattern, $1, $2, $3); }
   ;
 pattern_list
   : pattern_list ',' pattern
     { $$ = ExtendNode($1, $2, $3); }
   | pattern
-    { $$ = MakeTaggedNode(N::kPatternList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPatternList, $1); }
   ;
 member_pattern
   : GenericIdentifier ':' pattern
-    { $$ = MakeTaggedNode(N::kMemberPattern, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMemberPattern, $1, $2, $3); }
   ;
 member_pattern_list
   : member_pattern_list ',' member_pattern
     { $$ = ExtendNode($1, $2, $3); }
   | member_pattern
-    { $$ = MakeTaggedNode(N::kMemberPatternList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMemberPatternList, $1); }
   ;
 
 expression
   : equiv_impl_expr
-    { $$ = MakeTaggedNode(N::kExpression, $1);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpression, $1);}
   ;
 
 equiv_impl_expr
@@ -4285,7 +4287,7 @@ cond_expr
   : logor_expr
     { $$ = std::move($1); }
   | logor_expr '?' expression ':' cond_expr
-    { $$ = MakeTaggedNode(N::kConditionExpression, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConditionExpression, $1, $2, $3, $4, $5); }
   // | cond_expr '?' cond_expr ':' cond_expr
   // | cond_expr '?' logor_expr ':' logor_expr
   /*
@@ -4310,7 +4312,7 @@ unary_prefix_expr
     { $$ = std::move($1); }
   /* the following section's expr_primary-s were prefixed with attribute_list_opt */
   | unary_op unary_prefix_expr
-   { $$ = MakeTaggedNode(N::kUnaryPrefixExpression, $1, $2); }
+   { $$ = FACTORY()->MakeTaggedNode(N::kUnaryPrefixExpression, $1, $2); }
   ;
 
 unary_op
@@ -4447,7 +4449,7 @@ bitor_expr
 
 with_exprs_suffix
   : with_exprs_suffix with_covergroup_expression_in_parens
-    { $$ = MakeTaggedNode(N::kWithGroup, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kWithGroup, $1, $2); }
   | bitor_expr
     { $$ = std::move($1); }
   ;
@@ -4494,7 +4496,7 @@ expr_mintypmax_trans_set
     { $$ = ExtendNode($1, $2, ForwardChildren($3)); }
   | expr_mintypmax_generalized
     { $$ = IsExpression($1) ? std::move($1)
-                            : MakeTaggedNode(N::kMinTypMaxList, ForwardChildren($1)); }
+                            : FACTORY()->MakeTaggedNode(N::kMinTypMaxList, ForwardChildren($1)); }
   ;
 expr_mintypmax_generalized
   /* covers original expr_mintypmax : expression ':' expression ':' expression
@@ -4504,7 +4506,7 @@ expr_mintypmax_generalized
     { $$ = ExtendNode($1, $2, ForwardChildren($3)); }
   | property_expr_or_assignment_list  /* ','-separated */
     { $$ = IsExpression($1) ? std::move($1)
-                            : MakeTaggedNode(N::kMinTypMaxList, ForwardChildren($1)); }
+                            : FACTORY()->MakeTaggedNode(N::kMinTypMaxList, ForwardChildren($1)); }
   /* for trans_list, each of these can be an open_range_list,
    * for all other contexts, these should be single value_range.
    */
@@ -4515,7 +4517,7 @@ property_expr_or_assignment_list
     { $$ = ExtendNode($1, $2, $3); }
   | property_expr_or_assignment
     { $$ = IsExpression($1) ? std::move($1)
-                            : MakeTaggedNode(N::kMinTypMaxList, $1); }
+                            : FACTORY()->MakeTaggedNode(N::kMinTypMaxList, $1); }
   ;
 property_expr_or_assignment
   : property_expr
@@ -4530,7 +4532,7 @@ property_expr_or_assignment
     /* covers simple expression, including inc_or_dec_expression (assignment) */
     /* covers sequence_match_item: subroutine_call */
   | '[' expression ':' expression ']'
-    { $$ = MakeTaggedNode(N::kValueRange, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kValueRange, $1, $2, $3, $4, $5); }
     /* covers value_range */
   | assignment_statement_no_expr
     { $$ = std::move($1); }
@@ -4555,14 +4557,14 @@ any_argument_list_trailing_comma
   : any_argument_list ','
     { $$ = ExtendNode($1, $2); }
   | ','
-    { $$ = MakeTaggedNode(N::kArgumentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kArgumentList, $1); }
   ;
 any_argument_list_item_last
   /* TODO(fangism): positional arguments must appear before named arguments,
    * except inside odd uses of preprocessing directives.
    */
   : any_argument
-    { $$ = MakeTaggedNode(N::kArgumentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kArgumentList, $1); }
   /* comma separating arguments is required,
    * except after preprocessor directive
    */
@@ -4573,7 +4575,7 @@ any_argument_list_item_last
   ;
 any_argument_list_preprocessor_last
   : preprocessor_directive
-    { $$ = MakeTaggedNode(N::kArgumentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kArgumentList, $1); }
   /* comma separating preprocessor_directive is optional */
   | any_argument_list preprocessor_directive
     { $$ = ExtendNode($1, $2); }
@@ -4595,7 +4597,7 @@ expression_or_null_list_opt
   : expression_or_null_list_opt ',' expression_opt
     { $$ = ExtendNode($1, $2, $3); }
   | expression_opt
-    { $$ = MakeTaggedNode(N::kExpressionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpressionList, $1); }
   ;
 
 expression_opt
@@ -4609,19 +4611,19 @@ expression_list_proper
   : expression_list_proper ',' expression
     { $$ = ExtendNode($1, $2, $3); }
   | expression
-    { $$ = MakeTaggedNode(N::kExpressionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpressionList, $1); }
   ;
 
 scope_prefix
   : GenericIdentifier TK_SCOPE_RES
-    { $$ = MakeTaggedNode(N::kScopePrefix, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kScopePrefix, $1, $2); }
   | TK_Sunit TK_SCOPE_RES
-    { $$ = MakeTaggedNode(N::kScopePrefix, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kScopePrefix, $1, $2); }
   ;
 
 postfix_expression
   : reference_or_call
-    { $$ = MakeTaggedNode(N::kFunctionCall, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFunctionCall, $1); }
   | expr_primary
     { $$ = std::move($1); }
   ;
@@ -4634,7 +4636,7 @@ call_base
 //separated for chained calls (eg. foo().bar().baz())
 reference_or_call_base
   : reference call_base
-    { $$ = MakeTaggedNode(N::kReferenceCallBase, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kReferenceCallBase, $1, $2); }
   | reference_or_call_base hierarchy_or_call_extension
     { $$ = ExtendNode($1,$2); }
   ;
@@ -4647,18 +4649,18 @@ reference_or_call
   // to handle the built-ins when there is no function call earler in the chain
     /* base of reference, including GenericIdentifier */
   | reference '.' builtin_array_method
-    { $$ = ExtendNode($1, MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $2, $3, nullptr)); }
+    { $$ = ExtendNode($1, FACTORY()->MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $2, $3, nullptr)); }
   | reference '.' TK_randomize
-    { $$ = ExtendNode($1, MakeTaggedNode(N::kRandomizeMethodCallExtension, $2, $3, nullptr, nullptr)); }
+    { $$ = ExtendNode($1, FACTORY()->MakeTaggedNode(N::kRandomizeMethodCallExtension, $2, $3, nullptr, nullptr)); }
   | reference call_base select_variable_dimension
-    { $$ = ExtendNode(MakeTaggedNode(N::kReferenceCallBase, $1, $2), $3); }
+    { $$ = ExtendNode(FACTORY()->MakeTaggedNode(N::kReferenceCallBase, $1, $2), $3); }
     /* [ range ] */
   ;
 
 reference
   /* Replaces former "scoped_hierarchy_identifier" */
   : local_root
-    { $$ = MakeTaggedNode(N::kReference, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kReference, $1); }
     /* base of reference, including GenericIdentifier */
   | reference hierarchy_extension
     { $$ = ExtendNode($1, $2); }
@@ -4691,20 +4693,20 @@ expr_primary_parens
   ;
 expr_primary_braces
   : '{' '}'
-    { $$ = MakeTaggedNode(N::kExpression,
-                          MakeTaggedNode(N::kConcatenationExpression, $1, nullptr, $2)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpression,
+                          FACTORY()->MakeTaggedNode(N::kConcatenationExpression, $1, nullptr, $2)); }
   | '{' value_range '{' expression_list_proper '}' '}'
-    { $$ = MakeTaggedNode(N::kExpression, $1, $2, MakeTaggedNode(N::kConcatenationExpression, $3, $4, $5), $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpression, $1, $2, FACTORY()->MakeTaggedNode(N::kConcatenationExpression, $3, $4, $5), $6); }
     /* repeat concatenation: $2 should be an expression, not a range */
   | range_list_in_braces
     /* Reshape to use kConcatenationExpression instead of kBraceGroup */
     { auto& node = SymbolCastToNode(*$1);
-      $$ = MakeTaggedNode(N::kConcatenationExpression,
+      $$ = FACTORY()->MakeTaggedNode(N::kConcatenationExpression,
                                          node[0],
                                          node[1],
                                          node[2]); }
   | streaming_concatenation
-    { $$ = MakeTaggedNode(N::kExpression, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpression, $1); }
 
   ;
 range_list_in_braces
@@ -4726,14 +4728,14 @@ type_or_id_root
   ;
 local_root
   : TK_local_SCOPE type_or_id_root
-    { $$ = MakeTaggedNode(N::kLocalRoot, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLocalRoot, $1, $2); }
     /* 'local' is a legal class_qualifier in the scope of an
      * inline constraint block.
      */
   | TK_Sroot '.' type_or_id_root
-    { $$ = MakeTaggedNode(N::kLocalRoot, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLocalRoot, $1, $2, $3); }
   | type_or_id_root
-    { $$ = MakeTaggedNode(N::kLocalRoot, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLocalRoot, $1); }
   /* The following is now covered by allowing '.' class_id in
    * hierarchy_extension.
    *   implicit_class_handle '.' class_id
@@ -4781,7 +4783,7 @@ expr_primary_no_groups
   ;
 cast
   : casting_type '\'' '(' expression ')'
-    { $$ = MakeTaggedNode(N::kCast, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCast, $1, $2, MakeParenGroup($3, $4, $5)); }
   ;
 casting_type
   : TK_DecNumber
@@ -4809,7 +4811,7 @@ randomize_call
   : TK_randomize /* attribute_list_opt */
     identifier_list_in_parens_opt
     with_constraint_block_opt
-    { $$ = MakeTaggedNode(N::kRandomizeFunctionCall, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandomizeFunctionCall, $1, $2, $3); }
   /* Another form of randomize_call is as a member function, like foo.randomize().
    * This is covered by reference_or_call.
    */
@@ -4831,7 +4833,7 @@ identifier_list
   : identifier_list ',' reference
     { $$ = ExtendNode($1, $2, $3); }
   | reference
-    { $$ = MakeTaggedNode(N::kIdentifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIdentifierList, $1); }
   ;
 with_constraint_block_opt
   : with_constraint_block
@@ -4841,7 +4843,7 @@ with_constraint_block_opt
   ;
 with_constraint_block
   : TK_with identifier_list_in_parens_opt constraint_block
-    { $$ = MakeTaggedNode(N::kWithConstraints, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kWithConstraints, $1, $2, $3); }
   ;
 
 /**
@@ -4852,7 +4854,7 @@ function_item_list_opt
 **/
 function_item_list
   : function_item
-    { $$ = MakeTaggedNode(N::kFunctionItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFunctionItemList, $1); }
   | function_item_list function_item
     { $$ = ExtendNode($1, $2); }
   ;
@@ -4890,22 +4892,22 @@ primitive_gate_instance
     /* $1, $2 := name_of_instance
                  : instance_identifier { unpacked_dimension }
       */
-    { $$ = MakeTaggedNode(N::kPrimitiveGateInstance, $1,
-                          MakeUnpackedDimensionsNode($2),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPrimitiveGateInstance, $1,
+                          MakeUnpackedDimensionsNode(param, $2),
                           MakeParenGroup($3, $4, $5)); }
   /* anonymous instance */
   | '(' any_port_list_opt ')'
-    { $$ = MakeTaggedNode(N::kPrimitiveGateInstance, nullptr, nullptr, MakeParenGroup($1, $2, $3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPrimitiveGateInstance, nullptr, nullptr, MakeParenGroup($1, $2, $3)); }
   | GenericIdentifier decl_dimensions
-    { $$ = MakeTaggedNode(N::kPrimitiveGateInstance, $1,
-                          MakeUnpackedDimensionsNode($2),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPrimitiveGateInstance, $1,
+                          MakeUnpackedDimensionsNode(param, $2),
                           nullptr); }
   ;
 primitive_gate_instance_list
   : primitive_gate_instance_list ',' primitive_gate_instance
     { $$ = ExtendNode($1, $2, $3); }
   | primitive_gate_instance
-    { $$ = MakeTaggedNode(N::kPrimitiveGateInstanceList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPrimitiveGateInstanceList, $1); }
   ;
 
 // more permissive to eliminate S/R conflict
@@ -4913,11 +4915,11 @@ primitive_gate_instance_list
 gate_instance_or_register_variable
   /* similar to variable_decl_assignment */
   : GenericIdentifier decl_dimensions_opt trailing_decl_assignment_opt
-    { $$ = MakeTaggedNode(N::kRegisterVariable, $1,
-                          MakeUnpackedDimensionsNode($2), $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRegisterVariable, $1,
+                          MakeUnpackedDimensionsNode(param, $2), $3); }
   | GenericIdentifier decl_dimensions_opt '(' any_port_list_opt ')'
-    { $$ = MakeTaggedNode(N::kGateInstance, $1,
-                          MakeUnpackedDimensionsNode($2),
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstance, $1,
+                          MakeUnpackedDimensionsNode(param, $2),
                           MakeParenGroup($3, $4, $5)); }
   | MacroCall
     /* covers MacroCallId '(' ... ')' as an instance */
@@ -4926,13 +4928,13 @@ gate_instance_or_register_variable
   /* TODO(fangism): arrays should not be declared with port connections */
   /* TODO(b/36706412): support anonymous instances */
   | call_base
-    {$$ = MakeTaggedNode(N::kGateInstance, nullptr, nullptr, $1); }
+    {$$ = FACTORY()->MakeTaggedNode(N::kGateInstance, nullptr, nullptr, $1); }
   ;
 gate_instance_or_register_variable_list
   : gate_instance_or_register_variable_list ',' gate_instance_or_register_variable
     { $$ = ExtendNode($1, $2, $3); }
   | gate_instance_or_register_variable
-    { $$ = MakeTaggedNode(N::kGateInstanceRegisterVariableList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstanceRegisterVariableList, $1); }
   ;
 
 gatetype
@@ -4982,13 +4984,13 @@ switchtype
  */
 hierarchy_extension
   : '.' unqualified_id
-    { $$ = MakeTaggedNode(N::kHierarchyExtension, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kHierarchyExtension, $1, $2); }
   | '.' MacroCall
-    { $$ = MakeTaggedNode(N::kMacroCallExtension, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroCallExtension, $1, $2);}
   | '.' TK_new
-    { $$ = MakeTaggedNode(N::kNewCall, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNewCall, $1, $2); }
   | '.' TK_randomize call_base with_constraint_block_opt
-    { $$ = MakeTaggedNode(N::kRandomizeMethodCallExtension, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandomizeMethodCallExtension, $1,
                           $2,
                           $3, $4); }
 
@@ -4996,44 +4998,44 @@ hierarchy_extension
      * any other arbitrary function call.
      */
   | '.' TK_randomize with_constraint_block
-    { $$ = MakeTaggedNode(N::kRandomizeMethodCallExtension, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandomizeMethodCallExtension, $1,
                           $2,
                           nullptr, $3); }
     /* member function form of randomize_call */
   | '.' builtin_array_method call_base
     array_method_with_predicate_opt
-    { $$ = MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3, $4); }
   | '.' builtin_array_method
     array_method_with_predicate
-    { $$ = MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3); }
   ;
 hierarchy_or_call_extension
   : '.' unqualified_id
-    { $$ = MakeTaggedNode(N::kHierarchyExtension, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kHierarchyExtension, $1, $2); }
   | '.' unqualified_id call_base
-    { $$ = MakeTaggedNode(N::kMethodCallExtension, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMethodCallExtension, $1, $2, $3); }
   | '.' MacroCall
-    { $$ = MakeTaggedNode(N::kMacroCallExtension, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kMacroCallExtension, $1, $2); }
   /* Special functions like 'new' and 'randomize' should only ever appear
    * at end of any hierarchical reference.
    */
   | '.' TK_new
-    { $$ = MakeTaggedNode(N::kNewCall, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNewCall, $1, $2); }
   | '.' TK_new call_base
-    { $$ = MakeTaggedNode(N::kNewCall, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNewCall, $1, $2, $3); }
   | '.' TK_randomize with_constraint_block_opt
-    { $$ = MakeTaggedNode(N::kRandomizeMethodCallExtension, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandomizeMethodCallExtension, $1,
                           $2,
                           nullptr, $3); }
     /* member function form of randomize_call */
   | '.' builtin_array_method call_base
     array_method_with_predicate_opt
-    { $$ = MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3, $4); }
   | '.' builtin_array_method
     array_method_with_predicate_opt
-    { $$ = MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBuiltinArrayMethodCallExtension, $1, $2, $3); }
   | '.' TK_randomize call_base
-    { $$ = MakeTaggedNode(N::kRandomizeMethodCallExtension, $1, $2, nullptr, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandomizeMethodCallExtension, $1, $2, nullptr, $3); }
   ;
 /** this was merged into variable_dimension: (eliminate conflict on '[' )
 index_extension
@@ -5104,23 +5106,23 @@ array_method_with_predicate_opt
   ;
 array_method_with_predicate
   : TK_with '(' expression ')'
-    { $$ = MakeTaggedNode(N::kArrayWithPredicate, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kArrayWithPredicate, $1, MakeParenGroup($2, $3, $4)); }
   ;
 
 hierarchy_event_identifier
   : hierarchy_event_identifier '.' hierarchy_segment
     { $$ = ExtendNode($1, $2, $3); }
   | hierarchy_segment
-    { $$ = MakeTaggedNode(N::kHierarchySegmentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kHierarchySegmentList, $1); }
   ;
 hierarchy_segment
   : GenericIdentifier select_dimensions_opt
-    { $$ = MakeTaggedNode(N::kHierarchySegment, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kHierarchySegment, $1, $2); }
   ;
 
 list_of_identifiers
   : GenericIdentifier
-    { $$ = MakeTaggedNode(N::kIdentifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIdentifierList, $1); }
   | list_of_identifiers ',' GenericIdentifier
     { $$ = ExtendNode($1, $2, $3); }
   ;
@@ -5128,12 +5130,12 @@ list_of_identifiers_unpacked_dimensions
   : list_of_identifiers_unpacked_dimensions ',' identifier_optional_unpacked_dimensions
     { $$ = ExtendNode($1, $2, $3); }
   | identifier_optional_unpacked_dimensions
-    { $$ = MakeTaggedNode(N::kIdentifierUnpackedDimensionsList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIdentifierUnpackedDimensionsList, $1); }
   ;
 identifier_optional_unpacked_dimensions
   : GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kIdentifierUnpackedDimensions, $1,
-                          MakeUnpackedDimensionsNode($2)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIdentifierUnpackedDimensions, $1,
+                          MakeUnpackedDimensionsNode(param, $2)); }
   ;
 list_of_module_item_identifiers
   /* Workaround for grammatic conflict on implicitly typed port declarations:
@@ -5143,26 +5145,26 @@ list_of_module_item_identifiers
   : list_of_module_item_identifiers ',' identifier_optional_unpacked_dimensions
     { $$ = ExtendNode($1, $2, $3); }
   | unqualified_id decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kIdentifierList,
-                          MakeTaggedNode(N::kIdentifierUnpackedDimensions, $1,
-                                         MakeTaggedNode(N::kUnpackedDimensions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kIdentifierList,
+                          FACTORY()->MakeTaggedNode(N::kIdentifierUnpackedDimensions, $1,
+                                         FACTORY()->MakeTaggedNode(N::kUnpackedDimensions,
                                                         $2))); }
   /* TODO(fangism): Verify $1 is a bare GenericIdentifier, no parameters. */
   ;
 list_of_port_identifiers
   /* TODO(fangism): This probably needs decl_dimensions_opt after identifiers. */
   : GenericIdentifier
-    { $$ = MakeTaggedNode(N::kPortIdentifierList,
-                          MakeTaggedNode(N::kPortIdentifier, $1)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortIdentifierList,
+                          FACTORY()->MakeTaggedNode(N::kPortIdentifier, $1)); }
   | GenericIdentifier '=' expression
     /* port identifier with '=' default value */
-    { $$ = MakeTaggedNode(N::kPortIdentifierList,
-                          MakeTaggedNode(N::kPortIdentifier, $1, $2, $3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortIdentifierList,
+                          FACTORY()->MakeTaggedNode(N::kPortIdentifier, $1, $2, $3)); }
   | list_of_port_identifiers ',' GenericIdentifier
-    { $$ = ExtendNode($1, $2, MakeTaggedNode(N::kPortIdentifier, $3)); }
+    { $$ = ExtendNode($1, $2, FACTORY()->MakeTaggedNode(N::kPortIdentifier, $3)); }
   | list_of_port_identifiers ',' GenericIdentifier '=' expression
     /* port identifier with '=' default value */
-    { $$ = ExtendNode($1, $2, MakeTaggedNode(N::kPortIdentifier, $3, $4, $5)); }
+    { $$ = ExtendNode($1, $2, FACTORY()->MakeTaggedNode(N::kPortIdentifier, $3, $4, $5)); }
   ;
 
 identifier_opt
@@ -5183,7 +5185,7 @@ list_of_ports_or_port_declarations_opt
   : list_of_ports_or_port_declarations
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kPortDeclarationList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclarationList); }
   ;
 list_of_ports_or_port_declarations
   /* This serves as list_of_ports or list_of_port_declarations.
@@ -5204,7 +5206,7 @@ list_of_ports_or_port_declarations_preprocessor_last
     preprocessor_balanced_port_declarations
     { $$ = ExtendNode($1, $2); }
   | preprocessor_balanced_port_declarations
-    { $$ = MakeTaggedNode(N::kPortDeclarationList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclarationList, $1); }
   ;
 list_of_ports_or_port_declarations_item_last
   : list_of_ports_or_port_declarations_preprocessor_last port_or_port_declaration
@@ -5212,7 +5214,7 @@ list_of_ports_or_port_declarations_item_last
   | list_of_ports_or_port_declarations_trailing_comma port_or_port_declaration
     { $$ = ExtendNode($1, $2); }
   | port_or_port_declaration
-    { $$ = MakeTaggedNode(N::kPortDeclarationList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclarationList, $1); }
   ;
 list_of_ports_or_port_declarations_trailing_comma
   : list_of_ports_or_port_declarations ','
@@ -5233,7 +5235,7 @@ preprocessor_balanced_port_declarations
     preprocessor_elsif_port_declarations_opt
     preprocessor_else_port_declarations_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedPortDeclarations,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedPortDeclarations,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   | MacroGenericItem
@@ -5251,7 +5253,7 @@ preprocessor_elsif_port_declarations
   : preprocessor_elsif_port_declarations preprocessor_elsif_port_declaration
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_port_declaration
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_port_declaration
   : preprocessor_elsif_header preprocessor_list_of_ports_or_port_declarations_opt
@@ -5265,7 +5267,7 @@ preprocessor_else_port_declarations_opt
   ;
 preprocessor_else_port_declarations
   : PP_else preprocessor_list_of_ports_or_port_declarations_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 /** list_of_port_or_port_declarations combines the following rules:
@@ -5314,27 +5316,27 @@ port_declaration_noattr
   : port_direction var_or_net_type_opt
     data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
     trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kPortDeclaration, $1, $2, ForwardChildren($3), $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclaration, $1, $2, ForwardChildren($3), $4); }
     // TODO(fangism): inout's cannot have variable port types,
     // so this needs to be enforced in CST validation.
   | net_type data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
     trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kPortDeclaration, nullptr, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclaration, nullptr, $1,
                           ForwardChildren($2), $3); }
   | data_type_primitive GenericIdentifier decl_dimensions_opt trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kPortDeclaration, nullptr, nullptr,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclaration, nullptr, nullptr,
                           // just expand without ForwardChildren:
                           // MakeTypeIdDimensionsTuple(
                               $1,
-                              MakeTaggedNode(N::kUnqualifiedId, $2),
-                              MakeUnpackedDimensionsNode($3)
+                              FACTORY()->MakeTaggedNode(N::kUnqualifiedId, $2),
+                              MakeUnpackedDimensionsNode(param, $3)
                           // )
                           ,  //
                           $4); }
   /* user-defined types: including interface_port_declaration */
   | type_identifier_followed_by_id decl_dimensions_opt trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kPortDeclaration, nullptr, nullptr, ForwardChildren($1),
-                          MakeUnpackedDimensionsNode($2), $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortDeclaration, nullptr, nullptr, ForwardChildren($1),
+                          MakeUnpackedDimensionsNode(param, $2), $3); }
   ;
 var_or_net_type_opt
   : net_type
@@ -5355,13 +5357,13 @@ signed_unsigned_opt
 lpvalue
   /* intended to cover 'net_lvalue' and 'variable_lvalue' in LRM */
   : reference
-    { $$ = MakeTaggedNode(N::kLPValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLPValue, $1); }
     /* Unless functions can return by reference, calls should not be permitted
      * in lvalues.  Written this way to avoid R/R conflict against expressions.
      * TODO(fangism): Reject any () calls in $1.
      */
   | range_list_in_braces
-    { $$ = MakeTaggedNode(N::kLPValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLPValue, $1); }
   /* TODO(fangism): For lpvalue, verify that $1 is of the form
    * '{' expression_list_proper '}' and that each item in the list is an lvalue.
    */
@@ -5370,18 +5372,18 @@ lpvalue
      * and 'assignment_pattern_variable_lvalue'.
      * TODO(fangism): verify that elements are lpvalue (not just any expr).
      */
-    { $$ = MakeTaggedNode(N::kLPValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLPValue, $1); }
   | streaming_concatenation
-    { $$ = MakeTaggedNode(N::kLPValue, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLPValue, $1); }
   ;
 
 cont_assign
   : lpvalue '=' expression
-    { $$ = MakeTaggedNode(N::kNetVariableAssignment, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetVariableAssignment, $1, $2, $3); }
   // edge case to avoid R/R with reference_or_call
   | reference '.' builtin_array_method '=' expression
-    { $$ = MakeTaggedNode(N::kNetVariableAssignment, MakeTaggedNode(
-      N::kLPValue,ExtendNode($1, MakeTaggedNode(N::kHierarchyExtension, $2, $3, nullptr))
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetVariableAssignment, FACTORY()->MakeTaggedNode(
+      N::kLPValue,ExtendNode($1, FACTORY()->MakeTaggedNode(N::kHierarchyExtension, $2, $3, nullptr))
     ),$4,$5); }
   // FIXME: allow just lpvalue to permit just reference for MacroCall
   ;
@@ -5389,7 +5391,7 @@ cont_assign_list
   : cont_assign_list ',' cont_assign
     { $$ = ExtendNode($1, $2, $3); }
   | cont_assign
-    { $$ = MakeTaggedNode(N::kAssignmentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignmentList, $1); }
   ;
 
 symbol_or_label
@@ -5412,7 +5414,7 @@ module_or_interface_declaration
     module_end
     label_opt
     { const auto node_enum = DeclarationKeywordToNodeEnum(*$1);
-      $$ = MakeTaggedNode(node_enum,
+      $$ = FACTORY()->MakeTaggedNode(node_enum,
                           MakeModuleHeader($1, $2, $3, $4, $5, $6, $7, $8),
                           $9, $10, $11); }
   /* TODO(fangism): check that module_start and module_end match */
@@ -5440,13 +5442,13 @@ module_end
   ;
 label_opt
   : ':' symbol_or_label
-    { $$ = MakeTaggedNode(N::kLabel, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLabel, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
 module_attribute_foreign
   : TK_PSTAR GenericIdentifier TK_integer GenericIdentifier '=' TK_StringLiteral ';' TK_STARP
-    { $$ = MakeTaggedNode(N::kModuleAttributeForeign, $1, $2, $3, $4, $5, $6, $7, $8); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModuleAttributeForeign, $1, $2, $3, $4, $5, $6, $7, $8); }
   ;
 module_attribute_foreign_opt
   : module_attribute_foreign
@@ -5466,10 +5468,10 @@ module_port_list_opt
   ;
 module_parameter_port_list_opt
   : '#' '(' module_parameter_port_list ')'
-  { $$ = MakeTaggedNode(N::kFormalParameterListDeclaration, $1, MakeParenGroup($2, $3, $4)); }
+  { $$ = FACTORY()->MakeTaggedNode(N::kFormalParameterListDeclaration, $1, MakeParenGroup($2, $3, $4)); }
   | '#' '(' ')'
-  { $$ = MakeTaggedNode(N::kFormalParameterListDeclaration, $1,
-                        MakeParenGroup($2, MakeTaggedNode(N::kFormalParameterList), $3));
+  { $$ = FACTORY()->MakeTaggedNode(N::kFormalParameterListDeclaration, $1,
+                        MakeParenGroup($2, FACTORY()->MakeTaggedNode(N::kFormalParameterList), $3));
   }
   | /* empty */
   { $$ = nullptr; }
@@ -5487,10 +5489,10 @@ module_parameter_port
   /* : parameter_opt param_type_opt parameter_assign */
   : parameter_opt param_type_followed_by_id_and_dimensions_opt
     trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3); }
     /* TODO(fangism): Verify that $2 should not have trailing dimensions (in this context). */
   | parameter_opt TK_type type_assignment
-    { $$ = MakeTaggedNode(N::kParamDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamDeclaration, $1, $2, $3); }
   /* type parameter:
    * The EBNF permits a type_assignment_list, however, since both
    * type_assignment_list and module_parameter_port_list are comma-separated,
@@ -5508,14 +5510,14 @@ type_assignment_list
   : type_assignment_list ',' type_assignment
     { $$ = ExtendNode($1, $2, $3); }
   | type_assignment
-    { $$ = MakeTaggedNode(N::kTypeAssignmentList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTypeAssignmentList, $1); }
   ;
 type_assignment
   : GenericIdentifier '=' parameter_expr
-    { $$ = MakeTaggedNode(N::kTypeAssignment, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTypeAssignment, $1, $2, $3); }
     /* $3 covers all types, including interface types and user-defined types */
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kTypeAssignment, $1, nullptr, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTypeAssignment, $1, nullptr, nullptr); }
 
   ;
 
@@ -5536,7 +5538,7 @@ module_parameter_port_list_preprocessor_last
   | module_parameter_port_list_trailing_comma preprocessor_directive
     { $$ = ExtendNode($1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kFormalParameterList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFormalParameterList, $1); }
   ;
 module_parameter_port_list_item_last
   /* default value is mandatory */
@@ -5545,7 +5547,7 @@ module_parameter_port_list_item_last
   | module_parameter_port_list_preprocessor_last module_parameter_port
     { $$ = ExtendNode($1, $2); }
   | module_parameter_port
-    { $$ = MakeTaggedNode(N::kFormalParameterList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFormalParameterList, $1); }
   ;
 
 // TODO (glatosinski) MakeDataType is introduced here to mark
@@ -5556,9 +5558,9 @@ module_parameter_port_list_item_last
 // declaration)
 net_declaration
   : net_type net_variable_or_decl_assigns ';'
-    { $$ = MakeTaggedNode(N::kNetDeclaration, MakeDataType($1), nullptr, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetDeclaration, MakeDataType($1), nullptr, $2, $3); }
   | net_type data_type_or_implicit net_variable_or_decl_assigns ';'
-    { $$ = MakeTaggedNode(N::kNetDeclaration, MakeDataType($1), $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetDeclaration, MakeDataType($1), $2, $3, $4); }
     /* TODO(fangism): support drive_strength and charge_strength */
   // : net_type data_type_or_implicit delay3_opt net_variable_list ';'
   // : net_type data_type_or_implicit delay3 net_variable_list ';'
@@ -5571,11 +5573,11 @@ net_declaration
   //   trailing_assign_opt ',' net_decl_assigns ';'
   // | net_type data_type_or_implicit drive_strength net_decl_assigns ';'
   | TK_trireg charge_strength_opt decl_dimensions_opt delay3_opt list_of_identifiers ';'
-    { $$ = MakeTaggedNode(N::kNetDeclaration, MakeDataType(nullptr, $1, $4, nullptr), $2,
-                          MakePackedDimensionsNode($3),
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetDeclaration, MakeDataType(nullptr, $1, $4, nullptr), $2,
+                          MakePackedDimensionsNode(param, $3),
                           $5, $6); }
   | net_type delay3 net_variable_or_decl_assigns ';'
-  { $$ = MakeTaggedNode(N::kNetDeclaration, MakeDataType(nullptr, $1, $2, nullptr), nullptr, nullptr, $3, $4); }
+  { $$ = FACTORY()->MakeTaggedNode(N::kNetDeclaration, MakeDataType(nullptr, $1, $2, nullptr), nullptr, nullptr, $3, $4); }
   /* TODO(fangism): net_type_identifer [ delay_control ] list_of_net_decl_assignments */
   /* TODO(fangism): TK_interconnect ... */
   ;
@@ -5587,103 +5589,103 @@ module_port_declaration
    */
   : port_direction signed_unsigned_opt qualified_id decl_dimensions_opt
     list_of_identifiers_unpacked_dimensions ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, $3,
-                          MakePackedDimensionsNode($4)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, $3,
+                          MakePackedDimensionsNode(param, $4)),
                           $5, $6); }
   | port_direction signed_unsigned_opt unqualified_id decl_dimensions_opt
     list_of_identifiers_unpacked_dimensions ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, $3,
-                          MakePackedDimensionsNode($4)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, $3,
+                          MakePackedDimensionsNode(param, $4)),
                           $5, $6); }
   | port_direction signed_unsigned_opt decl_dimensions delay3_opt
     list_of_identifiers_unpacked_dimensions ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1,
-                          MakeDataType($2, nullptr, $4, MakePackedDimensionsNode($3)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1,
+                          MakeDataType($2, nullptr, $4, MakePackedDimensionsNode(param, $3)),
                           $5, $6);}
     /* implicit type */
   | port_direction signed_unsigned_opt delay3
     list_of_identifiers_unpacked_dimensions ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, nullptr, $3, nullptr), $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, nullptr, $3, nullptr), $4, $5); }
     /* implicit type */
   | port_direction signed_unsigned_opt list_of_module_item_identifiers ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, nullptr, nullptr), $3, $4);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1, MakeDataType($2, nullptr, nullptr), $3, $4);}
     /* implicit type */
   | port_direction port_net_type signed_unsigned_opt decl_dimensions_opt
     list_of_identifiers_unpacked_dimensions ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1,
-                          MakeDataType($3, ForwardChildren($2), MakePackedDimensionsNode($4)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1,
+                          MakeDataType($3, ForwardChildren($2), MakePackedDimensionsNode(param, $4)),
                           $5, $6); }
   | dir var_type signed_unsigned_opt decl_dimensions_opt
     list_of_port_identifiers ';'
-    { $$ = MakeTaggedNode(N::kModulePortDeclaration, $1,
-                          MakeDataType($3, ForwardChildren($2), MakePackedDimensionsNode($4)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kModulePortDeclaration, $1,
+                          MakeDataType($3, ForwardChildren($2), MakePackedDimensionsNode(param, $4)),
                           $5, $6); }
   ;
 
 parameter_override
   : TK_defparam defparam_assign_list ';'
-    { $$ = MakeTaggedNode(N::kParameterOverride, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParameterOverride, $1, $2, $3); }
   ;
 
 gate_instantiation
   // TODO(jeremycs): possibly introduce structure here
   : /* attribute_list_opt */ gatetype primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
   | /* attribute_list_opt */ gatetype delay3 primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4); }
   | /* attribute_list_opt */ gatetype drive_strength primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4); }
   | /* attribute_list_opt */ gatetype drive_strength delay3 primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4, $5); }
   | /* attribute_list_opt */ switchtype primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
   | /* attribute_list_opt */ switchtype delay3 primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3, $4); }
   | TK_pullup primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
   | TK_pulldown primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1, $2, $3); }
   | TK_pullup '(' dr_strength1 ')' primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1,
                           MakeParenGroup($2, $3, $4), $5, $6); }
   | TK_pullup '(' dr_strength1 ',' dr_strength0 ')' primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5), $6), $7, $8); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6), $7, $8); }
   | TK_pullup '(' dr_strength0 ',' dr_strength1 ')' primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5), $6), $7, $8); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6), $7, $8); }
   | TK_pulldown '(' dr_strength0 ')' primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1,
                           MakeParenGroup($2, $3, $4), $5, $6); }
   | TK_pulldown '(' dr_strength1 ',' dr_strength0 ')' primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5), $6), $7, $8); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6), $7, $8); }
   | TK_pulldown '(' dr_strength0 ',' dr_strength1 ')' primitive_gate_instance_list ';'
-    { $$ = MakeTaggedNode(N::kGateInstantiation, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5), $6), $7, $8); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGateInstantiation, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6), $7, $8); }
   ;
 
 specify_block
   : TK_specify specify_item_list_opt TK_endspecify
-    { $$ = MakeTaggedNode(N::kSpecifyBlock, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyBlock, $1, $2, $3); }
   ;
 
 specparam_declaration
   : /* attribute_list_opt */ TK_specparam specparam_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecParamDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecParamDeclaration, $1, $2, $3); }
   ;
 
 generate_region
   : TK_generate generate_item_list_opt TK_endgenerate
-    { $$ = MakeTaggedNode(N::kGenerateRegion, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateRegion, $1, $2, $3); }
   ;
 
 continuous_assign
   : TK_assign drive_strength_opt delay3_opt cont_assign_list ';'
-    { $$ = MakeTaggedNode(N::kContinuousAssignmentStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kContinuousAssignmentStatement, $1, $2, $3, $4, $5); }
   /* Allowed the following because they have been observed in practice: */
   | TK_assign drive_strength_opt delay3_opt macro_call_or_item
-    { $$ = MakeTaggedNode(N::kContinuousAssignmentStatement, $1, $2, $3, $4, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kContinuousAssignmentStatement, $1, $2, $3, $4, nullptr); }
   /* TODO(fangism): shape kContinuousAssignmentStatement consistently */
   ;
 
@@ -5691,27 +5693,27 @@ net_alias_assign_lvalue_list
   : net_alias_assign_lvalue_list '=' lpvalue
     { $$ = ExtendNode($1, $2, $3); }
   | lpvalue '=' lpvalue
-    { $$ = MakeTaggedNode(N::kNetAliasLvalueList, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetAliasLvalueList, $1, $2, $3); }
   ;
 
 net_alias
   : TK_alias net_alias_assign_lvalue_list ';'
-    { $$ = MakeTaggedNode(N::kNetAlias, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetAlias, $1, $2, $3); }
   ;
 
 loop_generate_construct
   : TK_for '(' genvar_opt GenericIdentifier '=' expression ';'
     expression_opt ';' for_step_opt ')'
     generate_item
-    { $$ = MakeTaggedNode(
+    { $$ = FACTORY()->MakeTaggedNode(
         N::kLoopGenerateConstruct,
-        MakeTaggedNode(
+        FACTORY()->MakeTaggedNode(
             N::kLoopHeader, $1,
             MakeParenGroup($2,
-                MakeTaggedNode(N::kForSpec,
-                    MakeTaggedNode(N::kForInitialization, $3, nullptr, $4, $5, $6),
+                FACTORY()->MakeTaggedNode(N::kForSpec,
+                    FACTORY()->MakeTaggedNode(N::kForInitialization, $3, nullptr, $4, $5, $6),
                     $7,
-                    MakeTaggedNode(N::kForCondition, $8),
+                    FACTORY()->MakeTaggedNode(N::kForCondition, $8),
                     $9, $10),
                 $11)),
         $12); }
@@ -5720,42 +5722,42 @@ loop_generate_construct
 
 conditional_generate_construct
   : generate_if generate_item TK_else generate_item
-    { $$ = MakeTaggedNode(N::kConditionalGenerateConstruct,
-             MakeTaggedNode(N::kGenerateIfClause,
-               MakeTaggedNode(N::kGenerateIfHeader, $1),
-               MakeTaggedNode(N::kGenerateIfBody, $2)),
-           MakeTaggedNode(N::kGenerateElseClause,
+    { $$ = FACTORY()->MakeTaggedNode(N::kConditionalGenerateConstruct,
+             FACTORY()->MakeTaggedNode(N::kGenerateIfClause,
+               FACTORY()->MakeTaggedNode(N::kGenerateIfHeader, $1),
+               FACTORY()->MakeTaggedNode(N::kGenerateIfBody, $2)),
+           FACTORY()->MakeTaggedNode(N::kGenerateElseClause,
                $3,
-               MakeTaggedNode(N::kGenerateElseBody, $4))); }
+               FACTORY()->MakeTaggedNode(N::kGenerateElseBody, $4))); }
   | generate_if generate_item %prec less_than_TK_else
-    { $$ = MakeTaggedNode(N::kConditionalGenerateConstruct,
-             MakeTaggedNode(N::kGenerateIfClause,
-               MakeTaggedNode(N::kGenerateIfHeader, $1),
-               MakeTaggedNode(N::kGenerateIfBody, $2)),
+    { $$ = FACTORY()->MakeTaggedNode(N::kConditionalGenerateConstruct,
+             FACTORY()->MakeTaggedNode(N::kGenerateIfClause,
+               FACTORY()->MakeTaggedNode(N::kGenerateIfHeader, $1),
+               FACTORY()->MakeTaggedNode(N::kGenerateIfBody, $2)),
            nullptr); }
   | TK_case '(' expression ')' generate_case_items TK_endcase
-    { $$ = MakeTaggedNode(N::kCaseGenerateConstruct, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseGenerateConstruct, $1,
                           MakeParenGroup($2, $3, $4), $5, $6); }
   ;
 
 always_construct
   : /* attribute_list_opt */ always_any statement
-    { $$ = MakeTaggedNode(N::kAlwaysStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAlwaysStatement, $1, $2); }
   ;
 
 initial_construct
   : /* attribute_list_opt */ TK_initial statement
-    { $$ = MakeTaggedNode(N::kInitialStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kInitialStatement, $1, $2); }
   ;
 
 final_construct
   : /* attribute_list_opt */ TK_final statement
-    { $$ = MakeTaggedNode(N::kFinalStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFinalStatement, $1, $2); }
   ;
 
 analog_construct
   : /* attribute_list_opt */ TK_analog analog_statement
-    { $$ = MakeTaggedNode(N::kAnalogStatement, $1, ForwardChildren($2)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAnalogStatement, $1, ForwardChildren($2)); }
   ;
 
 module_common_item
@@ -5789,7 +5791,7 @@ module_common_item
 
 genvar_declaration
   : TK_genvar list_of_identifiers ';'
-    { $$ = MakeTaggedNode(N::kGenvarDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenvarDeclaration, $1, $2, $3); }
   ;
 
 module_or_generate_item_declaration
@@ -5799,9 +5801,9 @@ module_or_generate_item_declaration
   | clocking_declaration
     { $$ = std::move($1); }
   | TK_default TK_clocking GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kDefaultClockingStatement, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultClockingStatement, $1, $2, $3, $4); }
   | TK_default TK_disable TK_iff expression_or_dist ';'
-    { $$ = MakeTaggedNode(N::kDefaultDisableStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultDisableStatement, $1, $2, $3, $4, $5); }
   | genvar_declaration
     { $$ = std::move($1); }
   ;
@@ -5829,7 +5831,7 @@ package_or_generate_item_declaration
   | dpi_import_export
     { $$ = std::move($1); }
   | ';'
-    { $$ = MakeTaggedNode(N::kNullItem, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNullItem, $1); }
   ;
 
 module_or_generate_item
@@ -5879,14 +5881,14 @@ module_block
    * lint error.
    */
   : begin module_item_list_opt end
-    { $$ = MakeTaggedNode(N::kModuleBlock, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModuleBlock, $1, $2, $3); }
   ;
 preprocessor_balanced_module_items
   : preprocessor_if_header module_item_list_opt
     preprocessor_elsif_module_items_opt
     preprocessor_else_module_item_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedModuleItems,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedModuleItems,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -5900,7 +5902,7 @@ preprocessor_elsif_module_items
   : preprocessor_elsif_module_items preprocessor_elsif_module_item
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_module_item
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_module_item
   : preprocessor_elsif_header module_item_list_opt
@@ -5914,7 +5916,7 @@ preprocessor_else_module_item_opt
   ;
 preprocessor_else_module_item
   : PP_else module_item_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 non_port_module_item
@@ -5929,8 +5931,8 @@ non_port_module_item
   | module_or_interface_declaration
     { $$ = std::move($1); }
   | TKK_attribute '(' GenericIdentifier ',' TK_StringLiteral ',' TK_StringLiteral ')' ';'
-    { $$ = MakeTaggedNode(N::kAttribute, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7),
+    { $$ = FACTORY()->MakeTaggedNode(N::kAttribute, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7),
                                          $8), $9); }
   ;
 
@@ -5946,19 +5948,19 @@ always_any
   ;
 generate_if
   : TK_if expression_in_parens
-    { $$ = MakeTaggedNode(N::kGenerateIf, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateIf, $1, $2); }
   ;
 generate_case_items
   : generate_case_items generate_case_item
     { $$ = ExtendNode($1, $2); }
   | generate_case_item
-    { $$ = MakeTaggedNode(N::kGenerateCaseItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateCaseItemList, $1); }
   ;
 generate_case_item
   : expression_list_proper ':' generate_item
-    { $$ = MakeTaggedNode(N::kGenerateCaseItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateCaseItem, $1, $2, $3); }
   | TK_default ':' generate_item
-    { $$ = MakeTaggedNode(N::kGenerateDefaultItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateDefaultItem, $1, $2, $3); }
   ;
 
 generate_item
@@ -5984,7 +5986,7 @@ preprocessor_balanced_generate_items
     preprocessor_elsif_generate_items_opt
     preprocessor_else_generate_item_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedGenerateItems,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedGenerateItems,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -5998,7 +6000,7 @@ preprocessor_elsif_generate_items
   : preprocessor_elsif_generate_items preprocessor_elsif_generate_item
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_generate_item
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_generate_item
   : preprocessor_elsif_header generate_item_list_opt
@@ -6012,17 +6014,17 @@ preprocessor_else_generate_item_opt
   ;
 preprocessor_else_generate_item
   : PP_else generate_item_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 begin
   : TK_begin label_opt
-    { $$ = MakeTaggedNode(N::kBegin, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBegin, $1, $2); }
   ;
 
 end
   : TK_end label_opt
-    { $$ = MakeTaggedNode(N::kEnd, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEnd, $1, $2); }
   ;
 
 /* The LRM swaps the roles of generate_item and generate_block, but block as
@@ -6030,12 +6032,12 @@ end
  */
 generate_block
   : begin generate_item_list_opt end
-    { $$ = MakeTaggedNode(N::kGenerateBlock, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateBlock, $1, $2, $3); }
     /* begin : label is more common and is the preferred style. */
   | unqualified_id ':' TK_begin generate_item_list_opt end
-    { $$ = MakeTaggedNode(N::kGenerateBlock,
-                          MakeTaggedNode(N::kBegin,
-                                         MakeTaggedNode(N::kLabel, $1, $2),
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateBlock,
+                          FACTORY()->MakeTaggedNode(N::kBegin,
+                                         FACTORY()->MakeTaggedNode(N::kLabel, $1, $2),
                                          $3),
                           $4, $5); }
     /* $1 should be a GenericIdentifier, without parameter_value */
@@ -6046,27 +6048,27 @@ generate_item_list
   : generate_item_list generate_item
     { $$ = ExtendNode($1, $2); }
   | generate_item
-    { $$ = MakeTaggedNode(N::kGenerateItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateItemList, $1); }
   ;
 
 generate_item_list_opt
   : generate_item_list
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kGenerateItemList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGenerateItemList); }
   ;
 
 module_item_list
   : module_item_list module_item
     { $$ = ExtendNode($1, $2); }
   | module_item
-    { $$ = MakeTaggedNode(N::kModuleItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModuleItemList, $1); }
   ;
 module_item_list_opt
   : module_item_list
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kModuleItemList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kModuleItemList); }
   ;
 genvar_opt
   : TK_genvar
@@ -6076,7 +6078,7 @@ genvar_opt
   ;
 net_decl_assign
   : GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kNetDeclarationAssignment, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetDeclarationAssignment, $1, $2, $3); }
   ;
 /**
 net_decl_assigns
@@ -6094,7 +6096,7 @@ net_variable_or_decl_assigns
   : net_variable_or_decl_assigns ',' net_variable_or_decl_assign
     { $$ = ExtendNode($1, $2, $3); }
   | net_variable_or_decl_assign
-    { $$ = MakeTaggedNode(N::kNetVariableDeclarationAssign, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetVariableDeclarationAssign, $1); }
   ;
 
 bit_logic
@@ -6165,75 +6167,75 @@ param_type_followed_by_id_and_dimensions_opt
   : bit_logic_opt signed_unsigned_opt qualified_id decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, $2, $3),
-                                    MakePackedDimensionsNode($4),
+                                    MakePackedDimensionsNode(param, $4),
                                     $5,
-                                    MakeUnpackedDimensionsNode($6)); }
+                                    MakeUnpackedDimensionsNode(param, $6)); }
   | bit_logic_opt signed_unsigned_opt unqualified_id decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, $2, $3),
-                                    MakePackedDimensionsNode($4),
+                                    MakePackedDimensionsNode(param, $4),
                                     $5,
-                                    MakeUnpackedDimensionsNode($6)); }
+                                    MakeUnpackedDimensionsNode(param, $6)); }
   | bit_logic_opt signed_unsigned_opt unqualified_id decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, $2, nullptr),
                                     /* no packed dimensions */ nullptr,
                                     /* parameter id, not type */ $3,
-                                    MakeUnpackedDimensionsNode($4)); }
+                                    MakeUnpackedDimensionsNode(param, $4)); }
     /* implicit type.  Declared identifier upgraded to unqualified_id to avoid conflict. */
     /* TODO(fangism): Verify that $3 is only a GenericIdentifier, without parameters. */
   | bit_logic_opt signed_unsigned_opt decl_dimensions
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, $2, nullptr),
-                                    MakePackedDimensionsNode($3),
+                                    MakePackedDimensionsNode(param, $3),
                                     $4,
-                                    MakeUnpackedDimensionsNode($5)); }
+                                    MakeUnpackedDimensionsNode(param, $5)); }
   | integer_atom_type signed_unsigned_opt decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, $2, nullptr),
-                                    MakePackedDimensionsNode($3),
+                                    MakePackedDimensionsNode(param, $3),
                                     $4,
-                                    MakeUnpackedDimensionsNode($5)); }
+                                    MakeUnpackedDimensionsNode(param, $5)); }
   | non_integer_type decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, nullptr, nullptr),
-                                    MakePackedDimensionsNode($2),
+                                    MakePackedDimensionsNode(param, $2),
                                     $3,
-                                    MakeUnpackedDimensionsNode($4)); }
+                                    MakeUnpackedDimensionsNode(param, $4)); }
   | TK_reg decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, nullptr, nullptr),
-                                    MakePackedDimensionsNode($2),
+                                    MakePackedDimensionsNode(param, $2),
                                     $3,
-                                    MakeUnpackedDimensionsNode($4)); }
+                                    MakeUnpackedDimensionsNode(param, $4)); }
   | TK_string decl_dimensions_opt
     GenericIdentifier decl_dimensions_opt
     { $$ = MakeParamTypeDeclaration(MakeTypeInfoNode($1, nullptr, nullptr),
-                                    MakePackedDimensionsNode($2),
+                                    MakePackedDimensionsNode(param, $2),
                                     $3,
-                                    MakeUnpackedDimensionsNode($4)); }
+                                    MakeUnpackedDimensionsNode(param, $4)); }
   /* TODO(fangism): see if this can be simplified to:
    * data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
    */
   ;
 parameter_assign_list
   : parameter_assign
-    { $$ = MakeTaggedNode(N::kParameterAssignList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParameterAssignList, $1); }
   | parameter_assign_list ',' parameter_assign
     { $$ = ExtendNode($1, $2, $3); }
   ;
 localparam_assign_list
   : localparam_assign
-    { $$ = MakeTaggedNode(N::kParameterAssignList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParameterAssignList, $1); }
   | localparam_assign_list ',' localparam_assign
     { $$ = ExtendNode($1, $2, $3); }
   ;
 parameter_assign
   : GenericIdentifier '=' expression parameter_value_ranges_opt
-    { $$ = MakeTaggedNode(N::kParameterAssign, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParameterAssign, $1, $2, $3); }
   ;
 localparam_assign
   : GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kParameterAssign, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParameterAssign, $1, $2, $3); }
   ;
 /**
  * Normally localparam assign do not take parameter_value_ranges_opt,
@@ -6242,7 +6244,7 @@ localparam_assign
 trailing_assign
   /* similar to trailing_decl_assignment */
   : '=' parameter_expr parameter_value_ranges_opt
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2, $3); }
   ;
 trailing_assign_opt
   : trailing_assign
@@ -6285,33 +6287,33 @@ parameter_value_opt
   ;
 parameters
   : '#' '(' parameter_expr_list ')'
-    { $$ = MakeTaggedNode(N::kActualParameterList, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterList, $1, MakeParenGroup($2, $3, $4)); }
   | '#' '(' parameter_value_byname_list ')'
-    { $$ = MakeTaggedNode(N::kActualParameterList, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterList, $1, MakeParenGroup($2, $3, $4)); }
     /* TODO(fangism): allow preprocessor_directives in parameter_expr_list
      * by combining with parameter_value_byname_list.
      */
   | '#' '(' ')'
-    { $$ = MakeTaggedNode(N::kActualParameterList, $1, MakeParenGroup($2, nullptr, $3)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterList, $1, MakeParenGroup($2, nullptr, $3)); }
   | '#' TK_DecNumber
-    { $$ = MakeTaggedNode(N::kActualParameterList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterList, $1, $2); }
   | '#' TK_RealTime
-    { $$ = MakeTaggedNode(N::kActualParameterList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterList, $1, $2); }
   ;
 parameter_expr_list
   /* positional arguments */
   : parameter_expr_list ',' parameter_expr
     { $$ = ExtendNode($1, $2, $3); }
   | parameter_expr
-    { $$ = MakeTaggedNode(N::kActualParameterPositionalList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterPositionalList, $1); }
   ;
 parameter_value_byname
   : '.' member_name '(' parameter_expr ')'
-    { $$ = MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, $4, $5)); }
   | '.' member_name '(' ')'
-    { $$ = MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, nullptr, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamByName, $1, $2, MakeParenGroup($3, nullptr, $4)); }
   | '.' member_name
-    { $$ = MakeTaggedNode(N::kParamByName, $1, $2, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParamByName, $1, $2, nullptr); }
   ;
 parameter_value_byname_list
   /* named arguments */
@@ -6326,17 +6328,17 @@ parameter_value_byname_list_trailing_comma
   : parameter_value_byname_list ','
     { $$ = ExtendNode($1, $2); }
   | ','
-    { $$ = MakeTaggedNode(N::kActualParameterByNameList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterByNameList, $1); }
   ;
 parameter_value_byname_list_preprocessor_last
   : parameter_value_byname_list preprocessor_directive
     { $$ = ExtendNode($1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kActualParameterByNameList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterByNameList, $1); }
   ;
 parameter_value_byname_list_item_last
   : parameter_value_byname
-    { $$ = MakeTaggedNode(N::kActualParameterByNameList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualParameterByNameList, $1); }
   | parameter_value_byname_list_trailing_comma parameter_value_byname
     { $$ = ExtendNode($1, $2); }
   | parameter_value_byname_list_preprocessor_last parameter_value_byname
@@ -6363,9 +6365,9 @@ parameter_expr
 port
   : port_expression trailing_assign_opt
     /* when using a trailing_assign, port_expression should be a port_reference */
-    { $$ = MakeTaggedNode(N::kPort, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPort, $1, $2); }
   | '.' member_name '(' port_expression_opt ')'
-    { $$ = MakeTaggedNode(N::kPort, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPort, $1, $2, MakeParenGroup($3, $4, $5)); }
   ;
 any_port_list_opt
   : any_port_list
@@ -6389,7 +6391,7 @@ any_port_list_trailing_comma
   : any_port_list ','
     { $$ = ExtendNode($1, $2); }
   | ','
-    { $$ = MakeTaggedNode(N::kPortActualList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortActualList, $1); }
   ;
 /* TODO(b/36237582): accept a macro item here
    The difficulty around this lies with the reduction path from
@@ -6403,7 +6405,7 @@ any_port_list_trailing_macro_item
   : any_port_list MacroGenericItem
     { $$ = ExtendNode($1, $2); }
   | MacroGenericItem
-    { $$ = MakeTaggedNode(N::kPortActualList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortActualList, $1); }
   ;
 */
 any_port_list_item_last
@@ -6412,30 +6414,30 @@ any_port_list_item_last
   | any_port_list_preprocessor_last any_port
     { $$ = ExtendNode($1, $2); }
   | any_port
-    { $$ = MakeTaggedNode(N::kPortActualList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortActualList, $1); }
   ;
 any_port_list_preprocessor_last
   : any_port_list preprocessor_directive
     { $$ = ExtendNode($1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kPortActualList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortActualList, $1); }
   ;
 any_port
   : port_named
     { $$ = std::move($1); }
   | expression
     /* Note: expr_primary_no_groups already covers MacroGenericItem */
-    { $$ = MakeTaggedNode(N::kActualPositionalPort, std::move($1)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualPositionalPort, std::move($1)); }
   ;
 port_named
   : '.' member_name '(' expression ')'
-    { $$ = MakeTaggedNode(N::kActualNamedPort, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualNamedPort, $1, $2, MakeParenGroup($3, $4, $5)); }
   | '.' member_name '(' ')'
-    { $$ = MakeTaggedNode(N::kActualNamedPort, $1, $2, MakeParenGroup($3, nullptr, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualNamedPort, $1, $2, MakeParenGroup($3, nullptr, $4)); }
   | '.' member_name
-    { $$ = MakeTaggedNode(N::kActualNamedPort, $1, $2, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualNamedPort, $1, $2, nullptr); }
   | TK_DOTSTAR
-    { $$ = MakeTaggedNode(N::kActualNamedPort, $1, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kActualNamedPort, $1, nullptr); }
   ;
 
 member_name
@@ -6461,7 +6463,7 @@ port_expression
 
 port_reference
   : unqualified_id decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kPortReference, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortReference, $1, $2); }
   /* These 'unqualified_id' should all be GenericIdentifier, but were
    * promoted to ease S/R conflict resolution vs. general class_ids in
    * port declarations.
@@ -6471,7 +6473,7 @@ port_reference
   ;
 port_reference_list
   : port_reference
-    { $$ = MakeTaggedNode(N::kPortReferenceList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPortReferenceList, $1); }
   | port_reference_list ',' port_reference
     { $$ = ExtendNode($1, $2, $3); }
   ;
@@ -6483,7 +6485,7 @@ select_dimensions_opt
   ;
 select_dimensions
   : select_variable_dimension
-    { $$ = MakeTaggedNode(N::kSelectVariableDimensionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSelectVariableDimensionList, $1); }
   | select_dimensions select_variable_dimension
     { $$ = ExtendNode($1, $2); }
   ;
@@ -6499,7 +6501,7 @@ decl_dimensions_opt
   ;
 decl_dimensions
   : decl_variable_dimension
-    { $$ = MakeTaggedNode(N::kDeclarationDimensions, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDeclarationDimensions, $1); }
   | decl_dimensions decl_variable_dimension
     { $$ = ExtendNode($1, $2); }
   ;
@@ -6516,8 +6518,8 @@ register_variable_list
 **/
 net_variable
   : GenericIdentifier decl_dimensions_opt
-    { $$ = MakeTaggedNode(N::kNetVariable, $1,
-                          MakeUnpackedDimensionsNode($2)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNetVariable, $1,
+                          MakeUnpackedDimensionsNode(param, $2)); }
   ;
 /** merged into net_variable_or_decl_assigns:
 net_variable_list
@@ -6527,114 +6529,114 @@ net_variable_list
 **/
 specify_item
   : TK_specparam specparam_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | specify_simple_path_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2); }
   | specify_edge_path_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2); }
   | TK_if '(' expression ')' specify_simple_path_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
                           MakeParenGroup($2, $3, $4), $5, $6); }
   | TK_if '(' expression ')' specify_edge_path_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
                           MakeParenGroup($2, $3, $4), $5, $6); }
   | TK_ifnone specify_simple_path_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | TK_ifnone specify_edge_path_decl ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | TK_Sfullskew  '(' spec_reference_event ',' spec_reference_event
     ',' delay_value ',' delay_value spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
                          $12);}
   | TK_Snochange  '(' spec_reference_event ',' spec_reference_event
     ',' delay_value ',' delay_value spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
                           $12);}
   | TK_Srecrem    '(' spec_reference_event ',' spec_reference_event
     ',' delay_value ',' delay_value spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
                           $12);}
   | TK_Ssetuphold '(' spec_reference_event ',' spec_reference_event
     ',' delay_value ',' delay_value spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8, $9, $10), $11),
                           $12);}
 
   | TK_Speriod '(' spec_reference_event ',' delay_value spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6), $7),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6), $7),
                           $8);}
   | TK_Swidth '(' spec_reference_event ',' delay_value ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5), $6),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5), $6),
                           $7);}
   | TK_Shold  '(' spec_reference_event ',' spec_reference_event
     ',' delay_value  spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $7, $8), $9),
                           $10);}
   | TK_Srecovery '(' spec_reference_event ',' spec_reference_event
     ',' delay_value  spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8), $9),
                           $10); }
   | TK_Sremoval  '(' spec_reference_event ',' spec_reference_event
     ',' delay_value  spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8), $9),
                           $10); }
   | TK_Ssetup    '(' spec_reference_event ',' spec_reference_event
     ',' delay_value  spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8), $9),
                           $10); }
   | TK_Sskew     '(' spec_reference_event ',' spec_reference_event
     ',' delay_value  spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8), $9),
                           $10); }
   | TK_Stimeskew '(' spec_reference_event ',' spec_reference_event
     ',' delay_value  spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8), $9),
                           $10); }
   | TK_Swidth    '(' spec_reference_event ',' delay_value
     ',' expression   spec_notifier_opt ')' ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1,
-                          MakeParenGroup($2, MakeNode($3, $4, $5, $6, $7, $8), $9),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1,
+                          MakeParenGroup($2, FACTORY()->MakeNode($3, $4, $5, $6, $7, $8), $9),
                           $10); }
 
   | TK_pulsestyle_onevent  specify_path_identifiers ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | TK_pulsestyle_ondetect specify_path_identifiers ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | TK_showcancelled       specify_path_identifiers ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | TK_noshowcancelled     specify_path_identifiers ';'
-    { $$ = MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItem, $1, $2, $3); }
   | preprocessor_directive
     { $$ = std::move($1); }
   ;
 specify_item_list
   : specify_item
-    { $$ = MakeTaggedNode(N::kSpecifyItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItemList, $1); }
   | specify_item_list specify_item
     { $$ = ExtendNode($1, $2); }
   ;
 specify_item_list_opt
   : /* empty */
-    { $$ = MakeTaggedNode(N::kSpecifyItemList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyItemList); }
   | specify_item_list
     { $$ = std::move($1); }
   ;
 specify_edge_path_decl
   : specify_edge_path '=' '(' delay_value_list ')'
-    { $$ = MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, MakeParenGroup($3, $4, $5)); }
   | specify_edge_path '=' delay_value_simple
-    { $$ = MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, $3); }
   ;
 edge_operator
   : TK_posedge
@@ -6647,20 +6649,20 @@ edge_operator
 specify_edge_path
   : '(' specify_path_identifiers spec_polarity
         TK_EG '(' specify_path_identifiers polarity_operator expression ')' ')'
-    { $$ = MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4,
-                          MakeParenGroup($5, MakeNode($6, $7, $8), $9), $10); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4,
+                          MakeParenGroup($5, FACTORY()->MakeNode($6, $7, $8), $9), $10); }
   | '(' specify_path_identifiers spec_polarity
         TK_SG '(' specify_path_identifiers polarity_operator expression ')' ')'
-    { $$ = MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4,
-                          MakeParenGroup($5, MakeNode($6, $7, $8), $9), $10); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4,
+                          MakeParenGroup($5, FACTORY()->MakeNode($6, $7, $8), $9), $10); }
   | '(' edge_operator specify_path_identifiers spec_polarity
         TK_EG '(' specify_path_identifiers polarity_operator expression ')' ')'
-     { $$ = MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4, $5,
-                          MakeParenGroup($6, MakeNode($7, $8, $9), $10), $11); }
+     { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4, $5,
+                          MakeParenGroup($6, FACTORY()->MakeNode($7, $8, $9), $10), $11); }
   | '(' edge_operator specify_path_identifiers spec_polarity
         TK_SG '(' specify_path_identifiers polarity_operator expression ')' ')'
-     { $$ = MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4, $5,
-                          MakeParenGroup($6, MakeNode($7, $8, $9), $10), $11); }
+     { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyEdgePath, $1, $2, $3, $4, $5,
+                          MakeParenGroup($6, FACTORY()->MakeNode($7, $8, $9), $10), $11); }
   ;
 polarity_operator
   : TK_PO_POS
@@ -6672,9 +6674,9 @@ polarity_operator
   ;
 specify_simple_path_decl
   : specify_simple_path '=' '(' delay_value_list ')'
-    { $$ = MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, MakeParenGroup($3, $4, $5)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, MakeParenGroup($3, $4, $5)); }
   | specify_simple_path '=' delay_value_simple
-    { $$ = MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyPathDeclaration, $1, $2, $3); }
 /**
   | specify_simple_path '=' '(' error ')'
 **/
@@ -6682,19 +6684,19 @@ specify_simple_path_decl
 specify_simple_path
   : '(' specify_path_identifiers spec_polarity
                TK_EG specify_path_identifiers ')'
-    { $$ = MakeTaggedNode(N::kSpecifySimplePath, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifySimplePath, $1, $2, $3, $4, $5, $6); }
   | '(' specify_path_identifiers spec_polarity
                TK_SG specify_path_identifiers ')'
-    { $$ = MakeTaggedNode(N::kSpecifySimplePath, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifySimplePath, $1, $2, $3, $4, $5, $6); }
 /**
   | '(' error ')'
 **/
   ;
 specify_path_identifiers
   : GenericIdentifier
-    { $$ = MakeTaggedNode(N::kSpecifyPathIdentifier, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyPathIdentifier, $1); }
   | GenericIdentifier '[' expr_primary ']'
-    { $$ = MakeTaggedNode(N::kSpecifyPathIdentifier, $1, MakeBracketGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyPathIdentifier, $1, MakeBracketGroup($2, $3, $4)); }
   | specify_path_identifiers ',' GenericIdentifier
     { $$ = ExtendNode($1, $2, $3); }
   | specify_path_identifiers ',' GenericIdentifier '[' expr_primary ']'
@@ -6703,9 +6705,9 @@ specify_path_identifiers
 specparam
   /* all expressions should have constant value */
   : GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kSpecParam, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecParam, $1, $2, $3); }
   | GenericIdentifier '=' expression ':' expression ':' expression
-    { $$ = MakeTaggedNode(N::kSpecParam, $1, $2, MakeTaggedNode(N::kMinTypMaxList,
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecParam, $1, $2, FACTORY()->MakeTaggedNode(N::kMinTypMaxList,
                                                              $3, $4, $5, $6, $7)); }
   /* TODO(fangism): support pulse_control_specparam.
   | GenericIdentifier '=' '(' expression ',' expression ')'
@@ -6713,7 +6715,7 @@ specparam
   ;
 specparam_list
   : specparam
-    { $$ = MakeTaggedNode(N::kSpecParamList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecParamList, $1); }
   | specparam_list ',' specparam
     { $$ = ExtendNode($1, $2); }
   ;
@@ -6721,8 +6723,8 @@ specparam_decl
   : specparam_list
     { $$ = std::move($1); }
   | decl_dimensions specparam_list
-    { $$ = MakeTaggedNode(N::kSpecParamDeclaration,
-                          MakePackedDimensionsNode($1), $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecParamDeclaration,
+                          MakePackedDimensionsNode(param, $1), $2); }
   ;
 spec_polarity
   : '+'
@@ -6735,26 +6737,26 @@ spec_polarity
 spec_reference_event
   /* also known as: timing_check_event */
   : edge_operator specify_terminal_descriptor
-    { $$ = MakeTaggedNode(N::kSpecifyReferenceEvent, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyReferenceEvent, $1, $2);}
   | edge_operator specify_terminal_descriptor TK_TAND expression
-    { $$ = MakeTaggedNode(N::kSpecifyReferenceEvent, $1, $2, $3, $4);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyReferenceEvent, $1, $2, $3, $4);}
     /* $4 should be a timing_check_condition */
   | TK_edge '[' edge_descriptor_list ']' specify_terminal_descriptor
-    { $$ = MakeTaggedNode(N::kSpecifyReferenceEvent, $1, MakeBracketGroup($2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyReferenceEvent, $1, MakeBracketGroup($2, $3, $4),
                           $5); }
   | TK_edge '[' edge_descriptor_list ']' specify_terminal_descriptor TK_TAND expression
-    { $$ = MakeTaggedNode(N::kSpecifyReferenceEvent, $1, MakeBracketGroup($2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyReferenceEvent, $1, MakeBracketGroup($2, $3, $4),
                           $5, $6, $7); }
   | specify_terminal_descriptor TK_TAND expression
-    { $$ = MakeTaggedNode(N::kSpecifyReferenceEvent, $1, $2, $3);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyReferenceEvent, $1, $2, $3);}
   | specify_terminal_descriptor
-    { $$ = MakeTaggedNode(N::kSpecifyReferenceEvent, $1);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyReferenceEvent, $1);}
   ;
 edge_descriptor_list
   : edge_descriptor_list ',' TK_edge_descriptor
     { $$ = ExtendNode($1, $2, $3); }
   | TK_edge_descriptor
-    { $$ = MakeTaggedNode(N::kEdgeDescriptorList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kEdgeDescriptorList, $1); }
   ;
 specify_terminal_descriptor
   : reference
@@ -6768,15 +6770,15 @@ spec_notifier_opt
   ;
 spec_notifier
   : ','
-    { $$ = MakeTaggedNode(N::kSpecifyNotifier, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyNotifier, $1); }
   | ',' reference
-    { $$ = MakeTaggedNode(N::kSpecifyNotifier, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyNotifier, $1, $2); }
   | spec_notifier ','
     { $$ = ExtendNode($1, $2); }
   | spec_notifier ',' reference
     { $$ = ExtendNode($1, $2, $3); }
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kSpecifyNotifier, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSpecifyNotifier, $1); }
   ;
 
 
@@ -6792,64 +6794,64 @@ case_any
 blocking_assignment
   /* TODO(fangism): structure kBlockingAssignmentStatement consistently */
   : lpvalue '=' delay_or_event_control expression ';'
-    { $$ = MakeTaggedNode(N::kBlockingAssignmentStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockingAssignmentStatement, $1, $2, $3, $4, $5); }
   | lpvalue '=' dynamic_array_new ';'
-    { $$ = MakeTaggedNode(N::kBlockingAssignmentStatement, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockingAssignmentStatement, $1, $2, $3, $4); }
   | lpvalue '=' class_new ';'
-    { $$ = MakeTaggedNode(N::kBlockingAssignmentStatement, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockingAssignmentStatement, $1, $2, $3, $4); }
   | reference '.' builtin_array_method '=' delay_or_event_control expression ';'
-    { $$ = MakeTaggedNode(N::kBlockingAssignmentStatement, MakeTaggedNode(
-      N::kLPValue,ExtendNode($1, MakeTaggedNode(N::kHierarchyExtension, $2, $3, nullptr))
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockingAssignmentStatement, FACTORY()->MakeTaggedNode(
+      N::kLPValue,ExtendNode($1, FACTORY()->MakeTaggedNode(N::kHierarchyExtension, $2, $3, nullptr))
     ),$4,$5,$6,$7); }
   | reference '.' builtin_array_method '=' expression ';'
-    { $$ = MakeTaggedNode(N::kBlockingAssignmentStatement, MakeTaggedNode(
-      N::kLPValue,ExtendNode($1, MakeTaggedNode(N::kHierarchyExtension, $2, $3, nullptr))
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockingAssignmentStatement, FACTORY()->MakeTaggedNode(
+      N::kLPValue,ExtendNode($1, FACTORY()->MakeTaggedNode(N::kHierarchyExtension, $2, $3, nullptr))
     ),$4,$5,$6); }
   ;
 
 nonblocking_assignment
   /* TODO(fangism): structure kNonblockingAssignmentStatement consistently */
   : lpvalue TK_LE delay_or_event_control_opt expression ';'
-    { $$ = MakeTaggedNode(N::kNonblockingAssignmentStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNonblockingAssignmentStatement, $1, $2, $3, $4, $5); }
     /* This rule overlaps with clocking_drive. */
   ;
 clocking_drive_only
   : lpvalue TK_LE cycle_delay expression ';'
-    { $$ = MakeTaggedNode(N::kNonblockingAssignmentStatement, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNonblockingAssignmentStatement, $1, $2, $3, $4, $5); }
   ;
 
 procedural_continuous_assignment
   : TK_assign lpvalue '=' expression ';'
-    { $$ = MakeTaggedNode(N::kProceduralContinuousAssignmentStatement, $1,
-                          MakeTaggedNode(N::kNetVariableAssignment, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralContinuousAssignmentStatement, $1,
+                          FACTORY()->MakeTaggedNode(N::kNetVariableAssignment, $2, $3, $4),
                           $5); }
   | TK_assign macro_call_or_item
-    { $$ = MakeTaggedNode(N::kProceduralContinuousAssignmentStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralContinuousAssignmentStatement, $1, $2); }
     /* allowed because this has been observed in practice */
   | TK_deassign lpvalue ';'
-    { $$ = MakeTaggedNode(N::kProceduralContinuousDeassignmentStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralContinuousDeassignmentStatement, $1, $2, $3); }
   | TK_force lpvalue '=' expression ';'
-    { $$ = MakeTaggedNode(N::kProceduralContinuousForceStatement, $1,
-                          MakeTaggedNode(N::kNetVariableAssignment, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralContinuousForceStatement, $1,
+                          FACTORY()->MakeTaggedNode(N::kNetVariableAssignment, $2, $3, $4),
                           $5); }
   | TK_release lpvalue ';'
-    { $$ = MakeTaggedNode(N::kProceduralContinuousReleaseStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralContinuousReleaseStatement, $1, $2, $3); }
   ;
 
 case_statement
   /* TODO(jeremycs): maybe add structure */
   /* includes randcase_statement */
   : unique_priority_opt case_any '(' expression ')' case_items TK_endcase
-    { $$ = MakeTaggedNode(N::kCaseStatement, $1, $2, MakeParenGroup($3, $4, $5), $6, $7);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseStatement, $1, $2, MakeParenGroup($3, $4, $5), $6, $7);}
   | unique_priority_opt case_any '(' expression ')' TK_matches
     case_pattern_items TK_endcase
-    { $$ = MakeTaggedNode(N::kCaseStatement, $1, $2, MakeParenGroup($3, $4, $5), $6, $7, $8);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseStatement, $1, $2, MakeParenGroup($3, $4, $5), $6, $7, $8);}
   | unique_priority_opt case_any '(' expression ')' TK_inside
     case_inside_items TK_endcase
-    { $$ = MakeTaggedNode(N::kCaseStatement, $1, $2, MakeParenGroup($3, $4, $5), $6, $7, $8);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kCaseStatement, $1, $2, MakeParenGroup($3, $4, $5), $6, $7, $8);}
     /* $2 should only be TK_case, but case_any avoids S/R conflict. */
   | unique_priority_opt TK_randcase case_items TK_endcase
-    { $$ = MakeTaggedNode(N::kRandCaseStatement, $1, $2, $3, $4);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandCaseStatement, $1, $2, $3, $4);}
   /**
   | TK_case '(' expression ')' case_items TK_endcase
   | TK_casex '(' expression ')' case_items TK_endcase
@@ -6860,30 +6862,30 @@ case_statement
 conditional_statement
   : unique_priority_opt TK_if expression_in_parens statement_or_null
     %prec less_than_TK_else
-    { $$ = MakeTaggedNode(N::kConditionalStatement,
-             MakeTaggedNode(N::kIfClause,
-               MakeTaggedNode(N::kIfHeader, $1, $2, $3),
-               MakeTaggedNode(N::kIfBody, $4)));}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConditionalStatement,
+             FACTORY()->MakeTaggedNode(N::kIfClause,
+               FACTORY()->MakeTaggedNode(N::kIfHeader, $1, $2, $3),
+               FACTORY()->MakeTaggedNode(N::kIfBody, $4)));}
   | unique_priority_opt TK_if expression_in_parens statement_or_null
     TK_else statement_or_null
-    { $$ = MakeTaggedNode(N::kConditionalStatement,
-             MakeTaggedNode(N::kIfClause,
-               MakeTaggedNode(N::kIfHeader, $1, $2, $3),
-               MakeTaggedNode(N::kIfBody, $4)),
-             MakeTaggedNode(N::kElseClause, $5, MakeTaggedNode(N::kElseBody, $6)));}
+    { $$ = FACTORY()->MakeTaggedNode(N::kConditionalStatement,
+             FACTORY()->MakeTaggedNode(N::kIfClause,
+               FACTORY()->MakeTaggedNode(N::kIfHeader, $1, $2, $3),
+               FACTORY()->MakeTaggedNode(N::kIfBody, $4)),
+             FACTORY()->MakeTaggedNode(N::kElseClause, $5, FACTORY()->MakeTaggedNode(N::kElseBody, $6)));}
   ;
 
 event_trigger
   : TK_TRIGGER reference ';'
-    { $$ = MakeTaggedNode(N::kBlockingEventTriggerStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBlockingEventTriggerStatement, $1, $2, $3); }
   | TK_NONBLOCKING_TRIGGER delay_or_event_control_opt reference ';'
-    { $$ = MakeTaggedNode(N::kNonblockingEventTriggerStatement,
+    { $$ = FACTORY()->MakeTaggedNode(N::kNonblockingEventTriggerStatement,
                           $1, $2, $3, $4); }
   ;
 
 repeat_control
   : TK_repeat '(' expression ')'
-    { $$ = MakeTaggedNode(N::kRepeatControl, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRepeatControl, $1, MakeParenGroup($2, $3, $4)); }
   ;
 
 delay_or_event_control
@@ -6892,7 +6894,7 @@ delay_or_event_control
   | event_control
     { $$ = std::move($1); }
   | repeat_control event_control
-    { $$ = MakeTaggedNode(N::kRepeatEventControl, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRepeatEventControl, $1, $2); }
   ;
 
 delay_or_event_control_opt
@@ -6908,33 +6910,33 @@ par_block
     block_item_or_statement_or_null_list_opt
     join_keyword label_opt
     /* TODO(fangism): pair ($1,$2) and ($4,$5) together, like kBegin,kEnd */
-    { $$ = MakeTaggedNode(N::kParBlock, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kParBlock, $1, $2, $3, $4, $5); }
   ;
 
 procedural_timing_control_statement
   : delay1 statement_or_null
-    { $$ = MakeTaggedNode(N::kProceduralTimingControlStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralTimingControlStatement, $1, $2); }
   | event_control statement_or_null
-    { $$ = MakeTaggedNode(N::kProceduralTimingControlStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralTimingControlStatement, $1, $2); }
   | cycle_delay statement_or_null
-    { $$ = MakeTaggedNode(N::kProceduralTimingControlStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProceduralTimingControlStatement, $1, $2); }
   ;
 
 seq_block
   : begin block_item_or_statement_or_null_list_opt end
     /* merged: block_item_decls_opt statement_or_null_list_opt */
-    { $$ = MakeTaggedNode(N::kSeqBlock, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSeqBlock, $1, $2, $3); }
   ;
 
 wait_statement
   : TK_wait '(' expression ')' statement_or_null
     /* shaped similarly to kIfClause */
-    { $$ = MakeTaggedNode(N::kWaitStatement,
-                          MakeTaggedNode(N::kWaitHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kWaitStatement,
+                          FACTORY()->MakeTaggedNode(N::kWaitHeader,
                                          $1, MakeParenGroup($2, $3, $4)),
-                          MakeTaggedNode(N::kWaitBody, $5));}
+                          FACTORY()->MakeTaggedNode(N::kWaitBody, $5));}
   | TK_wait TK_fork ';'
-    { $$ = MakeTaggedNode(N::kWaitForkStatement, $1, $2, $3);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kWaitForkStatement, $1, $2, $3);}
     /* TODO(b/144972702): wait_order ... */
   ;
 
@@ -6980,17 +6982,17 @@ statement_item
   | randsequence_statement
     { $$ = std::move($1); }
   | subroutine_call ';'
-    { $$ = MakeTaggedNode(N::kStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatement, $1, $2); }
   /* covered by reference_or_call rule:
   | scoped_hierarchy_identifier '(' argument_list_opt ')' ';'
   | scoped_hierarchy_identifier ';'
   | implicit_class_handle '.' TK_new '(' argument_list_opt ')' ';'
   */
   | randomize_call ';'
-    { $$ = MakeTaggedNode(N::kStatement, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatement, $1, $2); }
   // seen in the wild:
   | TK_void '\'' '(' expression ')' ';'
-  { $$ = MakeTaggedNode(N::kStatement, MakeTaggedNode(N::kVoidcast, $1, $2, MakeParenGroup($3, $4, $5), $6)); }
+  { $$ = FACTORY()->MakeTaggedNode(N::kStatement, FACTORY()->MakeTaggedNode(N::kVoidcast, $1, $2, MakeParenGroup($3, $4, $5), $6)); }
   | error ';'
     { yyerrok; $$ = Recover(); }
   | MacroGenericItem /* statement that does not end with ; */
@@ -7008,7 +7010,7 @@ preprocessor_balanced_statements
     preprocessor_elsif_statements_opt
     preprocessor_else_statement_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedStatements,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedStatements,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -7022,7 +7024,7 @@ preprocessor_elsif_statements
   : preprocessor_elsif_statements preprocessor_elsif_statement
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_statement
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_statement
   : preprocessor_elsif_header block_item_or_statement_or_null_list_opt
@@ -7036,38 +7038,38 @@ preprocessor_else_statement_opt
   ;
 preprocessor_else_statement
   : PP_else block_item_or_statement_or_null_list_opt
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 disable_statement
   : TK_disable reference ';'
-    { $$ = MakeTaggedNode(N::kDisableStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisableStatement, $1, $2, $3); }
   | TK_disable TK_fork ';'
-    { $$ = MakeTaggedNode(N::kDisableStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDisableStatement, $1, $2, $3); }
   ;
 assign_modify_statement
   : lpvalue TK_PLUS_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_MINUS_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_MUL_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_DIV_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_MOD_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_AND_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_OR_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_XOR_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_LS_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_RS_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   | lpvalue TK_RSS_EQ expression
-    { $$ = MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssignModifyStatement, $1, $2, $3); }
   ;
 unique_priority_opt
   : TK_unique
@@ -7083,17 +7085,17 @@ statement_or_null_list_opt
   : statement_or_null_list
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kStatementList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatementList); }
   ;
 statement_or_null_list
   : statement_or_null_list statement_or_null
     { $$ = ExtendNode($1, $2); }
   | statement_or_null
-    { $$ = MakeTaggedNode(N::kStatementList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatementList, $1); }
   ;
 analog_statement
   : branch_probe_expression TK_CONTRIBUTE expression ';'
-    { $$ = MakeTaggedNode(N::kAnalogStatement, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAnalogStatement, $1, $2, $3, $4); }
   ;
 /* same as function_item */
 task_item
@@ -7135,7 +7137,7 @@ tf_item_or_statement_or_null
 tf_item_or_statement_or_null_list
   /* TODO(jeremycs): unclear if this should have its own enum */
   : tf_item_or_statement_or_null
-    { $$ = MakeTaggedNode(N::kStatementList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatementList, $1); }
   | tf_item_or_statement_or_null_list tf_item_or_statement_or_null
     { $$ = ExtendNode($1, $2); }
   ;
@@ -7143,7 +7145,7 @@ tf_item_or_statement_or_null_list_opt
   : tf_item_or_statement_or_null_list
     { $$ = std::move($1); }
   | /* empty */
-    { $$ = MakeTaggedNode(N::kStatementList); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kStatementList); }
   ;
 
 tf_port_list_paren_opt
@@ -7161,9 +7163,9 @@ tf_port_list_opt
   ;
 udp_body
   : TK_table udp_entry_list TK_endtable
-    { $$ = MakeTaggedNode(N::kUdpBody, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpBody, $1, $2, $3); }
   | TK_table TK_endtable
-    { $$ = MakeTaggedNode(N::kUdpBody, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpBody, $1, nullptr, $2); }
 /**
   | TK_table error TK_endtable
 **/
@@ -7180,15 +7182,15 @@ udp_unknown_list
   : udp_unknown_list preprocessor_directive
     { $$ = ExtendNode($1, $2); }
   | preprocessor_directive
-    { $$ = MakeTaggedNode(N::kUdpEntryList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpEntryList, $1); }
   ;
 udp_comb_entry
   : udp_input_list ':' udp_output_sym ';'
-    { $$ = MakeTaggedNode(N::kUdpCombEntry, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpCombEntry, $1, $2, $3, $4); }
   ;
 udp_comb_entry_list
   : udp_comb_entry
-    { $$ = MakeTaggedNode(N::kUdpEntryList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpEntryList, $1); }
   | udp_comb_entry_list udp_comb_entry
     { $$ = ExtendNode($1, $2); }
   | udp_comb_entry_list preprocessor_directive
@@ -7198,7 +7200,7 @@ udp_comb_entry_list
   ;
 udp_sequ_entry_list
   : udp_sequ_entry
-    { $$ = MakeTaggedNode(N::kUdpEntryList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpEntryList, $1); }
   | udp_sequ_entry_list udp_sequ_entry
     { $$ = ExtendNode($1, $2); }
   | udp_sequ_entry_list preprocessor_directive
@@ -7208,11 +7210,11 @@ udp_sequ_entry_list
   ;
 udp_sequ_entry
   : udp_input_list ':' udp_input_sym ':' udp_output_sym ';'
-    { $$ = MakeTaggedNode(N::kUdpSequenceEntry, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpSequenceEntry, $1, $2, $3, $4, $5, $6); }
   ;
 udp_initial
   : TK_initial GenericIdentifier '=' number ';'
-    { $$ = MakeTaggedNode(N::kUdpInitial, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpInitial, $1, $2, $3, $4, $5); }
   ;
 udp_init_opt
   : udp_initial
@@ -7222,7 +7224,7 @@ udp_init_opt
   ;
 udp_input_list
   : udp_input_sym
-    { $$ = MakeTaggedNode(N::kUdpInputList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpInputList, $1); }
   | udp_input_list udp_input_sym
     { $$ = ExtendNode($1, $2); }
   ;
@@ -7290,35 +7292,35 @@ udp_output_sym
   ;
 udp_port_decl
   : TK_input list_of_identifiers ';'
-    { $$ = MakeTaggedNode(N::kUdpPortDeclaration, nullptr, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPortDeclaration, nullptr, $1, $2, $3); }
   | TK_output GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kUdpPortDeclaration, nullptr, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPortDeclaration, nullptr, $1, $2, $3); }
   | TK_reg GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kUdpPortDeclaration, $1, nullptr, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPortDeclaration, $1, nullptr, $2, $3); }
   | TK_reg TK_output GenericIdentifier ';'
-    { $$ = MakeTaggedNode(N::kUdpPortDeclaration, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPortDeclaration, $1, $2, $3, $4); }
   ;
 udp_port_decls
   : udp_port_decl
-    { $$ = MakeTaggedNode(N::kUdpPortDeclarationList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPortDeclarationList, $1); }
   | udp_port_decls udp_port_decl
     { $$ = ExtendNode($1, $2); }
   ;
 udp_port_list
   : GenericIdentifier
-    { $$ = MakeTaggedNode(N::kUdpPortList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPortList, $1); }
   | udp_port_list ',' GenericIdentifier
     { $$ = ExtendNode($1, $2, $3); }
   ;
 udp_initial_expr_opt
   : '=' expression
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
 udp_input_declaration_list
   : TK_input GenericIdentifier
-    { $$ = MakeTaggedNode(N::kUdpInputDeclarationList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpInputDeclarationList, $1, $2); }
   | udp_input_declaration_list ',' TK_input GenericIdentifier
     { $$ = ExtendNode($1, $2, $3, $4); }
   ;
@@ -7328,15 +7330,15 @@ udp_primitive
       udp_init_opt
       udp_body
     TK_endprimitive label_opt
-    { $$ = MakeTaggedNode(N::kUdpPrimitive, $1, $2, MakeParenGroup($3, $4, $5), $6,
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPrimitive, $1, $2, MakeParenGroup($3, $4, $5), $6,
                           $7, $8, $9, $10, $11); }
   | TK_primitive GenericIdentifier
       '(' TK_output TK_reg_opt GenericIdentifier udp_initial_expr_opt ','
       udp_input_declaration_list ')' ';'
       udp_body
     TK_endprimitive label_opt
-    { $$ = MakeTaggedNode(N::kUdpPrimitive, $1, $2,
-                          MakeParenGroup($3, MakeNode($4, $5, $6, $7, $8, $9), $10),
+    { $$ = FACTORY()->MakeTaggedNode(N::kUdpPrimitive, $1, $2,
+                          MakeParenGroup($3, FACTORY()->MakeNode($4, $5, $6, $7, $8, $9), $10),
                           $11, $12, $13, $14); }
   ;
 lifetime
@@ -7378,12 +7380,12 @@ TK_virtual_opt
 
 bind_directive
   : TK_bind reference ':' bind_target_instance_list bind_instantiation ';'
-    { $$ = MakeTaggedNode(N::kBindDirective, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBindDirective, $1, $2, $3, $4, $5, $6); }
     /* $2 is target scope (module or interface),
      * and should be GenericIdentifier.
      */
   | TK_bind reference bind_instantiation ';'
-    { $$ = MakeTaggedNode(N::kBindDirective, $1, $2, nullptr, nullptr, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBindDirective, $1, $2, nullptr, nullptr, $3, $4); }
     /* if $2 is target scope (module or interface),
      * then $2 should be a GenericIdentifier,
      * if $2 is a bind_target_scope, then it may be hierarchical.
@@ -7393,7 +7395,7 @@ bind_target_instance_list
   : bind_target_instance_list ',' bind_target_instance
     { $$ = ExtendNode($1, $2, $3); }
   | bind_target_instance
-    { $$ = MakeTaggedNode(N::kBindTargetInstanceList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBindTargetInstanceList, $1); }
   ;
 bind_target_instance
   : reference
@@ -7403,7 +7405,7 @@ bind_target_instance
 bind_instantiation
   /* similar to block_item_decl instantiation */
   : class_id gate_instance_or_register_variable_list
-    { $$ = MakeTaggedNode(N::kBindTargetInstance, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBindTargetInstance, $1, $2); }
     /* covers: program, module, interface, checker instantiation */
   ;
 
@@ -7412,16 +7414,16 @@ clocking_declaration
   : TK_default TK_clocking identifier_opt event_control ';'
     clocking_item_list_opt
     TK_endclocking label_opt
-    { $$ = MakeTaggedNode(N::kClockingDeclaration, $1, $2, $3, $4, $5, $6, $7, $8); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDeclaration, $1, $2, $3, $4, $5, $6, $7, $8); }
     /* $4 event_control should be @identifier or @(event_expr) */
   | TK_clocking identifier_opt event_control ';'
     clocking_item_list_opt
     TK_endclocking label_opt
-    { $$ = MakeTaggedNode(N::kClockingDeclaration, nullptr, $1, $2, $3, $4, $5, $6, $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDeclaration, nullptr, $1, $2, $3, $4, $5, $6, $7); }
     /* $4 event_control should be @identifier or @(event_expr) */
   | TK_global TK_clocking identifier_opt event_control ';'
     TK_endclocking label_opt
-    { $$ = MakeTaggedNode(N::kClockingDeclaration, $1, $2, $3, $4, $5, $6, nullptr, $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDeclaration, $1, $2, $3, $4, $5, $6, nullptr, $7); }
   ;
 clocking_item_list_opt
   : clocking_item_list
@@ -7433,13 +7435,13 @@ clocking_item_list
   : clocking_item_list clocking_item
     { $$ = ExtendNode($1, $2); }
   | clocking_item
-    { $$ = MakeTaggedNode(N::kClockingItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingItemList, $1); }
   ;
 clocking_item
   : TK_default default_skew ';'
-    { $$ = MakeTaggedNode(N::kClockingItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingItem, $1, $2, $3); }
   | clocking_direction list_of_clocking_decl_assign ';'
-    { $$ = MakeTaggedNode(N::kClockingItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingItem, $1, $2, $3); }
   | /* attribute_list_opt */ assertion_item_declaration
     { $$ = std::move($1); }
   | let_declaration
@@ -7447,11 +7449,11 @@ clocking_item
   ;
 default_skew
   : TK_input clocking_skew
-    { $$ = MakeTaggedNode(N::kDefaultSkew, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultSkew, $1, $2);}
   | TK_input clocking_skew TK_output clocking_skew
-    { $$ = MakeTaggedNode(N::kDefaultSkew, $1, $2, $3, $4);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultSkew, $1, $2, $3, $4);}
   | TK_output clocking_skew
-    { $$ = MakeTaggedNode(N::kDefaultSkew, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kDefaultSkew, $1, $2);}
   ;
 clocking_skew_opt
   : clocking_skew
@@ -7461,29 +7463,29 @@ clocking_skew_opt
   ;
 clocking_skew
   : edge_operator delay3_opt
-    { $$ = MakeTaggedNode(N::kClockingSkew, $1, $2);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingSkew, $1, $2);}
   | delay3
-    { $$ = MakeTaggedNode(N::kClockingSkew, $1);}
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingSkew, $1);}
   ;
 clocking_direction
   : TK_input clocking_skew_opt
-    { $$ = MakeTaggedNode(N::kClockingDirection, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDirection, $1, $2); }
   | TK_input clocking_skew_opt TK_output clocking_skew_opt
-    { $$ = MakeTaggedNode(N::kClockingDirection, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDirection, $1, $2, $3, $4); }
   | TK_output clocking_skew_opt
-    { $$ = MakeTaggedNode(N::kClockingDirection, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDirection, $1, $2); }
   | TK_inout
-    { $$ = MakeTaggedNode(N::kClockingDirection, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingDirection, $1); }
   ;
 list_of_clocking_decl_assign
   : list_of_clocking_decl_assign ',' clocking_decl_assign
     { $$ = ExtendNode($1, $2, $3); }
   | clocking_decl_assign
-    { $$ = MakeTaggedNode(N::kClockingAssignList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingAssignList, $1); }
   ;
 clocking_decl_assign
   : GenericIdentifier trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kClockingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kClockingAssign, $1, $2); }
     /* $1 is signal_identifier */
   ;
 
@@ -7499,7 +7501,7 @@ assertion_item_declaration
 
 let_declaration
   : TK_let GenericIdentifier let_port_list_in_parens_opt '=' expression ';'
-    { $$ = MakeTaggedNode(N::kLetDeclaration, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLetDeclaration, $1, $2, $3, $4, $5, $6); }
   ;
 let_port_list_in_parens_opt
   : '(' let_port_list ')'
@@ -7513,21 +7515,21 @@ let_port_list
   : let_port_list ',' let_port_item
     { $$ = ExtendNode($1, $2, $3); }
   | let_port_item
-    { $$ = MakeTaggedNode(N::kLetPortList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLetPortList, $1); }
   ;
 let_port_item
   : let_formal_type_followed_by_id decl_dimensions_opt
     /* $2 is not limited to being an unpacked dimension */
-    { $$ = MakeTaggedNode(N::kLetPortItem, ForwardChildren($1), $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLetPortItem, ForwardChildren($1), $2); }
   | let_formal_type_followed_by_id decl_dimensions_opt '=' expression
-    { $$ = MakeTaggedNode(N::kLetPortItem, ForwardChildren($1), $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kLetPortItem, ForwardChildren($1), $2, $3, $4); }
   ;
 let_formal_type_followed_by_id
   /* similar to property_formal_type_followed_by_id */
   : data_type_or_implicit_basic_followed_by_id
     { $$ = std::move($1); }
   | TK_untyped GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   ;
 
 sequence_declaration
@@ -7537,18 +7539,18 @@ sequence_declaration
     SemicolonEndOfAssertionVariableDeclarations
     sequence_expr optional_semicolon
     TK_endsequence label_opt
-    { $$ = MakeTaggedNode(N::kSequenceDeclaration,
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceDeclaration,
                           $1, $2, $3, $4, ExtendNode($5, $6),
-                          MakeTaggedNode(N::kSequenceDeclarationFinalExpr, $7, $8),
+                          FACTORY()->MakeTaggedNode(N::kSequenceDeclarationFinalExpr, $7, $8),
                           $9, $10); }
   | TK_sequence GenericIdentifier
     sequence_port_list_in_parens_opt
     SemicolonEndOfAssertionVariableDeclarations
     sequence_expr optional_semicolon
     TK_endsequence label_opt
-    { $$ = MakeTaggedNode(N::kSequenceDeclaration,
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceDeclaration,
                           $1, $2, $3, $4, nullptr,
-                          MakeTaggedNode(N::kSequenceDeclarationFinalExpr, $5, $6),
+                          FACTORY()->MakeTaggedNode(N::kSequenceDeclarationFinalExpr, $5, $6),
                           $7, $8); }
   ;
 
@@ -7568,18 +7570,18 @@ sequence_port_list
   : sequence_port_list ',' sequence_port_item
     { $$ = ExtendNode($1, $2, $3); }
   | sequence_port_item
-    { $$ = MakeTaggedNode(N::kSequencePortList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequencePortList, $1); }
   ;
 sequence_port_item
   : /* attribute_list_opt */
     local_sequence_lvar_port_direction_opt
     sequence_port_type_followed_by_id decl_dimensions_opt trailing_assign_opt
     /* $3 is not limited to being an unpacked dimension */
-    { $$ = MakeTaggedNode(N::kSequencePortItem, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequencePortItem, $1, $2, $3, $4); }
   ;
 local_sequence_lvar_port_direction_opt
   : TK_local dir
-    { $$ = MakeNode($1, $2); }
+    { $$ = FACTORY()->MakeNode($1, $2); }
   | TK_local
     { $$ = std::move($1); }
   | /* empty */
@@ -7590,9 +7592,9 @@ sequence_port_type_followed_by_id
   : data_type_or_implicit_basic_followed_by_id
     { $$ = std::move($1); }
   | TK_sequence GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   | TK_untyped GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   ;
 
 property_declaration
@@ -7601,14 +7603,14 @@ property_declaration
     SemicolonEndOfAssertionVariableDeclarations
     property_spec optional_semicolon
     TK_endproperty label_opt
-    { $$ = MakeTaggedNode(N::kPropertyDeclaration,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyDeclaration,
                           $1, $2, $3, $4, ExtendNode($5, $6),
                           ExtendNode($7, $8), $9, $10); }
   | TK_property GenericIdentifier property_port_list_in_parens_opt
     SemicolonEndOfAssertionVariableDeclarations
     property_spec optional_semicolon
     TK_endproperty label_opt
-    { $$ = MakeTaggedNode(N::kPropertyDeclaration,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyDeclaration,
                           $1, $2, $3, $4, nullptr,
                           ExtendNode($5, $6), $7, $8); }
   ;
@@ -7622,7 +7624,7 @@ property_port_list
   : property_port_list ',' property_port_item
     { $$ = ExtendNode($1, $2, $3); }
   | property_port_item
-    { $$ = MakeTaggedNode(N::kPropertyPortList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPortList, $1); }
   ;
 property_port_item
   : /* attribute_list_opt */
@@ -7634,13 +7636,13 @@ property_port_item
     decl_dimensions_opt
     property_actual_arg_opt
     /* $3 is not limited to being an unpacked dimension */
-    { $$ = MakeTaggedNode(N::kPropertyPortItem, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPortItem, $1, $2, $3, $4); }
   ;
 property_port_modifiers_opt
   : TK_local TK_input
-    { $$ = MakeTaggedNode(N::kPropertyPortModifierList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPortModifierList, $1, $2); }
   | TK_local
-    { $$ = MakeTaggedNode(N::kPropertyPortModifierList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPortModifierList, $1); }
   | /* empty */
     { $$ = nullptr; }
   ;
@@ -7649,15 +7651,15 @@ property_formal_type_followed_by_id
   : data_type_or_implicit_basic_followed_by_id
     { $$ = std::move($1); }
   | TK_sequence GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   | TK_untyped GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   | TK_property GenericIdentifier
-    { $$ = MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDataTypeImplicitBasicId, $1, $2); }
   ;
 property_actual_arg_opt
   : '=' property_actual_arg
-    { $$ = MakeTaggedNode(N::kTrailingAssign, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kTrailingAssign, $1, $2); }
   | /* empty */
     { $$ = nullptr; }
   ;
@@ -7665,15 +7667,15 @@ assertion_variable_declaration_list
   : assertion_variable_declaration_list ';' assertion_variable_declaration
     { $$ = ExtendNode($1, $2, $3); }
   | assertion_variable_declaration
-    { $$ = MakeTaggedNode(N::kAssertionVariableDeclarationList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssertionVariableDeclarationList, $1); }
   ;
 assertion_variable_declaration
   : var_opt data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
     trailing_assign_opt
-    { $$ = MakeTaggedNode(N::kAssertionVariableDeclaration, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssertionVariableDeclaration, $1, $2, $3); }
   | var_opt data_type_or_implicit_basic_followed_by_id_and_dimensions_opt
     trailing_assign_opt ',' net_variable_or_decl_assigns
-    { $$ = MakeTaggedNode(N::kAssertionVariableDeclaration, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kAssertionVariableDeclaration, $1, $2, $3, $4, $5); }
     // TODO(fangism): re-pack $3
   ;
 
@@ -7682,10 +7684,10 @@ property_actual_arg
    * to avoid conflict, we expand event_expression without the lone expression rule.
    */
   : edge_operator expression
-    { $$ = MakeTaggedNode(N::kPropertyActualArg, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyActualArg, $1, $2); }
     /* from event_expression */
   | property_expr
-    { $$ = MakeTaggedNode(N::kPropertyActualArg, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyActualArg, $1); }
   ;
 
 
@@ -7725,13 +7727,13 @@ sequence_expr
 property_prefix_expr
   // TODO(fangism): distinguish different property_prefix_exprs
   : TK_accept_on '(' expression_or_dist ')' property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
   | TK_reject_on '(' expression_or_dist ')' property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
   | TK_sync_accept_on '(' expression_or_dist ')' property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
   | TK_sync_reject_on '(' expression_or_dist ')' property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, MakeParenGroup($2, $3, $4), $5); }
 
   /* TODO(fangism):
   // like sequence_instance, this looks like a function/subroutine call.
@@ -7739,42 +7741,42 @@ property_prefix_expr
   */
   /* temporal_property_expr: */
   | TK_nexttime property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
   | TK_nexttime '[' expression ']' property_prefix_expr
     /* $3 is a constant_expression */
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1,
-                          MakeTaggedNode(N::kPropertyExpressionIndex, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1,
+                          FACTORY()->MakeTaggedNode(N::kPropertyExpressionIndex, $2, $3, $4),
                           $5); }
   | TK_s_nexttime property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
   | TK_s_nexttime '[' expression ']' property_prefix_expr
     /* $3 is a constant_expression */
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1,
-                          MakeTaggedNode(N::kPropertyExpressionIndex, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1,
+                          FACTORY()->MakeTaggedNode(N::kPropertyExpressionIndex, $2, $3, $4),
                           $5); }
   | TK_always property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
   | TK_always '[' cycle_range ']' property_prefix_expr
     /* $3 is a cycle_delay_const_range_expression */
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1,
-                          MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1,
+                          FACTORY()->MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
                           $5); }
   | TK_s_always '[' cycle_range ']' property_prefix_expr
     /* $3 should be a constant_range */
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1,
-                          MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1,
+                          FACTORY()->MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
                           $5); }
   | TK_s_eventually property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1, nullptr, $2); }
   | TK_eventually '[' cycle_range ']'  property_prefix_expr
     /* $3 should be a constant_range */
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1,
-                          MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1,
+                          FACTORY()->MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
                           $5); }
   | TK_s_eventually '[' cycle_range ']'  property_prefix_expr
     /* $3 should be a cycle_delay_const_range_expression */
-    { $$ = MakeTaggedNode(N::kPropertyPrefixExpression, $1,
-                          MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyPrefixExpression, $1,
+                          FACTORY()->MakeTaggedNode(N::kCycleDelayConstRange, $2, $3, $4),
                           $5); }
   | property_if_else_expr
    { $$ = std::move($1); }
@@ -7783,11 +7785,11 @@ property_prefix_expr
 property_if_else_expr
   : TK_if '(' expression_or_dist ')' property_prefix_expr
     TK_else property_prefix_expr
-    { $$ = MakeTaggedNode(N::kPropertyIfElse, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyIfElse, $1,
                           MakeParenGroup($2, $3, $4), $5, $6, $7); }
   | TK_if '(' expression_or_dist ')' property_prefix_expr
     %prec less_than_TK_else
-    { $$ = MakeTaggedNode(N::kPropertyIfElse, $1, MakeParenGroup($2, $3, $4), $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyIfElse, $1, MakeParenGroup($2, $3, $4), $5); }
   | simple_sequence_expr
     { $$ = std::move($1); }
   ;
@@ -7796,7 +7798,7 @@ simple_sequence_expr
   // TODO: distinguish different sequence expressions' tags
   /* cannot have trailing if */
   : TK_first_match '(' sequence_expr_match_item_list ')'
-    { $$ = MakeTaggedNode(N::kPropertySimpleSequenceExpression, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertySimpleSequenceExpression, $1,
                           MakeParenGroup($2, $3, $4)); }
   /* TODO(fangism): Resolve conflict on sequence_instance.
    * sequence_instance looks like function/subroutine call,
@@ -7806,10 +7808,10 @@ simple_sequence_expr
   | property_case_statement
     { $$ = std::move($1); }
   | TK_strong '(' sequence_expr ')'
-    { $$ = MakeTaggedNode(N::kPropertySimpleSequenceExpression, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertySimpleSequenceExpression, $1,
                           MakeParenGroup($2, $3, $4)); }
   | TK_weak '(' sequence_expr ')'
-    { $$ = MakeTaggedNode(N::kPropertySimpleSequenceExpression, $1,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertySimpleSequenceExpression, $1,
                           MakeParenGroup($2, $3, $4)); }
   | sequence_or_expr
     { $$ = std::move($1); }
@@ -7819,14 +7821,14 @@ property_case_statement
   : TK_case '(' expression_or_dist ')'
     property_case_item_list optional_semicolon
     TK_endcase
-    { $$ = MakeTaggedNode(N::kPropertyCaseStatement, $1, MakeParenGroup($2, $3, $4),
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyCaseStatement, $1, MakeParenGroup($2, $3, $4),
                           $5, $6, $7); }
   ;
 property_case_item_list
   : property_case_item_list ';' property_case_item
     { $$ = ExtendNode($1, $2, $3); }
   | property_case_item
-    { $$ = MakeTaggedNode(N::kPropertyCaseItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyCaseItemList, $1); }
   ;
 /* Language spec allows semicolons to be optional following each property_case_item,
  * but without a required separator, the grammar becomes unparseable.
@@ -7834,17 +7836,17 @@ property_case_item_list
  */
 property_case_item
   : expression_or_dist_list ':' property_expr
-    { $$ = MakeTaggedNode(N::kPropertyCaseItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyCaseItem, $1, $2, $3); }
   | TK_default ':' property_expr
-    { $$ = MakeTaggedNode(N::kPropertyDefaultItem, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyDefaultItem, $1, $2, $3); }
   | TK_default property_expr
-    { $$ = MakeTaggedNode(N::kPropertyDefaultItem, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPropertyDefaultItem, $1, $2); }
   ;
 expression_or_dist_list
   : expression_or_dist_list ',' expression_or_dist
     { $$ = ExtendNode($1, $2, $3); }
   | expression_or_dist
-    { $$ = MakeTaggedNode(N::kExpressionDistributionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpressionDistributionList, $1); }
   ;
 
 property_implication_expr
@@ -7852,7 +7854,7 @@ property_implication_expr
     { $$ = ExtendNode($1, $2, $3); }
   | property_prefix_expr
     { $$ = IsExpression($1) ? std::move($1)
-                            : MakeTaggedNode(N::kPropertyImplicationList, $1); }
+                            : FACTORY()->MakeTaggedNode(N::kPropertyImplicationList, $1); }
   ;
 
 property_operator
@@ -7896,9 +7898,9 @@ followed_by_operator
 system_tf_call
   /* This also covers constant_function_subroutine_call. */
   : SystemTFIdentifier call_base
-    { $$ = MakeTaggedNode(N::kSystemTFCall, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSystemTFCall, $1, $2); }
   | SystemTFIdentifier
-    { $$ = MakeTaggedNode(N::kSystemTFCall, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSystemTFCall, $1); }
     /* Some system tasks can be 'called' without ()-arguments. */
   ;
 
@@ -7906,15 +7908,15 @@ sequence_match_item_list
   : sequence_match_item_list ',' sequence_match_item
     { $$ = ExtendNode($1, $2, $3); }
   | sequence_match_item
-    { $$ = MakeTaggedNode(N::kSequenceMatchItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceMatchItemList, $1); }
 
   ;
 sequence_expr_match_item_list
   : property_expr ',' sequence_match_item_list
-    { $$ = MakeTaggedNode(N::kSequenceMatchItemList, $1, $2,
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceMatchItemList, $1, $2,
                           ForwardChildren($3)); }
   | property_expr
-    { $$ = MakeTaggedNode(N::kSequenceMatchItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceMatchItemList, $1); }
   ;
 sequence_match_item
   : assignment_statement
@@ -7922,7 +7924,7 @@ sequence_match_item
   | subroutine_call
     { $$ = std::move($1); }
   | reference_or_call
-    { $$ = MakeTaggedNode(N::kFunctionCall, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kFunctionCall, $1); }
   ;
 subroutine_call
   : system_tf_call
@@ -7945,7 +7947,7 @@ sequence_unary_expr
   : sequence_intersect_expr
     { $$ = IsExpression($1) ? std::move($1) : std::move($1); }
   | TK_not sequence_intersect_expr
-    { $$ = MakeTaggedNode(N::kUnaryPrefixExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kUnaryPrefixExpression, $1, $2); }
     /* only for property_expr */
   ;
 sequence_intersect_expr
@@ -7971,39 +7973,39 @@ sequence_delay_range_expr
   : sequence_delay_repetition_list
     { $$ = IsExpression($1) ? std::move($1) : std::move($1); }
   | cycle_delay_range sequence_delay_repetition_list
-    { $$ = MakeTaggedNode(N::kSequenceDelayRange, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceDelayRange, $1, $2); }
   ;
 sequence_delay_repetition_list
   : sequence_delay_repetition_list cycle_delay_range sequence_expr_primary
-    { $$ = MakeTaggedNode(N::kSequenceDelayRepetition, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSequenceDelayRepetition, $1, $2, $3); }
   | sequence_expr_primary
     { $$ = IsExpression($1) ? std::move($1) : std::move($1); }
   ;
 
 cycle_delay
   : TK_POUNDPOUND TK_DecNumber
-    { $$ = MakeTaggedNode(N::kCycleDelay, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelay, $1, $2); }
   | TK_POUNDPOUND GenericIdentifier
-    { $$ = MakeTaggedNode(N::kCycleDelay, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelay, $1, $2); }
   | TK_POUNDPOUND '(' expression ')'
-    { $$ = MakeTaggedNode(N::kCycleDelay, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelay, $1, MakeParenGroup($2, $3, $4)); }
   ;
 
 cycle_delay_range
   : TK_POUNDPOUND '[' cycle_range ']'
-    { $$ = MakeTaggedNode(N::kCycleDelayRange, $1, MakeBracketGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelayRange, $1, MakeBracketGroup($2, $3, $4)); }
   | TK_POUNDPOUND TK_LBSTARRB
-    { $$ = MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
     /* but not lb_star_rb */
   | TK_POUNDPOUND TK_LBPLUSRB
-    { $$ = MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
   | TK_POUNDPOUND '(' expression ')'
-    { $$ = MakeTaggedNode(N::kCycleDelayRange, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelayRange, $1, MakeParenGroup($2, $3, $4)); }
     /* $2 expression should be constant. */
   | TK_POUNDPOUND GenericIdentifier
-    { $$ = MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
   | TK_POUNDPOUND TK_DecNumber
-    { $$ = MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleDelayRange, $1, $2); }
   ;
 cycle_range_or_expr
   /* this covers repeat_range */
@@ -8015,32 +8017,32 @@ cycle_range_or_expr
 cycle_range
   /* For constant expressions, $3 can be '$'.  */
   : expression ':' expression
-    { $$ = MakeTaggedNode(N::kCycleRange, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCycleRange, $1, $2, $3); }
   ;
 dist_opt
   : TK_dist '{' dist_list '}'
-    { $$ = MakeTaggedNode(N::kDistribution, expression_placeholder,
+    { $$ = FACTORY()->MakeTaggedNode(N::kDistribution, expression_placeholder,
                           $1, MakeBraceGroup($2, $3, $4)); }
   | /* empty */
     { $$ = nullptr; }
   ;
 dist_list
   : dist_item
-    { $$ = MakeTaggedNode(N::kDistributionItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDistributionItemList, $1); }
   | dist_list ',' dist_item
     { $$ = ExtendNode($1, $2, $3); }
   ;
 dist_item
   : value_range dist_weight
-    { $$ = MakeTaggedNode(N::kDistributionItem, $1, ForwardChildren($2)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDistributionItem, $1, ForwardChildren($2)); }
   | value_range
-    { $$ = MakeTaggedNode(N::kDistributionItem, $1, nullptr, nullptr); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kDistributionItem, $1, nullptr, nullptr); }
   ;
 dist_weight
   : TK_COLON_EQ expression
-    { $$ = MakeNode($1, $2); }
+    { $$ = FACTORY()->MakeNode($1, $2); }
   | TK_COLON_DIV expression
-    { $$ = MakeNode($1, $2); }
+    { $$ = FACTORY()->MakeNode($1, $2); }
   ;
 /**
 sequence_instance
@@ -8089,7 +8091,7 @@ sequence_repetition_expr
   /* Highest precedence sequence_expr. */
   : expression_or_dist boolean_abbrev_opt
     { $$ = ($2 == nullptr) ? std::move($1) :
-                             MakeTaggedNode(N::kSequenceRepetitionExpression,
+                             FACTORY()->MakeTaggedNode(N::kSequenceRepetitionExpression,
                                             $1, $2); }
   /* This covers a simple expression.
    *
@@ -8141,28 +8143,28 @@ boolean_abbrev
   ;
 consecutive_repetition
   : TK_LBSTAR cycle_range_or_expr ']'
-    { $$ = MakeTaggedNode(N::kConsecutiveRepetition, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConsecutiveRepetition, $1, $2, $3); }
   | TK_LBSTARRB
-    { $$ = MakeTaggedNode(N::kConsecutiveRepetition, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConsecutiveRepetition, $1); }
     /* but not lb_star_rb */
   | TK_LBPLUSRB
-    { $$ = MakeTaggedNode(N::kConsecutiveRepetition, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kConsecutiveRepetition, $1); }
   ;
 nonconsecutive_repetition
   : TK_LBEQ cycle_range_or_expr ']'
-    { $$ = MakeTaggedNode(N::kNonconsecutiveRepetition, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kNonconsecutiveRepetition, $1, $2, $3); }
   ;
 goto_repetition
   : TK_LBRARROW cycle_range_or_expr ']'
-    { $$ = MakeTaggedNode(N::kGotoRepetition, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kGotoRepetition, $1, $2, $3); }
   ;
 
 covergroup_declaration
   : TK_covergroup GenericIdentifier tf_port_list_paren_opt coverage_event_opt ';'
     coverage_spec_or_option_list_opt
     TK_endgroup label_opt
-    { $$ = MakeTaggedNode(N::kCovergroupDeclaration,
-                               MakeTaggedNode(N::kCovergroupHeader,
+    { $$ = FACTORY()->MakeTaggedNode(N::kCovergroupDeclaration,
+                               FACTORY()->MakeTaggedNode(N::kCovergroupHeader,
                                               $1, $2, $3, $4, $5),
                                $6, $7, $8); }
   ;
@@ -8177,7 +8179,7 @@ coverage_spec_or_option_list
   : coverage_spec_or_option_list coverage_spec_or_option
     { $$ = ExtendNode($1, $2); }
   | coverage_spec_or_option
-    { $$ = MakeTaggedNode(N::kCoverageSpecOptionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageSpecOptionList, $1); }
   ;
 coverage_spec_or_option
   : /* attribute_list_opt */ coverage_spec /* no ';' here */
@@ -8191,9 +8193,9 @@ coverage_spec_or_option
   ;
 coverage_option
   : TK_option '.' GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kCoverageOption, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageOption, $1, $2, $3, $4, $5); }
   | TK_type_option '.' GenericIdentifier '=' expression
-    { $$ = MakeTaggedNode(N::kCoverageOption, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageOption, $1, $2, $3, $4, $5); }
   ;
 coverage_spec
   : cover_point
@@ -8213,9 +8215,9 @@ coverage_event
   : event_control
     { $$ = std::move($1); }
   | TK_with__covergroup TK_function TK_sample '(' tf_port_list_opt ')'
-    { $$ = MakeTaggedNode(N::kCoverageEvent, $1, $2, $3, MakeParenGroup($4, $5, $6)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageEvent, $1, $2, $3, MakeParenGroup($4, $5, $6)); }
   | TK_ATAT '(' block_event_expression ')'
-    { $$ = MakeTaggedNode(N::kCoverageEvent, $1 , MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageEvent, $1 , MakeParenGroup($2, $3, $4)); }
   ;
 block_event_expression
   : block_event_or_expr
@@ -8225,25 +8227,25 @@ block_event_or_expr
   : block_event_or_expr TK_or block_event_expr_primary
     { $$ = ExtendNode($1, $2, $3); }
   | block_event_expr_primary
-    { $$ = MakeTaggedNode(N::kCoverageBlockEventOrList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageBlockEventOrList, $1); }
   ;
 block_event_expr_primary
   : TK_begin reference
-    { $$ = MakeTaggedNode(N::kCoverageBlockEventExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageBlockEventExpression, $1, $2); }
   | TK_end reference
-    { $$ = MakeTaggedNode(N::kCoverageBlockEventExpression, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageBlockEventExpression, $1, $2); }
   ;
 
 cover_cross
   /* optional leading label is painful to disambiguate */
   : data_type_or_implicit_basic_followed_by_id ':'
     TK_cross cross_item_list iff_expr_opt cross_body
-    { $$ = MakeTaggedNode(N::kCoverCross, $1, $2, $3, $4, $5, $6); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverCross, $1, $2, $3, $4, $5, $6); }
     /* $1 should be GenericIdentifier, make sure it has nothing else.
      * promoted as such to ease S/R conflict resolution.
      */
   | TK_cross cross_item_list iff_expr_opt cross_body
-    { $$ = MakeTaggedNode(N::kCoverCross, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverCross, $1, $2, $3, $4); }
   ;
 cross_body
   : '{' cross_body_item_list_opt '}'
@@ -8261,13 +8263,13 @@ cross_body_item_list
   : cross_body_item_list cross_body_item
     { $$ = ExtendNode($1, $2); }
   | cross_body_item
-    { $$ = MakeTaggedNode(N::kCrossBodyItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCrossBodyItemList, $1); }
   ;
 cross_item_list
   : cross_item_list ',' cross_item
     { $$ = ExtendNode($1, $2, $3); }
   | cross_item ',' cross_item
-    { $$ = MakeTaggedNode(N::kCrossItemList, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCrossItemList, $1, $2, $3); }
     /* cross_item_list must contain 2 or more items. */
   ;
 cross_body_item
@@ -8292,17 +8294,17 @@ cover_point
     property_expr
     /* expression iff_expr_opt (covered by property_expr) */
     bins_or_options_list_opt
-    { $$ = MakeTaggedNode(N::kCoverPoint, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverPoint, $1, $2, $3, $4, $5); }
     /* must end with '}' or ';' */
   | TK_coverpoint
     property_expr
     /* expression iff_expr_opt (covered by property_expr) */
     bins_or_options_list_opt
-    { $$ = MakeTaggedNode(N::kCoverPoint, nullptr, nullptr, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverPoint, nullptr, nullptr, $1, $2, $3); }
   ;
 iff_expr_opt
   : TK_iff '(' expression ')'
-    { $$ = MakeTaggedNode(N::kIffExpression, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kIffExpression, $1, MakeParenGroup($2, $3, $4)); }
   | /* empty */
     { $$ = nullptr; }
   ;
@@ -8323,7 +8325,7 @@ bins_or_options_list
   : bins_or_options_list bins_or_options
     { $$ = ExtendNode($1, $2); }
   | bins_or_options
-    { $$ = MakeTaggedNode(N::kBinOptionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBinOptionList, $1); }
   ;
 bins_or_options
   : /* attribute_list_opt */ coverage_option ';'
@@ -8350,7 +8352,7 @@ preprocessor_balanced_bins_or_options_list
     preprocessor_elsif_bins_or_options_list_opt
     preprocessor_else_bins_or_options_opt
     PP_endif
-    { $$ = MakeTaggedNode(N::kPreprocessorBalancedBinsOrOptions,
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorBalancedBinsOrOptions,
                           ExtendNode($1, $2), ForwardChildren($3), $4, $5);
     }
   ;
@@ -8364,7 +8366,7 @@ preprocessor_elsif_bins_or_options_list
   : preprocessor_elsif_bins_or_options_list preprocessor_elsif_bins_or_options
     { $$ = ExtendNode($1, $2); }
   | preprocessor_elsif_bins_or_options
-    { $$ = MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
+    { $$ = FACTORY()->MakeNode($1); }  /* Don't bother tagging; node will be flattened. */
   ;
 preprocessor_elsif_bins_or_options
   : preprocessor_elsif_header bins_or_options_list_opt_pp
@@ -8378,14 +8380,14 @@ preprocessor_else_bins_or_options_opt
   ;
 preprocessor_else_bins_or_options
   : PP_else bins_or_options_list_opt_pp
-    { $$ = MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kPreprocessorElseClause, $1, $2); }
   ;
 
 coverage_bin
   /* This is a simplified approximation that may permit some illegal combinations. */
   : wildcard_opt bins_keyword GenericIdentifier covergroup_expression_bracketed_opt '='
     coverage_bin_rhs iff_expr_opt
-    { $$ = MakeTaggedNode(N::kCoverageBin, $1, $2, $3, $4, $5, $6, $7); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kCoverageBin, $1, $2, $3, $4, $5, $6, $7); }
   ;
 coverage_bin_rhs
   : set_covergroup_expression_or_covergroup_range_list_or_trans_list
@@ -8393,7 +8395,7 @@ coverage_bin_rhs
   | TK_default
     { $$ = std::move($1); }
   | TK_default TK_sequence
-    { $$ = MakeNode($1, $2); }
+    { $$ = FACTORY()->MakeNode($1, $2); }
   ;
 wildcard_opt
   : TK_wildcard
@@ -8468,7 +8470,7 @@ repeat_range
 */
 bins_selection
   : bins_keyword GenericIdentifier '=' select_expression /* iff_expr_opt */
-    { $$ = MakeTaggedNode(N::kBinsSelection, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kBinsSelection, $1, $2, $3, $4); }
     /* select_expression as property_expr covers trailing iff_expr_opt */
   ;
 select_expression
@@ -8489,7 +8491,7 @@ select_expression
 select_condition
   /* primary select expression */
   : TK_binsof '(' bins_expression ')'
-    { $$ = MakeTaggedNode(N::kSelectCondition, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kSelectCondition, $1, MakeParenGroup($2, $3, $4)); }
   /* optional trailing TK_intersect range_list_in_braces is covered by
    * select_expression using property_expr, which contains the
    * TK_intersect operator.
@@ -8521,7 +8523,7 @@ cross_set_expression
 /******** LRM: A.6.12 randsequence ********/
 randsequence_statement
   : TK_randsequence '(' identifier_opt ')' production_list TK_endsequence
-    { $$ = MakeTaggedNode(N::kRandSequenceStatement,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceStatement,
                           $1, MakeParenGroup($2, $3, $4), $5, $6); }
   ;
 
@@ -8529,12 +8531,12 @@ production_list
   : production_list production
     { $$ = ExtendNode($1, $2); }
   | production
-    { $$ = MakeTaggedNode(N::kProductionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProductionList, $1); }
   ;
 
 production
   : data_type_or_void_with_id tf_port_list_paren_opt ':' rs_rule_list ';'
-    { $$ = MakeTaggedNode(N::kProduction, $1, $2, $3, $4, $5); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProduction, $1, $2, $3, $4, $5); }
   ;
 
 data_type_or_void_with_id
@@ -8547,23 +8549,23 @@ rs_rule_list
   : rs_rule_list '|' rs_rule
     { $$ = ExtendNode($1, $2, $3); }
   | rs_rule
-    { $$ = MakeTaggedNode(N::kRandSequenceRuleList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceRuleList, $1); }
   ;
 
 rs_rule
   : rs_production_list_or_rand_join
-    { $$ = MakeTaggedNode(N::kRandSequenceRule, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceRule, $1); }
   | rs_production_list_or_rand_join TK_COLON_EQ weight_specification
-    { $$ = MakeTaggedNode(N::kRandSequenceRule, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceRule, $1, $2, $3); }
   | rs_production_list_or_rand_join TK_COLON_EQ weight_specification rs_code_block
-    { $$ = MakeTaggedNode(N::kRandSequenceRule, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceRule, $1, $2, $3, $4); }
   ;
 
 rs_production_list_or_rand_join
   : rs_production_list
     { $$ = std::move($1); }
   | TK_rand TK_join expression_in_parens_opt production_items_list
-    { $$ = MakeTaggedNode(N::kRandJoin, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandJoin, $1, $2, $3, $4); }
   ;
 
 /* TODO(fangism): use this nonterminal everywhere equivalent to enable error-recovery */
@@ -8587,17 +8589,17 @@ rs_production_list
   : rs_production_list rs_prod
     { $$ = ExtendNode($1, $2); }
   | rs_prod
-    { $$ = MakeTaggedNode(N::kRandSequenceProductionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceProductionList, $1); }
   ;
 
 weight_specification
   : number
     /* $1 must be integral */
-    { $$ = MakeTaggedNode(N::kWeightSpecification, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kWeightSpecification, $1); }
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kWeightSpecification, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kWeightSpecification, $1); }
   | '(' expression ')'
-    { $$ = MakeTaggedNode(N::kWeightSpecification, $1, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kWeightSpecification, $1, $2, $3); }
   ;
 
 rs_code_block
@@ -8611,7 +8613,7 @@ production_items_list
     { $$ = ExtendNode($1, $2); }
   | production_item production_item
     /* at least two elements required */
-    { $$ = MakeTaggedNode(N::kProductionItemsList, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProductionItemsList, $1, $2); }
   ;
 
 rs_prod
@@ -8629,28 +8631,28 @@ rs_prod
 
 production_item
   : GenericIdentifier '(' any_port_list ')'
-    { $$ = MakeTaggedNode(N::kProductionItem, $1, MakeParenGroup($2, $3, $4)); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProductionItem, $1, MakeParenGroup($2, $3, $4)); }
   | GenericIdentifier
-    { $$ = MakeTaggedNode(N::kProductionItem, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kProductionItem, $1); }
   ;
 
 rs_if_else
   : TK_if '(' expression ')' production_item TK_else production_item
-    { $$ = MakeTaggedNode(N::kRandSequenceConditional,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceConditional,
                           $1, MakeParenGroup($2, $3, $4), $5, $6, $7); }
   | TK_if '(' expression ')' production_item
-    { $$ = MakeTaggedNode(N::kRandSequenceConditional,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceConditional,
                           $1, MakeParenGroup($2, $3, $4), $5); }
   ;
 
 rs_repeat
   : repeat_control production_item
-    { $$ = MakeTaggedNode(N::kRandSequenceLoop, $1, $2); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceLoop, $1, $2); }
   ;
 
 rs_case
   : TK_case '(' expression ')' rs_case_item_list TK_endcase
-    { $$ = MakeTaggedNode(N::kRandSequenceCase,
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceCase,
                           $1, MakeParenGroup($2, $3, $4), $5, $6); }
   ;
 
@@ -8658,23 +8660,23 @@ rs_case_item_list
   : rs_case_item_list rs_case_item
     { $$ = ExtendNode($1, $2); }
   | rs_case_item
-    { $$ = MakeTaggedNode(N::kRandSequenceCaseItemList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceCaseItemList, $1); }
   ;
 
 rs_case_item
   : case_item_expression_list ':' production_item ';'
-    { $$ = MakeTaggedNode(N::kRandSequenceCaseItem, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceCaseItem, $1, $2, $3, $4); }
   | TK_default ':' production_item ';'
-    { $$ = MakeTaggedNode(N::kRandSequenceDefaultItem, $1, $2, $3, $4); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceDefaultItem, $1, $2, $3, $4); }
   | TK_default     production_item ';'
-    { $$ = MakeTaggedNode(N::kRandSequenceDefaultItem, $1, nullptr, $2, $3); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kRandSequenceDefaultItem, $1, nullptr, $2, $3); }
   ;
 
 case_item_expression_list
   : case_item_expression_list ',' case_item_expression
     { $$ = ExtendNode($1, $2, $3); }
   | case_item_expression
-    { $$ = MakeTaggedNode(N::kExpressionList, $1); }
+    { $$ = FACTORY()->MakeTaggedNode(N::kExpressionList, $1); }
   ;
 
 case_item_expression
